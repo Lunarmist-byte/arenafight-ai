@@ -216,3 +216,25 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ArenaFight Agent
+build/
+bin/
+sessions/
+logs/
+*.exe
+*.a
+*.lib
+*.obj
+*.o
+*.bak
+*.tmp
+sandbox_test/
+test_workspace_sandbox/
+test_search_sandbox/
+test_sessions_sandbox/
+test_agent_exec_ws/
+mock_output.txt
+docs/
+DEV_TUTORIAL.md
+docs/DEV_TUTORIAL.md
