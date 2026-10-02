@@ -12,8 +12,7 @@ ArenaFight Agent is designed for autonomous coding, research, and debugging work
 
 ---
 
-## 1. Core Architecture & Philosophy
-
+## 1. Core Architecture
 The system executes an autonomous cycle:
 
 ```text
