@@ -58,6 +58,8 @@ set(CORE_SOURCES
     src/router/model_router.cpp
     src/planner/planner.cpp
     src/executor/executor.cpp
+    src/evidence/claim_registry.cpp
+    src/verifier/independent_reviewer.cpp
     src/verifier/verifier.cpp
     src/ui/terminal_ui.cpp
     src/agent/arena_agent.cpp

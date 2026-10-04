@@ -12,6 +12,12 @@ public:
     MemoryManager() = default;
 
     void addFact(const std::string& fact, const std::string& source = "");
+    void addVerifiedFact(const std::string& fact, const std::string& evidenceId, const std::string& source = "");
+    void addHypothesis(const std::string& hypothesis, const std::string& source = "");
+    void addAssumption(const std::string& assumption, const std::string& source = "");
+    void addInference(const std::string& inference, const std::string& source = "");
+    bool promoteToVerifiedFact(const std::string& memId, const std::string& evidenceId);
+
     void addDiscovery(const std::string& discovery, const std::string& source = "");
     void addDecision(const std::string& decision, const std::string& reason = "");
     void addError(const std::string& errorContext, const std::string& errorDetails);

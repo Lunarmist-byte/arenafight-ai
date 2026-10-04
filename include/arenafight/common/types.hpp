@@ -7,6 +7,7 @@
 #include <chrono>
 #include <cstdint>
 #include <nlohmann/json.hpp>
+#include "arenafight/evidence/evidence_types.hpp"
 
 namespace arenafight {
 
@@ -198,6 +199,9 @@ struct MemoryItem {
     std::string content;
     std::string source;
     int64_t timestamp = 0;
+    KnowledgeType knowledgeType = KnowledgeType::FACT;
+    EvidenceLevel evidenceLevel = EvidenceLevel::UNKNOWN;
+    std::string evidenceId;
 
     nlohmann::json toJson() const {
         return {
@@ -205,7 +209,10 @@ struct MemoryItem {
             {"category", category},
             {"content", content},
             {"source", source},
-            {"timestamp", timestamp}
+            {"timestamp", timestamp},
+            {"knowledgeType", knowledgeTypeToString(knowledgeType)},
+            {"evidenceLevel", evidenceLevelToString(evidenceLevel)},
+            {"evidenceId", evidenceId}
         };
     }
 
@@ -216,6 +223,9 @@ struct MemoryItem {
         m.content = j.value("content", "");
         m.source = j.value("source", "");
         m.timestamp = j.value("timestamp", static_cast<int64_t>(0));
+        m.knowledgeType = knowledgeTypeFromString(j.value("knowledgeType", "FACT"));
+        m.evidenceLevel = evidenceLevelFromString(j.value("evidenceLevel", "UNKNOWN"));
+        m.evidenceId = j.value("evidenceId", "");
         return m;
     }
 };
@@ -363,14 +373,34 @@ struct VerificationResult {
     std::vector<std::string> passedChecks;
     std::vector<std::string> failedChecks;
     std::string evidence;
+    double completionScore = 0.0;
+    double confidence = 0.0;
+    std::vector<GateCheckResult> gates;
+    std::vector<std::string> remainingIssues;
+    GroundedFinalAnswer groundedAnswer;
 
     nlohmann::json toJson() const {
+        nlohmann::json gatesArr = nlohmann::json::array();
+        for (const auto& g : gates) {
+            gatesArr.push_back({
+                {"gateName", g.gateName},
+                {"passed", g.passed},
+                {"detail", g.detail},
+                {"evidenceId", g.evidenceId},
+                {"hierarchy", static_cast<int>(g.hierarchy)}
+            });
+        }
+
         return {
             {"complete", complete},
             {"summary", summary},
             {"passedChecks", passedChecks},
             {"failedChecks", failedChecks},
-            {"evidence", evidence}
+            {"evidence", evidence},
+            {"completionScore", completionScore},
+            {"confidence", confidence},
+            {"remainingIssues", remainingIssues},
+            {"gates", gatesArr}
         };
     }
 
@@ -381,6 +411,21 @@ struct VerificationResult {
         vr.passedChecks = j.value("passedChecks", std::vector<std::string>{});
         vr.failedChecks = j.value("failedChecks", std::vector<std::string>{});
         vr.evidence = j.value("evidence", "");
+        vr.completionScore = j.value("completionScore", 0.0);
+        vr.confidence = j.value("confidence", 0.0);
+        vr.remainingIssues = j.value("remainingIssues", std::vector<std::string>{});
+
+        if (j.contains("gates") && j["gates"].is_array()) {
+            for (const auto& gj : j["gates"]) {
+                GateCheckResult g;
+                g.gateName = gj.value("gateName", "");
+                g.passed = gj.value("passed", false);
+                g.detail = gj.value("detail", "");
+                g.evidenceId = gj.value("evidenceId", "");
+                g.hierarchy = static_cast<EvidenceHierarchy>(gj.value("hierarchy", 6));
+                vr.gates.push_back(g);
+            }
+        }
         return vr;
     }
 };

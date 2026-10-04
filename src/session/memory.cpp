@@ -20,8 +20,72 @@ void MemoryManager::addFact(const std::string& fact, const std::string& source) 
     item.category = "fact";
     item.content = fact;
     item.source = source;
+    item.knowledgeType = KnowledgeType::FACT;
+    item.evidenceLevel = EvidenceLevel::UNVERIFIED;
     item.timestamp = getNowMs();
     items_.push_back(item);
+}
+
+void MemoryManager::addVerifiedFact(const std::string& fact, const std::string& evidenceId, const std::string& source) {
+    MemoryItem item;
+    item.id = "mem_" + std::to_string(items_.size() + 1);
+    item.category = "fact";
+    item.content = fact;
+    item.source = source;
+    item.knowledgeType = KnowledgeType::FACT;
+    item.evidenceLevel = EvidenceLevel::VERIFIED;
+    item.evidenceId = evidenceId;
+    item.timestamp = getNowMs();
+    items_.push_back(item);
+}
+
+void MemoryManager::addHypothesis(const std::string& hypothesis, const std::string& source) {
+    MemoryItem item;
+    item.id = "mem_" + std::to_string(items_.size() + 1);
+    item.category = "hypothesis";
+    item.content = hypothesis;
+    item.source = source;
+    item.knowledgeType = KnowledgeType::HYPOTHESIS;
+    item.evidenceLevel = EvidenceLevel::UNVERIFIED;
+    item.timestamp = getNowMs();
+    items_.push_back(item);
+}
+
+void MemoryManager::addAssumption(const std::string& assumption, const std::string& source) {
+    MemoryItem item;
+    item.id = "mem_" + std::to_string(items_.size() + 1);
+    item.category = "assumption";
+    item.content = assumption;
+    item.source = source;
+    item.knowledgeType = KnowledgeType::ASSUMPTION;
+    item.evidenceLevel = EvidenceLevel::UNVERIFIED;
+    item.timestamp = getNowMs();
+    items_.push_back(item);
+}
+
+void MemoryManager::addInference(const std::string& inference, const std::string& source) {
+    MemoryItem item;
+    item.id = "mem_" + std::to_string(items_.size() + 1);
+    item.category = "inference";
+    item.content = inference;
+    item.source = source;
+    item.knowledgeType = KnowledgeType::INFERENCE;
+    item.evidenceLevel = EvidenceLevel::MODEL_DERIVED;
+    item.timestamp = getNowMs();
+    items_.push_back(item);
+}
+
+bool MemoryManager::promoteToVerifiedFact(const std::string& memId, const std::string& evidenceId) {
+    for (auto& item : items_) {
+        if (item.id == memId) {
+            item.category = "fact";
+            item.knowledgeType = KnowledgeType::FACT;
+            item.evidenceLevel = EvidenceLevel::VERIFIED;
+            item.evidenceId = evidenceId;
+            return true;
+        }
+    }
+    return false;
 }
 
 void MemoryManager::addDiscovery(const std::string& discovery, const std::string& source) {
@@ -87,14 +151,28 @@ std::vector<MemoryItem> MemoryManager::search(const std::string& keyword) const 
 std::string MemoryManager::getCompactSummary() const {
     std::stringstream ss;
     auto facts = getItemsByCategory("fact");
+    auto hypotheses = getItemsByCategory("hypothesis");
+    auto assumptions = getItemsByCategory("assumption");
     auto discoveries = getItemsByCategory("discovery");
     auto decisions = getItemsByCategory("decision");
     auto errors = getItemsByCategory("error");
     auto files = getItemsByCategory("file_change");
 
     if (!facts.empty()) {
-        ss << "Known Facts:\n";
-        for (const auto& f : facts) ss << "- " << f.content << "\n";
+        ss << "VERIFIED FACTS (Evidence-Grounded):\n";
+        for (const auto& f : facts) {
+            ss << "- " << f.content;
+            if (!f.evidenceId.empty()) ss << " [Evidence: " << f.evidenceId << "]";
+            ss << "\n";
+        }
+    }
+    if (!hypotheses.empty()) {
+        ss << "ACTIVE HYPOTHESES (Unverified - Requires Tool Validation):\n";
+        for (const auto& h : hypotheses) ss << "- " << h.content << "\n";
+    }
+    if (!assumptions.empty()) {
+        ss << "ASSUMPTIONS (Subject to Verification):\n";
+        for (const auto& a : assumptions) ss << "- " << a.content << "\n";
     }
     if (!discoveries.empty()) {
         ss << "Key Discoveries:\n";

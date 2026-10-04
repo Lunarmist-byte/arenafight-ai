@@ -31,7 +31,7 @@ nlohmann::json Session::toJson() const {
     nlohmann::json memJson = nlohmann::json::array();
     for (const auto& m : memories) memJson.push_back(m.toJson());
 
-    return {
+    nlohmann::json jOut = {
         {"id", id},
         {"originalTask", originalTask},
         {"objective", objective},
@@ -48,6 +48,10 @@ nlohmann::json Session::toJson() const {
         {"startTime", startTime},
         {"updatedTime", updatedTime}
     };
+    if (claimRegistry) {
+        jOut["claimRegistry"] = claimRegistry->toJson();
+    }
+    return jOut;
 }
 
 Session Session::fromJson(const nlohmann::json& j) {
@@ -80,6 +84,10 @@ Session Session::fromJson(const nlohmann::json& j) {
     s.completed = j.value("completed", false);
     s.startTime = j.value("startTime", "");
     s.updatedTime = j.value("updatedTime", "");
+
+    if (j.contains("claimRegistry") && s.claimRegistry) {
+        s.claimRegistry->fromJson(j["claimRegistry"]);
+    }
     return s;
 }
 

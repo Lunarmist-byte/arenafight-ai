@@ -128,28 +128,33 @@ void TerminalUI::printFinalReport(
     } else {
         std::cout << "             TASK PARTIALLY COMPLETED               \n";
     }
-    std::cout << "====================================================\n\n"
-              << "Objective:\n" << objective << "\n\n";
+    std::cout << "====================================================\n\n";
 
-    if (!filesCreated.empty()) {
-        std::cout << "Modified / Created Files:\n";
-        for (const auto& f : filesCreated) {
-            std::cout << "- " << f << "\n";
+    if (!verif.groundedAnswer.formattedReport.empty()) {
+        std::cout << verif.groundedAnswer.formattedReport << "\n";
+    } else {
+        std::cout << "Objective:\n" << objective << "\n\n";
+
+        if (!filesCreated.empty()) {
+            std::cout << "Modified / Created Files:\n";
+            for (const auto& f : filesCreated) {
+                std::cout << "- " << f << "\n";
+            }
+            std::cout << "\n";
         }
-        std::cout << "\n";
+
+        std::cout << "Verification Evidence:\n";
+        for (const auto& pc : verif.passedChecks) {
+            std::cout << "[PASS] " << pc << "\n";
+        }
+        for (const auto& fc : verif.failedChecks) {
+            std::cout << "[FAIL] " << fc << "\n";
+        }
+
+        std::cout << "\nSummary:\n" << verif.summary << "\n";
     }
 
-    std::cout << "Verification Evidence:\n";
-    for (const auto& pc : verif.passedChecks) {
-        std::cout << "[PASS] " << pc << "\n";
-    }
-    for (const auto& fc : verif.failedChecks) {
-        std::cout << "[FAIL] " << fc << "\n";
-    }
-
-    std::cout << "\nSummary:\n" << verif.summary << "\n\n"
-              << "Total Duration: " << formatTime(totalElapsedSec) << "\n";
-
+    std::cout << "Total Duration: " << formatTime(totalElapsedSec) << "\n";
     printFooter();
 }
 

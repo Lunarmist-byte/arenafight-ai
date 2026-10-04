@@ -116,6 +116,11 @@ TaskExecutionResult Executor::executeTask(
             res.success = true;
             res.summary = response.content.empty() ? "Task executed successfully." : response.content;
             res.toolCallsCount = toolCallCount;
+            if (!response.content.empty()) {
+                session.getClaimRegistry().recordModelAssertion(
+                    response.content, selection.model.id, KnowledgeType::INFERENCE, task.description
+                );
+            }
             return res;
         }
 
@@ -149,9 +154,29 @@ TaskExecutionResult Executor::executeTask(
             session.executions.push_back(record);
             Logger::instance().logExecution(record);
 
-            // Update memory based on tool action
+            // Section 18: Record raw authoritative Observation in ClaimRegistry
+            Observation obs;
+            obs.tool = tc.name;
+            if (tc.arguments.is_object()) {
+                if (tc.arguments.contains("command")) obs.command = tc.arguments["command"].get<std::string>();
+                else if (tc.arguments.contains("path")) obs.command = tc.arguments["path"].get<std::string>();
+                else obs.command = tc.arguments.dump();
+            }
+            obs.stdoutText = toolRes.output;
+            obs.stderrText = toolRes.error;
+            obs.exitCode = toolRes.exitCode;
+            obs.duration = static_cast<double>(toolRes.durationMs);
+            obs.timestamp = record.timestamp;
+            session.getClaimRegistry().recordObservation(obs);
+
+            // Section 21 & 22: Dependency-Aware Fresh Verification after modifications
             if (tc.name == "write_file" || tc.name == "edit_file") {
                 std::string path = tc.arguments.value("path", "");
+                int invalidated = session.getClaimRegistry().invalidateArtifactEvidence(path);
+                if (invalidated > 0) {
+                    Logger::instance().info("Evidence invalidation: " + std::to_string(invalidated) +
+                                           " items invalidated due to modification of " + path);
+                }
                 memory.addFileModification(path, "Updated via " + tc.name);
             }
 

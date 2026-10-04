@@ -88,7 +88,89 @@ ArenaFight never outputs *"Task complete"* based on conversational agreement. Co
 
 ---
 
-## 2. Supported Model Backends
+## 2. Hallucination-Resistant Multi-Model Architecture
+
+ArenaFight enforces an inviolable system invariant: **`MODEL OUTPUT ≠ TRUTH`**.
+
+Multiple models frequently share identical incorrect assumptions, training data artifacts, outdated API knowledge, or reasoning errors. Therefore, ArenaFight **prefers concrete evidence over model consensus**.
+
+```text
+MODEL OUTPUT
+     ↓
+   CLAIM (Hypothesis / Inference)
+     ↓
+  EVIDENCE (Compiler, Tests, Files, Exit Codes)
+     ↓
+ VERIFICATION (6 Verification Gates)
+     ↓
+ TRUSTED STATE (Persistent Verified Memory)
+```
+
+### 1. Evidence Levels (`EvidenceLevel`)
+Every significant claim is tracked in the central `ClaimRegistry` with an explicit evidence status:
+* `VERIFIED`: Proven by Level 1/Level 2 tool execution (compiler, test runner, exact file content).
+* `STRONGLY_SUPPORTED`: Backed by authoritative documentation, specifications, or strong indirect evidence.
+* `MODEL_DERIVED`: Asserted by one or more models without external tool proof.
+* `UNVERIFIED`: Proposed as hypothesis or assumption without supporting tool proof yet.
+* `CONTRADICTED`: Directly refuted by compiler errors, test failures, or opposing facts.
+* `UNKNOWN`: Insufficient evidence to validate or refute.
+
+### 2. The 6-Tier Evidence Hierarchy
+Evidence types are ranked hierarchically. Higher levels strictly dominate lower levels:
+1. **LEVEL 1 — Direct Execution Evidence:** Compiler output, test runners, shell exit codes, program stdout/stderr.
+2. **LEVEL 2 — Direct Artifact Evidence:** Source files, config files, Git diffs, database contents.
+3. **LEVEL 3 — Authoritative Documentation:** Official docs, API schemas, local project specifications.
+4. **LEVEL 4 — Independent Model Agreement:** Multiple independent models converging without prior bias.
+5. **LEVEL 5 — Single Model Reasoning:** Single model inference or deductions.
+6. **LEVEL 6 — Guess / Assumption:** Unsubstantiated model guesses.
+
+### 3. Separation of Facts from Hypotheses
+The system rigorously classifies claims as `FACT`, `HYPOTHESIS`, `ASSUMPTION`, `INFERENCE`, or `UNKNOWN`.
+* If a model says: *"The segmentation fault is caused by use-after-free"*, the system registers it as `KnowledgeType::HYPOTHESIS` with status `UNVERIFIED`.
+* It is **strictly prevented** from entering persistent memory as a `FACT` until concrete Level 1/Level 2 evidence (e.g. AddressSanitizer/GDB backtrace or test reproduction) is linked.
+
+### 4. Consensus Is Supporting Evidence, Not Proof
+* **5 models agree, 0 external evidence:** Status remains `MODEL_DERIVED`, confidence is capped at `0.50`.
+* **1 model claims X, compiler/tests prove X:** Status becomes `VERIFIED`, confidence is `> 0.95`.
+Evidence outranks consensus in every evaluation.
+
+### 5. Contradiction Detection & Active Resolution
+If independent agents produce conflicting claims (e.g., Agent A claims *"The bug is in parser.cpp"*, while Agent B claims *"The bug is in lexer.cpp"*):
+* The system detects the contradiction and registers an explicit `Contradiction` record.
+* Sets claim statuses to `CONTRADICTED`.
+* Enforces the required action: **`Inspect source + reproduce failure.`**
+* Contradictions must be actively resolved via tool evidence before a task can pass verification.
+
+### 6. Dependency-Aware Fresh Verification (Evidence Invalidation)
+Any file modification invalidates previous verification that depends on the modified artifact:
+* If `src/main.cpp` is modified via `write_file` or `edit_file`, previous build and test evidence automatically becomes `isStale = true`.
+* Dependent claims are downgraded from `VERIFIED` back to `UNVERIFIED`, forcing fresh re-compilation and re-testing.
+
+### 7. Independent & Adversarial Verification
+* **Blind Review:** When evaluating multiple candidate solutions, they are anonymized (`SOLUTION A`, `SOLUTION B`) without provider or model labels to eliminate provider bias.
+* **Adversarial Review (`ReviewMode::ADVERSARIAL`):** An independent model is tasked with actively attempting to prove the solution wrong, probing for command injection, path traversal, buffer overflows, missing edge cases, and invalid API assumptions.
+
+### 8. The 6 Verification Gates
+A task can **never** be marked complete without passing all 6 verification gates:
+* **Gate 1: Files Exist:** All modified/created artifacts are physically verified on disk with non-zero size.
+* **Gate 2: Code Compiles:** Build system (`cmake --build build`, `cargo check`) exits with code `0`.
+* **Gate 3: Tests Pass:** Automated test suite (`ctest`, `pytest`) exits with code `0`.
+* **Gate 4: Requirements Satisfied:** 100% of task dependencies and plan items are fulfilled.
+* **Gate 5: Independent Review:** Adversarial review approved with no critical objections.
+* **Gate 6: No Contradictions:** Zero unresolved conflicting claims in the registry.
+
+### 9. Final Grounding Pass & Structured Reports
+Before producing final answers, ArenaFight runs a grounding pass that removes unsupported claims and generates structured evidence reports:
+* `## Result`
+* `## Changes`
+* `## Verification` (Build, Tests, Gates)
+* `## Evidence` (E001, E002, etc.)
+* `## Remaining Issues`
+* `## Confidence` (Evidence-derived percentage and rationale)
+
+---
+
+## 3. Supported Model Backends
 
 ArenaFight provides a unified, extensible `ModelProvider` C++ interface:
 

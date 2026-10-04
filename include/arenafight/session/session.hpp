@@ -2,8 +2,8 @@
 
 #include <string>
 #include <vector>
-#include <nlohmann/json.hpp>
 #include "arenafight/common/types.hpp"
+#include "arenafight/evidence/claim_registry.hpp"
 
 namespace arenafight {
 
@@ -33,6 +33,16 @@ struct Session {
     bool completed = false;
     std::string startTime;
     std::string updatedTime;
+
+    std::shared_ptr<ClaimRegistry> claimRegistry = std::make_shared<ClaimRegistry>();
+
+    ClaimRegistry& getClaimRegistry() {
+        if (!claimRegistry) claimRegistry = std::make_shared<ClaimRegistry>();
+        return *claimRegistry;
+    }
+    const ClaimRegistry& getClaimRegistry() const {
+        return *claimRegistry;
+    }
 
     // Serialization
     nlohmann::json toJson() const;
