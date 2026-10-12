@@ -23,8 +23,21 @@
 #include "arenafight/verifier/independent_reviewer.hpp"
 #include "arenafight/evidence/claim_registry.hpp"
 #include "arenafight/agent/arena_agent.hpp"
+#include <thread>
+#include <chrono>
 
 using namespace arenafight;
+
+namespace {
+void safeRemoveAll(const std::filesystem::path& p) {
+    std::error_code ec;
+    for (int i = 0; i < 15; ++i) {
+        std::filesystem::remove_all(p, ec);
+        if (!ec || !std::filesystem::exists(p)) return;
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+}
+}
 
 #define TEST_ASSERT(cond, msg) \
     do { \
@@ -202,7 +215,7 @@ bool testSessionPersistence() {
     auto list = Session::listSessions(testSessionDir);
     TEST_ASSERT(list.size() == 1, "Session list must contain 1 session");
 
-    std::filesystem::remove_all(testSessionDir);
+    safeRemoveAll(testSessionDir);
     std::cout << "PASSED\n";
     return true;
 }
@@ -255,7 +268,7 @@ bool testMultiStepExecutionAndReplanning() {
     // Verify created output file
     TEST_ASSERT(std::filesystem::exists(testWs + "/mock_output.txt"), "Agent must have created mock_output.txt via tool");
 
-    std::filesystem::remove_all(testWs);
+    safeRemoveAll(testWs);
     std::cout << "PASSED\n";
     return true;
 }
@@ -544,15 +557,42 @@ bool testVerificationGatesAndUncertainty() {
     return true;
 }
 
+bool testAutoMockFallback() {
+    std::cout << "[TEST] 16. Automatic fallback to offline mock when no external backends exist... " << std::flush;
+    std::string testWs = "test_auto_mock_sandbox";
+    std::filesystem::create_directories(testWs);
+
+    Config cfg;
+    cfg.workspace_dir = testWs;
+    cfg.test_mock_enabled = false;    // Deliberately disabled initially
+    cfg.auto_mock_fallback = true;   // Auto fallback enabled
+    cfg.openrouter_api_key = "";     // No API key
+    cfg.ollama_url = "http://127.0.0.1:54321"; // Non-existent offline URL
+    cfg.claude_command = "non_existent_claude_binary_xyz";
+
+    ArenaAgent agent(cfg);
+    agent.startNewSession("Test automatic mock fallback execution");
+
+    bool ok = agent.run();
+    TEST_ASSERT(ok, "Agent must successfully complete execution via automatic mock fallback");
+    TEST_ASSERT(agent.getSession().completed, "Session must be marked COMPLETED");
+    TEST_ASSERT(std::filesystem::exists(testWs + "/mock_output.txt"), "Output file mock_output.txt must exist");
+
+    safeRemoveAll(testWs);
+    std::cout << "PASSED\n";
+    return true;
+}
+
 int main() {
     std::cout << "\n====================================================\n"
               << "          ARENAFIGHT AGENT TEST SUITE               \n"
               << " Made by: Lunarmist-byte                            \n"
               << " GitHub:  https://github.com/Lunarmist-byte         \n"
+              << " LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n"
               << "====================================================\n\n";
 
     int passed = 0;
-    int total = 15;
+    int total = 16;
 
     if (testConfig()) passed++;
     if (testFileTools()) passed++;
@@ -569,6 +609,7 @@ int main() {
     if (testFreshVerificationAndEvidenceInvalidation()) passed++;
     if (testBlindAndAdversarialReview()) passed++;
     if (testVerificationGatesAndUncertainty()) passed++;
+    if (testAutoMockFallback()) passed++;
 
     std::cout << "\n----------------------------------------------------\n";
     std::cout << "TEST RESULTS: " << passed << "/" << total << " PASSED\n";

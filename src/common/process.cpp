@@ -103,9 +103,12 @@ ProcessResult runProcessWin32(const std::wstring& cmdLine, const std::wstring& c
     }
     SetHandleInformation(hStdErrRead, HANDLE_FLAG_INHERIT, 0);
 
+    HANDLE hStdIn = CreateFileW(L"NUL", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, &sa, OPEN_EXISTING, 0, NULL);
+
     STARTUPINFOW si;
     ZeroMemory(&si, sizeof(si));
     si.cb = sizeof(si);
+    si.hStdInput = (hStdIn != INVALID_HANDLE_VALUE) ? hStdIn : GetStdHandle(STD_INPUT_HANDLE);
     si.hStdError = hStdErrWrite;
     si.hStdOutput = hStdOutWrite;
     si.dwFlags |= STARTF_USESTDHANDLES;
@@ -133,6 +136,9 @@ ProcessResult runProcessWin32(const std::wstring& cmdLine, const std::wstring& c
 
     CloseHandle(hStdOutWrite);
     CloseHandle(hStdErrWrite);
+    if (hStdIn != INVALID_HANDLE_VALUE) {
+        CloseHandle(hStdIn);
+    }
 
     if (!success) {
         CloseHandle(hStdOutRead);

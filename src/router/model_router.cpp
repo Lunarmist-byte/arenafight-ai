@@ -98,14 +98,14 @@ ModelSelection ModelRouter::selectModel(
     if (candidates.empty()) {
         // Fallback to remaining available entries that aren't excluded provider
         for (const auto& entry : catalog_) {
-            if (excludedProvider.empty() || entry.first->name() != excludedProvider) {
+            if ((excludedProvider.empty() || entry.first->name() != excludedProvider) && entry.first->available()) {
                 candidates.push_back(entry);
             }
         }
     }
 
     if (candidates.empty()) {
-        selection.reason = "No alternative providers available";
+        selection.reason = "No available online providers matching request";
         return selection;
     }
 

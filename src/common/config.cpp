@@ -21,7 +21,8 @@ nlohmann::json Config::toJson() const {
         {"require_confirmation_for_destructive_commands", require_confirmation_for_destructive_commands},
         {"default_provider", default_provider},
         {"workspace_dir", workspace_dir},
-        {"test_mock_enabled", test_mock_enabled}
+        {"test_mock_enabled", test_mock_enabled},
+        {"auto_mock_fallback", auto_mock_fallback}
     };
 }
 
@@ -48,6 +49,7 @@ Config Config::fromJson(const nlohmann::json& j) {
     cfg.default_provider = j.value("default_provider", cfg.default_provider);
     cfg.workspace_dir = j.value("workspace_dir", cfg.workspace_dir);
     cfg.test_mock_enabled = j.value("test_mock_enabled", cfg.test_mock_enabled);
+    cfg.auto_mock_fallback = j.value("auto_mock_fallback", cfg.auto_mock_fallback);
     return cfg;
 }
 
@@ -106,6 +108,13 @@ void Config::applyEnvOverrides() {
     if (const char* cmd = std::getenv("CLAUDE_COMMAND")) {
         if (cmd[0] != '\0') {
             claude_command = cmd;
+        }
+    }
+    if (const char* fb = std::getenv("ARENA_AUTO_MOCK_FALLBACK")) {
+        if (std::string(fb) == "0" || std::string(fb) == "false") {
+            auto_mock_fallback = false;
+        } else if (std::string(fb) == "1" || std::string(fb) == "true") {
+            auto_mock_fallback = true;
         }
     }
 }

@@ -161,6 +161,46 @@ bool ArenaAgent::run() {
         return true;
     }
 
+    // Check if any providers are available before starting
+    router_.refreshModels();
+    auto availableModels = router_.getAllAvailableModels();
+    if (availableModels.empty()) {
+        if (config_.auto_mock_fallback) {
+            Logger::instance().warn("No active AI model backends detected. Automatically falling back to Offline Mock Provider (TestMock).");
+            std::cout << "\n\033[33m[NOTICE] No active AI model backends detected!\033[0m\n"
+                      << "  1. Claude Code CLI : Not authenticated or not found in PATH\n"
+                      << "  2. OpenRouter      : No API key configured\n"
+                      << "  3. Ollama          : Server offline or no models pulled\n\n"
+                      << "\033[36m[AUTO-FALLBACK] Automatically switching to built-in Offline Mock Provider (TestMock) for execution.\033[0m\n\n";
+
+            config_.test_mock_enabled = true;
+            auto mock = std::make_shared<TestMockProvider>();
+            router_.registerProvider(mock);
+            router_.refreshModels();
+            availableModels = router_.getAllAvailableModels();
+        } else {
+            Logger::instance().error("Execution halted: No active AI model backends found.");
+            std::cout << "\n\033[31m[ERROR] No active AI model backends detected!\033[0m\n\n"
+                      << "Arenafight Agent requires at least one working backend:\n"
+                      << "  1. Claude Code CLI : Run 'claude login' in terminal\n"
+                      << "  2. OpenRouter      : Set OPENROUTER_API_KEY environment variable or edit config.json\n"
+                      << "  3. Ollama          : Start Ollama ('ollama serve') with a pulled model\n"
+                      << "  4. Offline Mock    : Run with '--mock' flag for built-in self-test mode\n\n";
+            TerminalUI::printFooter();
+            session_.currentState = "FAILED_NO_PROVIDERS";
+            session_.saveToDisk();
+            return false;
+        }
+    }
+
+    if (availableModels.empty()) {
+        Logger::instance().error("Execution halted: Failed to initialize any model provider.");
+        TerminalUI::printFooter();
+        session_.currentState = "FAILED_NO_PROVIDERS";
+        session_.saveToDisk();
+        return false;
+    }
+
     // Initial Plan if needed
     if (session_.tasks.empty()) {
         std::cout << "Planner:\nCreating execution plan...\n\n";
@@ -187,7 +227,27 @@ bool ArenaAgent::run() {
             if (session_.allTasksCompleted()) {
                 Logger::instance().info("All tasks in graph are marked complete. Proceeding to verification...");
             } else {
-                // Dependency deadlock or blocked tasks: trigger replan
+                // Dependency deadlock or blocked tasks
+                bool hasUnresolvedFailures = false;
+                for (const auto& t : session_.tasks) {
+                    if (t.status == TaskStatus::FAILED) {
+                        hasUnresolvedFailures = true;
+                        break;
+                    }
+                }
+                if (hasUnresolvedFailures && router_.getAllAvailableModels().empty()) {
+                    if (config_.auto_mock_fallback && !config_.test_mock_enabled) {
+                        Logger::instance().warn("Providers unavailable for blocked tasks. Automatically enabling Offline Mock Provider (TestMock).");
+                        config_.test_mock_enabled = true;
+                        auto mock = std::make_shared<TestMockProvider>();
+                        router_.registerProvider(mock);
+                        router_.refreshModels();
+                    } else {
+                        Logger::instance().error("Cannot resolve blocked tasks: No AI model provider available.");
+                        break;
+                    }
+                }
+
                 TerminalUI::printRecoveryNotice("Task dependencies blocked. Replanning remaining tasks...");
                 planner_->replan(session_, memory_, "Dependency blockage");
                 session_.saveToDisk();
@@ -220,9 +280,31 @@ bool ArenaAgent::run() {
                 session_.markTaskFailed(task.id, execRes.summary);
                 TerminalUI::printErrorBox(task.id, 1, execRes.summary);
 
-                if (task.attempts <= config_.max_retries) {
+                // Check if all providers became unavailable
+                if (execRes.summary.find("No provider available") != std::string::npos ||
+                    router_.getAllAvailableModels().empty()) {
+                    if (config_.auto_mock_fallback && !config_.test_mock_enabled) {
+                        Logger::instance().warn("Providers unavailable during execution. Automatically enabling Offline Mock Provider (TestMock).");
+                        config_.test_mock_enabled = true;
+                        auto mock = std::make_shared<TestMockProvider>();
+                        router_.registerProvider(mock);
+                        router_.refreshModels();
+                    } else {
+                        Logger::instance().error("Execution halted: AI model providers unavailable during execution.");
+                        session_.currentState = "FAILED_NO_PROVIDERS";
+                        session_.saveToDisk();
+                        break;
+                    }
+                }
+
+                // Prevent infinite debug task recursion
+                bool isDebugTask = (task.type == TaskType::DEBUGGING || task.id.rfind("debug_", 0) == 0);
+
+                if (!isDebugTask && task.attempts <= config_.max_retries) {
                     TerminalUI::printRecoveryNotice("Formulating recovery task for [" + task.id + "]...");
                     planner_->replan(session_, memory_, execRes.summary, task.id);
+                } else if (isDebugTask) {
+                    Logger::instance().error("Debugging task [" + task.id + "] failed; stopping debug recursion.");
                 } else {
                     Logger::instance().error("Task reached maximum attempts (" +
                                             std::to_string(config_.max_retries) + "): " + task.id);

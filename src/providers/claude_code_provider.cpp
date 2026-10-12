@@ -31,8 +31,17 @@ void ClaudeCodeProvider::checkVersion() {
         }
         isInstalled_ = true;
 
-        isAvailable_ = true;
-        statusMessage_ = "Installed (" + detectedVersion_ + ")";
+        // Verify authentication status
+        std::string authCmd = claudeCommand_ + " auth status";
+        ProcessResult authRes = ProcessExecutor::executeShell(authCmd, ".", 5000);
+        if (authRes.stdOut.find("\"loggedIn\": true") != std::string::npos ||
+            authRes.stdOut.find("\"loggedIn\":true") != std::string::npos) {
+            isAvailable_ = true;
+            statusMessage_ = "Installed & Authenticated (" + detectedVersion_ + ")";
+        } else {
+            isAvailable_ = false;
+            statusMessage_ = "Installed (" + detectedVersion_ + ") but not logged in. Run 'claude login' in terminal";
+        }
     } else {
         isInstalled_ = false;
         isAvailable_ = false;
@@ -152,8 +161,9 @@ AgentResponse ClaudeCodeProvider::generate(const AgentRequest& request) {
     if (combinedOutput.find("Not logged in") != std::string::npos ||
         combinedOutput.find("/login") != std::string::npos) {
         isAvailable_ = false;
+        statusMessage_ = "Installed but not logged in. Run 'claude login'";
         response.success = false;
-        response.errorMessage = "Claude Code is not authenticated. Run 'claude login' or use another configured backend.";
+        response.errorMessage = "Claude Code is not authenticated. Run 'claude login' in terminal or configure OpenRouter/Ollama in config.json.";
         return response;
     }
 

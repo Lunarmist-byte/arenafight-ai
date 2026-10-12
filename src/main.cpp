@@ -21,12 +21,17 @@ void printUsage() {
               << "  arena test                 Run built-in automated self-tests\n\n"
               << "Options:\n"
               << "  --verbose                  Enable debug output\n"
-              << "  --mock                     Enable built-in offline test mock provider\n\n";
+              << "  --mock                     Force built-in offline test mock provider\n"
+              << "  --no-mock-fallback         Disable automatic fallback to offline mock\n\n";
     TerminalUI::printFooter();
 }
 
 int main(int argc, char* argv[]) {
-    Config config = Config::loadFromFile("config.json");
+    std::string configPath = "config.json";
+    if (!std::filesystem::exists(configPath) && std::filesystem::exists("../config.json")) {
+        configPath = "../config.json";
+    }
+    Config config = Config::loadFromFile(configPath);
     bool verbose = false;
 
     // Check flags
@@ -38,6 +43,8 @@ int main(int argc, char* argv[]) {
         } else if (arg == "--mock") {
             config.test_mock_enabled = true;
             config.default_provider = "TestMock";
+        } else if (arg == "--no-mock-fallback") {
+            config.auto_mock_fallback = false;
         }
     }
 
@@ -91,7 +98,8 @@ int main(int argc, char* argv[]) {
             ArenaAgent agent(config);
             agent.startNewSession("Test multi-step execution and verification");
             bool ok = agent.run();
-            std::filesystem::remove_all(testWs);
+            std::error_code ec;
+            std::filesystem::remove_all(testWs, ec);
             return ok ? 0 : 1;
         }
 

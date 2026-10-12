@@ -20,5 +20,6 @@
     "require_confirmation_for_destructive_commands": true,
     "default_provider": "auto",
     "workspace_dir": ".",
-    "test_mock_enabled": false
+    "test_mock_enabled": false,
+    "auto_mock_fallback": true
 }

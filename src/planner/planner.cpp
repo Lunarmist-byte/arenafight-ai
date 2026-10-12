@@ -125,6 +125,19 @@ std::vector<Task> Planner::replan(
     if (!failedTaskId.empty()) {
         Task* failedTask = session.getTask(failedTaskId);
         if (failedTask) {
+            // Guard: Never create recursive debug tasks for an existing debug task
+            if (failedTask->type == TaskType::DEBUGGING || failedTaskId.rfind("debug_", 0) == 0) {
+                Logger::instance().warn("Halting recovery recursion: task [" + failedTaskId + "] is already a debugging task");
+                return session.tasks;
+            }
+
+            // Guard: If the failure was due to missing providers, debugging cannot help
+            if (failedTask->failureReason.find("No provider available") != std::string::npos ||
+                reason.find("No provider available") != std::string::npos) {
+                Logger::instance().warn("Skipping recovery task: No provider available to execute tasks");
+                return session.tasks;
+            }
+
             std::string debugId = "debug_" + failedTaskId + "_" + std::to_string(failedTask->attempts);
             Task debugTask;
             debugTask.id = debugId;

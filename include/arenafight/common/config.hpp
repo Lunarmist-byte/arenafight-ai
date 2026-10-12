@@ -21,6 +21,7 @@ struct Config {
     std::string default_provider = "auto";
     std::string workspace_dir = ".";
     bool test_mock_enabled = false;
+    bool auto_mock_fallback = true;
 
     // Serialization
     nlohmann::json toJson() const;

@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AuraColor - Automatic & Interactive Background Randomizer</title>
+    <meta name="description" content="A state-of-the-art interactive web application that randomizes background colors on click or automatically on an interval, featuring live color telemetry and history.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #6366f1;
+            --text-color: #ffffff;
+            --card-bg: rgba(255, 255, 255, 0.12);
+            --card-border: rgba(255, 255, 255, 0.22);
+            --card-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+            --button-bg: rgba(255, 255, 255, 0.95);
+            --button-text: #0f172a;
+            --accent-glow: rgba(99, 102, 241, 0.4);
+            --transition-speed: 0.8s;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1),
+                        color 0.4s ease;
+            overflow-x: hidden;
+            padding: 2rem 1.5rem 1.5rem;
+            position: relative;
+        }
+
+        /* Subtle animated background mesh texture */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.15) 0%, transparent 40%),
+                        radial-gradient(circle at 80% 80%, rgba(0, 0, 0, 0.15) 0%, transparent 40%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        header {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            margin-bottom: 2rem;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 1rem;
+            border-radius: 9999px;
+            background: rgba(255, 255, 255, 0.18);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            font-size: 0.85rem;
+            font-weight: 500;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #10b981;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 10px #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        h1 {
+            font-size: clamp(2.2rem, 5vw, 3.6rem);
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            font-size: clamp(1rem, 2vw, 1.25rem);
+            font-weight: 300;
+            opacity: 0.9;
+            max-width: 580px;
+            margin: 0 auto;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        main {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 560px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .glass-card {
+            width: 100%;
+            background: var(--card-bg);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--card-border);
+            border-radius: 28px;
+            padding: 2.5rem 2rem;
+            box-shadow: var(--card-shadow);
+            display: flex;
+            flex-direction: column;
+            gap: 1.75rem;
+            animation: fadeInUp 0.8s ease-out;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Color Telemetry Display */
+        .color-preview-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 20px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .color-hex {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: clamp(2rem, 4vw, 2.8rem);
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .color-hex:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.03);
+        }
+
+        .telemetry-row {
+            display: flex;
+            gap: 1.25rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.88rem;
+            opacity: 0.85;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .telemetry-item span {
+            font-weight: 600;
+        }
+
+        /* Action Buttons */
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            width: 100%;
+            padding: 1.15rem 2rem;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--button-text);
+            background: var(--button-bg);
+            border: none;
+            border-radius: 18px;
+            cursor: pointer;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px) scale(1.01);
+            box-shadow: 0 16px 32px -6px rgba(0, 0, 0, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(1px) scale(0.99);
+        }
+
+        .btn-secondary-row {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .btn-toggle {
+            flex: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.9rem 1.25rem;
+            background: rgba(255, 255, 255, 0.16);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            color: inherit;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            transition: all 0.2s ease;
+        }
+
+        .btn-toggle:hover {
+            background: rgba(255, 255, 255, 0.26);
+            transform: translateY(-1px);
+        }
+
+        .btn-toggle.active {
+            background: #10b981;
+            color: #ffffff;
+            border-color: #34d399;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+        }
+
+        /* Auto Speed Controls */
+        .auto-settings {
+            display: none;
+            flex-direction: column;
+            gap: 0.5rem;
+            padding: 1rem 1.25rem;
+            background: rgba(0, 0, 0, 0.12);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .auto-settings.visible {
+            display: flex;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            font-weight: 500;
+            opacity: 0.9;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 9999px;
+            background: rgba(255, 255, 255, 0.3);
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #ffffff;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            transition: transform 0.1s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        /* Palette Swatches History */
+        .history-section {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .history-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            opacity: 0.8;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .swatches-bar {
+            display: flex;
+            gap: 0.6rem;
+            overflow-x: auto;
+            padding: 0.3rem 0.1rem;
+            scrollbar-width: thin;
+        }
+
+        .swatch-item {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            cursor: pointer;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            flex-shrink: 0;
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .swatch-item:hover {
+            transform: scale(1.2) translateY(-2px);
+            border-color: #ffffff;
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 6rem;
+            background: rgba(15, 23, 42, 0.9);
+            color: #ffffff;
+            backdrop-filter: blur(12px);
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Footer Credit Section */
+        footer {
+            position: relative;
+            z-index: 1;
+            margin-top: 2rem;
+            text-align: center;
+            font-size: 0.92rem;
+            opacity: 0.9;
+        }
+
+        .credit-box {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.75rem 1.5rem;
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 9999px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .credit-text {
+            font-weight: 500;
+        }
+
+        .credit-links {
+            display: flex;
+            gap: 1.25rem;
+            font-size: 0.85rem;
+        }
+
+        .credit-links a {
+            color: inherit;
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.4);
+            padding-bottom: 1px;
+            transition: all 0.2s ease;
+        }
+
+        .credit-links a:hover {
+            border-bottom-style: solid;
+            border-bottom-color: #ffffff;
+            transform: translateY(-1px);
+        }
+
+        /* Keyframes */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.85); }
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @media (max-width: 480px) {
+            .glass-card {
+                padding: 1.75rem 1.25rem;
+            }
+            .btn-secondary-row {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="badge" id="status-badge">
+            <span class="pulse-dot" id="status-dot"></span>
+            <span id="status-text">Manual Mode</span>
+        </div>
+        <h1>AuraColor Dynamic</h1>
+        <p class="subtitle">Experience ambient gradients and dynamic generative palettes on every click or in real-time automatic mode.</p>
+    </header>
+
+    <main>
+        <div class="glass-card" id="main-card">
+            <!-- Telemetry Box -->
+            <div class="color-preview-box">
+                <div class="color-hex" id="color-hex-val" title="Click to copy HEX code">
+                    #6366F1
+                </div>
+                <div class="telemetry-row">
+                    <div class="telemetry-item">RGB: <span id="color-rgb-val">99, 102, 241</span></div>
+                    <div class="telemetry-item">HSL: <span id="color-hsl-val">239°, 84%, 67%</span></div>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="controls-grid">
+                <button type="button" class="btn-primary" id="randomize-btn">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                        <path d="M16 8h.01"></path>
+                        <path d="M8 8h.01"></path>
+                        <path d="M8 16h.01"></path>
+                        <path d="M16 16h.01"></path>
+                        <path d="M12 12h.01"></path>
+                    </svg>
+                    Randomize Background Color
+                </button>
+
+                <div class="btn-secondary-row">
+                    <button type="button" class="btn-toggle" id="auto-toggle-btn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                        </svg>
+                        <span id="auto-btn-text">Make It Automatic</span>
+                    </button>
+
+                    <button type="button" class="btn-toggle" id="copy-btn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        Copy Hex
+                    </button>
+                </div>
+
+                <!-- Speed Control for Automatic Mode -->
+                <div class="auto-settings" id="auto-settings">
+                    <div class="slider-label">
+                        <span>Auto Transition Interval</span>
+                        <span id="speed-display">2.0 seconds</span>
+                    </div>
+                    <input type="range" id="speed-slider" min="0.5" max="5.0" step="0.5" value="2.0">
+                </div>
+            </div>
+
+            <!-- Palette History -->
+            <div class="history-section">
+                <div class="history-title">
+                    <span>Recent Palettes</span>
+                    <span id="history-count">1 saved</span>
+                </div>
+                <div class="swatches-bar" id="swatches-bar">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">Copied to clipboard!</div>
+
+    <!-- Made by Lunarmist-byte Credit Footer -->
+    <footer>
+        <div class="credit-box">
+            <span class="credit-text">Made by <strong>Lunarmist-byte</strong></span>
+            <div class="credit-links">
+                <a href="https://github.com/Lunarmist-byte" target="_blank" rel="noopener noreferrer" id="credit-github">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
+                    </svg>
+                    GitHub
+                </a>
+                <a href="https://www.linkedin.com/in/amal-s-kumar-ba69a1290/" target="_blank" rel="noopener noreferrer" id="credit-linkedin">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+                    </svg>
+                    LinkedIn
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // State
+        let currentColor = { r: 99, g: 102, b: 241, hex: '#6366f1' };
+        let isAutoMode = false;
+        let autoIntervalId = null;
+        let autoIntervalSeconds = 2.0;
+        const colorHistory = [];
+        const MAX_HISTORY = 12;
+
+        // DOM Elements
+        const randomizeBtn = document.getElementById('randomize-btn');
+        const autoToggleBtn = document.getElementById('auto-toggle-btn');
+        const autoBtnText = document.getElementById('auto-btn-text');
+        const autoSettings = document.getElementById('auto-settings');
+        const speedSlider = document.getElementById('speed-slider');
+        const speedDisplay = document.getElementById('speed-display');
+        const copyBtn = document.getElementById('copy-btn');
+        const colorHexVal = document.getElementById('color-hex-val');
+        const colorRgbVal = document.getElementById('color-rgb-val');
+        const colorHslVal = document.getElementById('color-hsl-val');
+        const swatchesBar = document.getElementById('swatches-bar');
+        const historyCount = document.getElementById('history-count');
+        const statusBadge = document.getElementById('status-badge');
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+        const toast = document.getElementById('toast');
+
+        // Color Math & Generation
+        function getRandomVibrantColor() {
+            // Pick a vibrant HSL color for rich aesthetics (avoids muddy colors)
+            const hue = Math.floor(Math.random() * 360);
+            const saturation = Math.floor(Math.random() * 35) + 65; // 65% - 100%
+            const lightness = Math.floor(Math.random() * 30) + 40;   // 40% - 70%
+
+            const { r, g, b } = hslToRgb(hue, saturation, lightness);
+            const hex = rgbToHex(r, g, b);
+            return { r, g, b, hex, h: hue, s: saturation, l: lightness };
+        }
+
+        function hslToRgb(h, s, l) {
+            s /= 100;
+            l /= 100;
+            const k = n => (n + h / 30) % 12;
+            const a = s * Math.min(l, 1 - l);
+            const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+            return {
+                r: Math.round(255 * f(0)),
+                g: Math.round(255 * f(8)),
+                b: Math.round(255 * f(4))
+            };
+        }
+
+        function rgbToHex(r, g, b) {
+            return "#" + [r, g, b].map(x => {
+                const hex = x.toString(16);
+                return hex.length === 1 ? "0" + hex : hex;
+            }).join("");
+        }
+
+        function rgbToHsl(r, g, b) {
+            r /= 255; g /= 255; b /= 255;
+            const max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+
+            if (max === min) {
+                h = s = 0;
+            } else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
+                }
+                h /= 6;
+            }
+            return {
+                h: Math.round(h * 360),
+                s: Math.round(s * 100),
+                l: Math.round(l * 100)
+            };
+        }
+
+        // Relative luminance for dynamic high-contrast UI
+        function getLuminance(r, g, b) {
+            const a = [r, g, b].map(v => {
+                v /= 255;
+                return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+            });
+            return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
+        }
+
+        function applyColor(colorObj, recordHistory = true) {
+            currentColor = colorObj;
+            const { r, g, b, hex } = colorObj;
+            const hsl = colorObj.h !== undefined ? colorObj : rgbToHsl(r, g, b);
+
+            // Apply background color
+            document.documentElement.style.setProperty('--bg-color', hex);
+
+            // Dynamic text and card contrast
+            const luminance = getLuminance(r, g, b);
+            const isLightBg = luminance > 0.45;
+
+            if (isLightBg) {
+                document.documentElement.style.setProperty('--text-color', '#0f172a');
+                document.documentElement.style.setProperty('--card-bg', 'rgba(0, 0, 0, 0.08)');
+                document.documentElement.style.setProperty('--card-border', 'rgba(0, 0, 0, 0.18)');
+                document.documentElement.style.setProperty('--button-bg', '#0f172a');
+                document.documentElement.style.setProperty('--button-text', '#ffffff');
+            } else {
+                document.documentElement.style.setProperty('--text-color', '#ffffff');
+                document.documentElement.style.setProperty('--card-bg', 'rgba(255, 255, 255, 0.14)');
+                document.documentElement.style.setProperty('--card-border', 'rgba(255, 255, 255, 0.25)');
+                document.documentElement.style.setProperty('--button-bg', '#ffffff');
+                document.documentElement.style.setProperty('--button-text', '#0f172a');
+            }
+
+            // Update UI telemetry
+            colorHexVal.textContent = hex.toUpperCase();
+            colorRgbVal.textContent = `${r}, ${g}, ${b}`;
+            colorHslVal.textContent = `${hsl.h}°, ${hsl.s}%, ${hsl.l}%`;
+
+            if (recordHistory) {
+                addToHistory(hex);
+            }
+        }
+
+        function addToHistory(hex) {
+            // Deduplicate top entry
+            if (colorHistory.length > 0 && colorHistory[0].toLowerCase() === hex.toLowerCase()) {
+                return;
+            }
+            colorHistory.unshift(hex);
+            if (colorHistory.length > MAX_HISTORY) {
+                colorHistory.pop();
+            }
+            renderHistory();
+        }
+
+        function renderHistory() {
+            swatchesBar.innerHTML = '';
+            colorHistory.forEach(hex => {
+                const swatch = document.createElement('div');
+                swatch.className = 'swatch-item';
+                swatch.style.backgroundColor = hex;
+                swatch.title = `Restore ${hex}`;
+                swatch.addEventListener('click', () => {
+                    const r = parseInt(hex.slice(1, 3), 16);
+                    const g = parseInt(hex.slice(3, 5), 16);
+                    const b = parseInt(hex.slice(5, 7), 16);
+                    applyColor({ r, g, b, hex }, false);
+                    showToast(`Restored ${hex.toUpperCase()}`);
+                });
+                swatchesBar.appendChild(swatch);
+            });
+            historyCount.textContent = `${colorHistory.length} saved`;
+        }
+
+        // Automatic Mode Logic
+        function startAutomaticMode() {
+            if (isAutoMode) return;
+            isAutoMode = true;
+            autoToggleBtn.classList.add('active');
+            autoBtnText.textContent = 'Stop Automatic';
+            autoSettings.classList.add('visible');
+            statusBadge.style.background = 'rgba(16, 185, 129, 0.3)';
+            statusText.textContent = 'Auto Cycling Active';
+            statusDot.style.backgroundColor = '#10b981';
+
+            // Next change right away, then interval
+            applyColor(getRandomVibrantColor());
+            autoIntervalId = setInterval(() => {
+                applyColor(getRandomVibrantColor());
+            }, autoIntervalSeconds * 1000);
+        }
+
+        function stopAutomaticMode() {
+            if (!isAutoMode) return;
+            isAutoMode = false;
+            autoToggleBtn.classList.remove('active');
+            autoBtnText.textContent = 'Make It Automatic';
+            autoSettings.classList.remove('visible');
+            statusBadge.style.background = 'rgba(255, 255, 255, 0.18)';
+            statusText.textContent = 'Manual Mode';
+            statusDot.style.backgroundColor = '#6366f1';
+
+            if (autoIntervalId) {
+                clearInterval(autoIntervalId);
+                autoIntervalId = null;
+            }
+        }
+
+        function toggleAutomaticMode() {
+            if (isAutoMode) {
+                stopAutomaticMode();
+                showToast('Automatic mode stopped');
+            } else {
+                startAutomaticMode();
+                showToast(`Automatic mode started (${autoIntervalSeconds}s)`);
+            }
+        }
+
+        function showToast(msg) {
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+
+        function copyHex() {
+            const hex = colorHexVal.textContent.trim();
+            navigator.clipboard.writeText(hex).then(() => {
+                showToast(`Copied ${hex} to clipboard!`);
+            }).catch(() => {
+                showToast('Failed to copy to clipboard');
+            });
+        }
+
+        // Event Listeners
+        randomizeBtn.addEventListener('click', () => {
+            applyColor(getRandomVibrantColor());
+        });
+
+        autoToggleBtn.addEventListener('click', toggleAutomaticMode);
+
+        speedSlider.addEventListener('input', (e) => {
+            autoIntervalSeconds = parseFloat(e.target.value);
+            speedDisplay.textContent = `${autoIntervalSeconds.toFixed(1)} seconds`;
+            document.documentElement.style.setProperty('--transition-speed', `${Math.min(0.8, autoIntervalSeconds * 0.4)}s`);
+
+            if (isAutoMode) {
+                clearInterval(autoIntervalId);
+                autoIntervalId = setInterval(() => {
+                    applyColor(getRandomVibrantColor());
+                }, autoIntervalSeconds * 1000);
+            }
+        });
+
+        copyBtn.addEventListener('click', copyHex);
+        colorHexVal.addEventListener('click', copyHex);
+
+        // Keyboard Shortcut: Spacebar randomizes color
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && e.target === document.body) {
+                e.preventDefault();
+                applyColor(getRandomVibrantColor());
+            }
+        });
+
+        // Initial setup
+        applyColor(currentColor);
+    </script>
+</body>
+</html>
