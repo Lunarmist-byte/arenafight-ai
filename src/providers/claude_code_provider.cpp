@@ -31,16 +31,22 @@ void ClaudeCodeProvider::checkVersion() {
         }
         isInstalled_ = true;
 
-        // Verify authentication status
-        std::string authCmd = claudeCommand_ + " auth status";
-        ProcessResult authRes = ProcessExecutor::executeShell(authCmd, ".", 5000);
-        if (authRes.stdOut.find("\"loggedIn\": true") != std::string::npos ||
-            authRes.stdOut.find("\"loggedIn\":true") != std::string::npos) {
+        // Verify authentication status (either via logged-in status or ANTHROPIC_API_KEY)
+        const char* anthropicEnv = std::getenv("ANTHROPIC_API_KEY");
+        if (anthropicEnv != nullptr && anthropicEnv[0] != '\0') {
             isAvailable_ = true;
-            statusMessage_ = "Installed & Authenticated (" + detectedVersion_ + ")";
+            statusMessage_ = "Installed & Authenticated via ANTHROPIC_API_KEY (" + detectedVersion_ + ")";
         } else {
-            isAvailable_ = false;
-            statusMessage_ = "Installed (" + detectedVersion_ + ") but not logged in. Run 'claude login' in terminal";
+            std::string authCmd = claudeCommand_ + " auth status";
+            ProcessResult authRes = ProcessExecutor::executeShell(authCmd, ".", 5000);
+            if (authRes.stdOut.find("\"loggedIn\": true") != std::string::npos ||
+                authRes.stdOut.find("\"loggedIn\":true") != std::string::npos) {
+                isAvailable_ = true;
+                statusMessage_ = "Installed & Authenticated (" + detectedVersion_ + ")";
+            } else {
+                isAvailable_ = false;
+                statusMessage_ = "Installed (" + detectedVersion_ + ") but not logged in. Run 'claude login' in terminal or set ANTHROPIC_API_KEY";
+            }
         }
     } else {
         isInstalled_ = false;
@@ -144,9 +150,9 @@ AgentResponse ClaudeCodeProvider::generate(const AgentRequest& request) {
 
     std::string runCmd;
     if (ProcessExecutor::isWindows()) {
-        runCmd = "Get-Content -Raw " + tmpPromptFile + " | " + claudeCommand_ + " -p";
+        runCmd = "Get-Content -Raw " + tmpPromptFile + " | " + claudeCommand_ + " -p --dangerously-skip-permissions";
     } else {
-        runCmd = "cat " + tmpPromptFile + " | " + claudeCommand_ + " -p";
+        runCmd = "cat " + tmpPromptFile + " | " + claudeCommand_ + " -p --dangerously-skip-permissions";
     }
 
     ProcessResult procRes = ProcessExecutor::executeShell(runCmd, ".", 120000);

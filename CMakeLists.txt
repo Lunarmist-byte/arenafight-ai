@@ -52,6 +52,12 @@ set(CORE_SOURCES
     src/tools/shell_tools.cpp
     src/tools/git_tools.cpp
     src/tools/user_tools.cpp
+    src/tools/hardware_tools.cpp
+    src/hardware/board_registry.cpp
+    src/hardware/circuit_calculator.cpp
+    src/hardware/hardware_validator.cpp
+    src/hardware/hardware_scaffolder.cpp
+    src/hardware/hardware_manager.cpp
     src/session/session.cpp
     src/session/memory.cpp
     src/session/context_manager.cpp
@@ -62,6 +68,9 @@ set(CORE_SOURCES
     src/verifier/independent_reviewer.cpp
     src/verifier/verifier.cpp
     src/ui/terminal_ui.cpp
+    src/artifacts/artifact.cpp
+    src/customizations/customization_manager.cpp
+    src/repl/repl_engine.cpp
     src/agent/arena_agent.cpp
 )
 

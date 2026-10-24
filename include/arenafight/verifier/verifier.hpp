@@ -42,6 +42,7 @@ public:
     GateCheckResult evaluateGate4_RequirementsSatisfied(const Session& session, const MemoryManager& memory, ClaimRegistry& registry);
     GateCheckResult evaluateGate5_IndependentReview(const Session& session, ClaimRegistry& registry, ReviewMode mode = ReviewMode::ADVERSARIAL);
     GateCheckResult evaluateGate6_NoContradictions(ClaimRegistry& registry);
+    GateCheckResult evaluateGate7_HardwareAndQoS(const Session& session, ClaimRegistry& registry);
 
     // Automated build check (direct execution)
     bool checkBuild(std::string& buildEvidence, std::string& evidenceId, ClaimRegistry* registry = nullptr);

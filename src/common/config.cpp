@@ -13,6 +13,7 @@ nlohmann::json Config::toJson() const {
         {"openrouter_base_url", openrouter_base_url},
         {"openrouter_models", openrouter_models},
         {"claude_command", claude_command},
+        {"anthropic_api_key", anthropic_api_key.empty() ? "" : "[REDACTED]"},
         {"max_iterations", max_iterations},
         {"max_tool_calls", max_tool_calls},
         {"max_retries", max_retries},
@@ -40,6 +41,12 @@ Config Config::fromJson(const nlohmann::json& j) {
         cfg.openrouter_models = j["openrouter_models"].get<std::vector<std::string>>();
     }
     cfg.claude_command = j.value("claude_command", cfg.claude_command);
+    if (j.contains("anthropic_api_key")) {
+        std::string aKey = j["anthropic_api_key"].get<std::string>();
+        if (aKey != "[REDACTED]") {
+            cfg.anthropic_api_key = aKey;
+        }
+    }
     cfg.max_iterations = j.value("max_iterations", cfg.max_iterations);
     cfg.max_tool_calls = j.value("max_tool_calls", cfg.max_tool_calls);
     cfg.max_retries = j.value("max_retries", cfg.max_retries);
@@ -75,6 +82,9 @@ bool Config::saveToFile(const std::string& path) const {
     if (!openrouter_api_key.empty()) {
         j["openrouter_api_key"] = openrouter_api_key;
     }
+    if (!anthropic_api_key.empty()) {
+        j["anthropic_api_key"] = anthropic_api_key;
+    }
     file << j.dump(4);
     return true;
 }
@@ -108,6 +118,11 @@ void Config::applyEnvOverrides() {
     if (const char* cmd = std::getenv("CLAUDE_COMMAND")) {
         if (cmd[0] != '\0') {
             claude_command = cmd;
+        }
+    }
+    if (const char* aKey = std::getenv("ANTHROPIC_API_KEY")) {
+        if (aKey[0] != '\0') {
+            anthropic_api_key = aKey;
         }
     }
     if (const char* fb = std::getenv("ARENA_AUTO_MOCK_FALLBACK")) {

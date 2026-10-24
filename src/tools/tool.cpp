@@ -4,6 +4,7 @@
 #include "arenafight/tools/shell_tools.hpp"
 #include "arenafight/tools/git_tools.hpp"
 #include "arenafight/tools/user_tools.hpp"
+#include "arenafight/tools/hardware_tools.hpp"
 #include <iostream>
 
 namespace arenafight {
@@ -78,6 +79,14 @@ ToolRegistry ToolRegistry::createStandardRegistry(const Config& config) {
 
     // User interaction
     reg.registerTool(std::make_shared<AskUserTool>());
+
+    // Hardware mode & engineering tools
+    reg.registerTool(std::make_shared<HardwareListBoardsTool>());
+    reg.registerTool(std::make_shared<HardwareInspectBoardTool>());
+    reg.registerTool(std::make_shared<HardwareValidateTool>());
+    reg.registerTool(std::make_shared<HardwareCalculateTool>());
+    reg.registerTool(std::make_shared<HardwareScaffoldTool>());
+    reg.registerTool(std::make_shared<HardwareVerifyQoSTool>());
 
     return reg;
 }

@@ -12,6 +12,7 @@ struct Config {
     std::string openrouter_base_url = "https://openrouter.ai/api/v1";
     std::vector<std::string> openrouter_models;
     std::string claude_command = "claude";
+    std::string anthropic_api_key = "";
     int max_iterations = 30;
     int max_tool_calls = 100;
     int max_retries = 3;

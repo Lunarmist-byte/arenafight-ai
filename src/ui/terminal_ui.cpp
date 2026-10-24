@@ -229,4 +229,164 @@ void TerminalUI::printConfigView(const nlohmann::json& configJson) {
     printFooter();
 }
 
+void TerminalUI::printHardwareStudioBanner() {
+    std::cout << "\n"
+              << "========================================================================\n"
+              << "            ARENAFIGHT AGENT -- HARDWARE & EMBEDDED STUDIO              \n"
+              << "     Real-Time QoS Architecture | Physical Simulation | Circuit Safety   \n"
+              << "------------------------------------------------------------------------\n"
+              << " Made by: Lunarmist-byte\n"
+              << " GitHub:   https://github.com/Lunarmist-byte\n"
+              << " LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n"
+              << "========================================================================\n\n";
+}
+
+void TerminalUI::printBoardsTable(const std::vector<BoardSpec>& boards) {
+    printHardwareStudioBanner();
+    std::cout << "Supported Microcontroller Target Architectures:\n\n"
+              << std::left
+              << std::setw(15) << "BOARD ID"
+              << std::setw(28) << "NAME"
+              << std::setw(20) << "ARCHITECTURE"
+              << std::setw(9)  << "VOLTAGE"
+              << std::setw(10) << "CLOCK"
+              << std::setw(12) << "FLASH"
+              << "SRAM"
+              << "\n"
+              << std::string(98, '-') << "\n";
+
+    for (const auto& b : boards) {
+        std::cout << std::left
+                  << std::setw(15) << b.id
+                  << std::setw(28) << (b.name.size() > 26 ? b.name.substr(0, 24) + ".." : b.name)
+                  << std::setw(20) << architectureToString(b.architecture)
+                  << std::setw(9)  << logicVoltageToString(b.logicVoltage)
+                  << std::setw(10) << (std::to_string(b.clockMHz) + "MHz")
+                  << std::setw(12) << (std::to_string(b.flashKb) + "KB")
+                  << (std::to_string(b.sramKb) + "KB")
+                  << "\n";
+    }
+    printFooter();
+}
+
+void TerminalUI::printBoardDetails(const BoardSpec& board) {
+    printHardwareStudioBanner();
+    std::cout << "Target Board: " << board.name << " (" << board.id << ")\n"
+              << "------------------------------------------------------------------------\n"
+              << "Architecture:    " << architectureToString(board.architecture) << "\n"
+              << "Operating Logic: " << logicVoltageToString(board.logicVoltage) << "\n"
+              << "Clock Frequency: " << board.clockMHz << " MHz\n"
+              << "Flash Memory:    " << board.flashKb << " KB\n"
+              << "SRAM Memory:     " << board.sramKb << " KB\n"
+              << "Active Power:    " << board.activeMilliAmps << " mA\n"
+              << "Deep Sleep:      " << board.deepSleepMicroAmps << " uA\n"
+              << "Default I2C:     SDA=" << board.defaultI2cSda << ", SCL=" << board.defaultI2cScl << "\n"
+              << "Default SPI:     MOSI=" << board.defaultSpiMosi << ", MISO=" << board.defaultSpiMiso << ", SCK=" << board.defaultSpiSck << "\n"
+              << "Default UART:    TX=" << board.defaultUartTx << ", RX=" << board.defaultUartRx << "\n"
+              << "Onboard LED:     " << board.defaultLedPin << "\n"
+              << "PlatformIO ID:   " << board.platformioBoardId << "\n"
+              << "Overview:        " << board.description << "\n\n"
+              << "Pin Specifications (" << board.pins.size() << " pins defined):\n"
+              << std::string(72, '-') << "\n";
+
+    for (const auto& [name, pin] : board.pins) {
+        std::cout << "  * " << std::left << std::setw(8) << name
+                  << " | Phys: " << std::setw(3) << pin.physicalPin;
+        if (pin.isStrappingPin) std::cout << " | [BOOT STRAP: " << pin.strappingWarning << "]";
+        if (pin.isInputOnly) std::cout << " | [INPUT-ONLY (GPI)]";
+        if (pin.hasAdcWifiConflict) std::cout << " | [ADC2 WIFI CONFLICT]";
+        if (pin.is5VTolerant) std::cout << " | [5V-Tolerant]";
+        std::cout << "\n";
+    }
+    printFooter();
+}
+
+void TerminalUI::printComponentsTable(const std::vector<ComponentSpec>& components) {
+    printHardwareStudioBanner();
+    std::cout << "Supported Sensor & Actuator Library:\n\n"
+              << std::left
+              << std::setw(15) << "COMPONENT ID"
+              << std::setw(32) << "NAME"
+              << std::setw(12) << "CATEGORY"
+              << std::setw(10) << "VOLTAGE"
+              << std::setw(12) << "I2C ADDR"
+              << "CURRENT"
+              << "\n"
+              << std::string(92, '-') << "\n";
+
+    for (const auto& c : components) {
+        std::string i2cStr = (c.defaultI2cAddress != 0) ? ("0x" + ([&]{
+            std::stringstream ss;
+            ss << std::hex << std::uppercase << c.defaultI2cAddress;
+            return ss.str();
+        })()) : "N/A";
+
+        std::cout << std::left
+                  << std::setw(15) << c.id
+                  << std::setw(32) << (c.name.size() > 30 ? c.name.substr(0, 28) + ".." : c.name)
+                  << std::setw(12) << c.category
+                  << std::setw(10) << logicVoltageToString(c.operatingVoltage)
+                  << std::setw(12) << i2cStr
+                  << std::to_string(c.currentDrawMa).substr(0, 4) << " mA"
+                  << "\n";
+    }
+    printFooter();
+}
+
+void TerminalUI::printHardwareValidation(const HardwareValidationReport& report) {
+    std::cout << "\n========================================================================\n"
+              << "                 HARDWARE CIRCUIT VALIDATION REPORT                     \n"
+              << "========================================================================\n"
+              << "Status:          " << (report.isValid ? "\033[32mPASSED (Zero Critical Errors)\033[0m" : "\033[31mFAILED (Design Hazards Detected)\033[0m") << "\n"
+              << "Critical Errors: " << report.criticalCount << "\n"
+              << "Warnings:        " << report.warningCount << "\n\n";
+
+    if (!report.issues.empty()) {
+        std::cout << "Detected Circuit & Pinout Issues:\n"
+                  << std::string(72, '-') << "\n";
+        for (const auto& is : report.issues) {
+            std::string tag = (is.severity == HardwareIssueSeverity::CRITICAL_ERROR) ? "\033[31m[CRITICAL]\033[0m" : "\033[33m[WARNING]\033[0m";
+            std::cout << tag << " " << is.code << " -> " << is.targetPinOrComponent << ":\n"
+                      << "  Detail: " << is.message << "\n"
+                      << "  Remedy: " << is.recommendation << "\n\n";
+        }
+    }
+
+    if (!report.recommendations.empty()) {
+        std::cout << "Engineering & Wiring Recommendations:\n";
+        for (const auto& r : report.recommendations) {
+            std::cout << "  * " << r << "\n";
+        }
+        std::cout << "\n";
+    }
+
+    if (!report.asciiWiringSummary.empty()) {
+        std::cout << report.asciiWiringSummary << "\n";
+    }
+    printFooter();
+}
+
+void TerminalUI::printQoSTelemetryReport(const QoSTelemetry& qos) {
+    std::cout << "\n========================================================================\n"
+              << "                EMBEDDED QUALITY OF SERVICE (QoS) REPORT                \n"
+              << "========================================================================\n"
+              << "Overall QoS Score:  \033[36m" << qos.overallScore << " / 100\033[0m\n"
+              << "Reliability Tier:   " << qos.qosTier << "\n"
+              << "Made by:            Lunarmist-byte (https://github.com/Lunarmist-byte)\n\n"
+              << "Architectural Guarantees Verified:\n";
+
+    for (const auto& g : qos.passedGuarantees) {
+        std::cout << "  \033[32m[VERIFIED]\033[0m " << g << "\n";
+    }
+
+    if (!qos.violations.empty()) {
+        std::cout << "\n\033[31mReliability Hazards / Non-Compliances:\033[0m\n";
+        for (const auto& v : qos.violations) {
+            std::cout << "  \033[31m[HAZARD]\033[0m " << v << "\n";
+        }
+    }
+    std::cout << "\n";
+    printFooter();
+}
+
 } // namespace arenafight

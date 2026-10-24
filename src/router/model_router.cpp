@@ -109,6 +109,13 @@ ModelSelection ModelRouter::selectModel(
         return selection;
     }
 
+    // Sort candidates by capability score descending so best models are tested first
+    std::sort(candidates.begin(), candidates.end(),
+        [](const auto& a, const auto& b) {
+            return a.second.capabilityScore > b.second.capabilityScore;
+        }
+    );
+
     // If explicit default provider configured
     if (config_.default_provider != "auto" && config_.default_provider != excludedProvider) {
         for (const auto& entry : candidates) {
@@ -129,6 +136,8 @@ ModelSelection ModelRouter::selectModel(
                 if (id.find("r1") != std::string::npos ||
                     id.find("3.7-sonnet") != std::string::npos ||
                     id.find("3.5-sonnet") != std::string::npos ||
+                    id.find("qwen") != std::string::npos ||
+                    id.find("llama") != std::string::npos ||
                     id.find("reasoner") != std::string::npos) {
                     selection.provider = entry.first;
                     selection.model = entry.second;
@@ -144,6 +153,8 @@ ModelSelection ModelRouter::selectModel(
                 if (entry.first->name() == "ClaudeCode" ||
                     id.find("coder") != std::string::npos ||
                     id.find("3.7-sonnet") != std::string::npos ||
+                    id.find("qwen") != std::string::npos ||
+                    id.find("llama") != std::string::npos ||
                     id.find("mock-coder") != std::string::npos) {
                     selection.provider = entry.first;
                     selection.model = entry.second;
@@ -158,6 +169,8 @@ ModelSelection ModelRouter::selectModel(
                 const auto& id = entry.second.id;
                 if (id.find("r1") != std::string::npos ||
                     id.find("sonnet") != std::string::npos ||
+                    id.find("qwen") != std::string::npos ||
+                    id.find("llama") != std::string::npos ||
                     id.find("coder") != std::string::npos) {
                     selection.provider = entry.first;
                     selection.model = entry.second;
@@ -176,6 +189,22 @@ ModelSelection ModelRouter::selectModel(
                         selection.reason = "Independent model selected for Verification (different from coder: " + coderModelUsed + ")";
                         return selection;
                     }
+                }
+            }
+            break;
+        }
+        case TaskType::HARDWARE: {
+            for (const auto& entry : candidates) {
+                const auto& id = entry.second.id;
+                if (id.find("coder") != std::string::npos ||
+                    id.find("sonnet") != std::string::npos ||
+                    id.find("r1") != std::string::npos ||
+                    id.find("qwen") != std::string::npos ||
+                    id.find("mock-coder") != std::string::npos) {
+                    selection.provider = entry.first;
+                    selection.model = entry.second;
+                    selection.reason = "High-precision embedded hardware reasoning and firmware model selected";
+                    return selection;
                 }
             }
             break;

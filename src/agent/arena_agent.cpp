@@ -59,6 +59,13 @@ void ArenaAgent::initialize() {
     router_.registerProvider(openrouter);
 
     // 3. Claude Code Provider
+    if (!config_.anthropic_api_key.empty()) {
+#ifdef _WIN32
+        _putenv_s("ANTHROPIC_API_KEY", config_.anthropic_api_key.c_str());
+#else
+        setenv("ANTHROPIC_API_KEY", config_.anthropic_api_key.c_str(), 1);
+#endif
+    }
     auto claude = std::make_shared<ClaudeCodeProvider>(config_.claude_command);
     router_.registerProvider(claude);
 

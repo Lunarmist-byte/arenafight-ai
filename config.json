@@ -12,6 +12,7 @@
         "qwen/qwen-2.5-coder-32b-instruct"
     ],
     "claude_command": "claude",
+    "anthropic_api_key": "",
     "max_iterations": 30,
     "max_tool_calls": 100,
     "max_retries": 3,

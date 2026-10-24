@@ -5,6 +5,11 @@
 #include <chrono>
 #include "arenafight/common/types.hpp"
 #include "arenafight/session/session.hpp"
+#include "arenafight/hardware/hardware_types.hpp"
+
+// Made by Lunarmist-byte
+// GitHub: https://github.com/Lunarmist-byte
+// LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/
 
 namespace arenafight {
 
@@ -52,6 +57,14 @@ public:
     static void printSessionsList(const std::vector<SessionInfo>& sessions);
     static void printModelsList(const std::vector<ModelInfo>& models);
     static void printConfigView(const nlohmann::json& configJson);
+
+    // Hardware Studio UI
+    static void printHardwareStudioBanner();
+    static void printBoardDetails(const BoardSpec& board);
+    static void printBoardsTable(const std::vector<BoardSpec>& boards);
+    static void printComponentsTable(const std::vector<ComponentSpec>& components);
+    static void printHardwareValidation(const HardwareValidationReport& report);
+    static void printQoSTelemetryReport(const QoSTelemetry& qos);
 };
 
 } // namespace arenafight

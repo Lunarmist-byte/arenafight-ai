@@ -48,6 +48,7 @@ enum class TaskType {
     RESEARCH,
     REVIEW,
     VERIFICATION,
+    HARDWARE,
     GENERAL
 };
 
@@ -59,6 +60,7 @@ inline std::string taskTypeToString(TaskType type) {
         case TaskType::RESEARCH: return "RESEARCH";
         case TaskType::REVIEW: return "REVIEW";
         case TaskType::VERIFICATION: return "VERIFICATION";
+        case TaskType::HARDWARE: return "HARDWARE";
         default: return "GENERAL";
     }
 }
@@ -70,6 +72,7 @@ inline TaskType taskTypeFromString(const std::string& str) {
     if (str == "RESEARCH") return TaskType::RESEARCH;
     if (str == "REVIEW") return TaskType::REVIEW;
     if (str == "VERIFICATION") return TaskType::VERIFICATION;
+    if (str == "HARDWARE") return TaskType::HARDWARE;
     return TaskType::GENERAL;
 }
 

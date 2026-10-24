@@ -3,26 +3,37 @@
 #include <vector>
 #include <filesystem>
 #include "arenafight/agent/arena_agent.hpp"
+#include "arenafight/repl/repl_engine.hpp"
 #include "arenafight/ui/terminal_ui.hpp"
 #include "arenafight/common/config.hpp"
 #include "arenafight/common/logger.hpp"
+
+// Made by Lunarmist-byte
+// GitHub: https://github.com/Lunarmist-byte
+// LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/
 
 using namespace arenafight;
 
 void printUsage() {
     TerminalUI::printBanner();
     std::cout << "Usage:\n"
-              << "  arena                      Launch interactive task mode\n"
-              << "  arena \"<task>\"              Execute a task autonomously\n"
-              << "  arena resume <session-id>  Resume an existing session\n"
-              << "  arena sessions             List past saved sessions\n"
-              << "  arena models               Discover and list models across all backends\n"
-              << "  arena config               Display current configuration\n"
-              << "  arena test                 Run built-in automated self-tests\n\n"
+              << "  arena                          Launch Antigravity Interactive REPL\n"
+              << "  arena \"<task>\"                  Execute a task autonomously (/goal)\n"
+              << "  arena goal \"<task>\"             Autonomous goal pursuit with verification\n"
+              << "  arena plan \"<task>\"             Generate structured plan artifact with milestones\n"
+              << "  arena grill-me \"<topic>\"        Interactive requirements interview\n"
+              << "  arena artifacts                List and inspect project artifacts\n"
+              << "  arena skills                   List active skills\n"
+              << "  arena rules                    Display active workspace and system rules\n"
+              << "  arena resume <session-id>      Resume an existing session\n"
+              << "  arena sessions                 List past saved sessions\n"
+              << "  arena models                   Discover and list models across all backends\n"
+              << "  arena config                   Display current configuration\n"
+              << "  arena test                     Run built-in automated self-tests\n\n"
               << "Options:\n"
-              << "  --verbose                  Enable debug output\n"
-              << "  --mock                     Force built-in offline test mock provider\n"
-              << "  --no-mock-fallback         Disable automatic fallback to offline mock\n\n";
+              << "  --verbose                      Enable debug output\n"
+              << "  --mock                         Force built-in offline test mock provider\n"
+              << "  --no-mock-fallback             Disable automatic fallback to offline mock\n\n";
     TerminalUI::printFooter();
 }
 
@@ -32,21 +43,22 @@ int main(int argc, char* argv[]) {
         configPath = "../config.json";
     }
     Config config = Config::loadFromFile(configPath);
-    bool verbose = false;
 
     // Check flags
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg == "--verbose" || arg == "-v") {
-            verbose = true;
             Logger::instance().setVerbose(true);
         } else if (arg == "--mock") {
             config.test_mock_enabled = true;
             config.default_provider = "TestMock";
-        } else if (arg == "--no-mock-fallback") {
-            config.auto_mock_fallback = false;
+        if (arg == "--help" || arg == "-h" || arg == "help") {
+            printUsage();
+            return 0;
         }
     }
+
+    ArenaAgent agent(config);
 
     if (argc > 1) {
         std::string cmd = argv[1];
@@ -68,9 +80,60 @@ int main(int argc, char* argv[]) {
         }
 
         if (cmd == "models") {
-            ArenaAgent agent(config);
             auto models = agent.getRouter().getAllAvailableModels();
             TerminalUI::printModelsList(models);
+            return 0;
+        }
+
+        if (cmd == "artifacts") {
+            ReplEngine repl(agent);
+            std::string arg = (argc > 2) ? argv[2] : "";
+            repl.handleArtifacts(arg);
+            return 0;
+        }
+
+        if (cmd == "skills") {
+            ReplEngine repl(agent);
+            std::string arg = (argc > 2) ? argv[2] : "";
+            repl.handleSkills(arg);
+            return 0;
+        }
+
+        if (cmd == "rules") {
+            ReplEngine repl(agent);
+            repl.handleRules("");
+            return 0;
+        }
+
+        if (cmd == "plan") {
+            if (argc < 3) {
+                std::cerr << "Error: Missing task for plan.\nUsage: arena plan \"<task>\"\n";
+                return 1;
+            }
+            std::string task = argv[2];
+            for (int i = 3; i < argc; ++i) task += " " + std::string(argv[i]);
+            ReplEngine repl(agent);
+            repl.handlePlan(task);
+            return 0;
+        }
+
+        if (cmd == "goal") {
+            if (argc < 3) {
+                std::cerr << "Error: Missing task for goal.\nUsage: arena goal \"<task>\"\n";
+                return 1;
+            }
+            std::string task = argv[2];
+            for (int i = 3; i < argc; ++i) task += " " + std::string(argv[i]);
+            ReplEngine repl(agent);
+            repl.handleGoal(task);
+            return 0;
+        }
+
+        if (cmd == "grill-me") {
+            std::string topic = (argc > 2) ? argv[2] : "";
+            for (int i = 3; i < argc; ++i) topic += " " + std::string(argv[i]);
+            ReplEngine repl(agent);
+            repl.handleGrillMe(topic);
             return 0;
         }
 
@@ -80,7 +143,6 @@ int main(int argc, char* argv[]) {
                 return 1;
             }
             std::string sessionId = argv[2];
-            ArenaAgent agent(config);
             if (!agent.resumeSession(sessionId)) {
                 return 1;
             }
@@ -95,15 +157,15 @@ int main(int argc, char* argv[]) {
             config.workspace_dir = testWs;
             config.test_mock_enabled = true;
             config.default_provider = "TestMock";
-            ArenaAgent agent(config);
-            agent.startNewSession("Test multi-step execution and verification");
-            bool ok = agent.run();
+            ArenaAgent testAgent(config);
+            testAgent.startNewSession("Test multi-step execution and verification");
+            bool ok = testAgent.run();
             std::error_code ec;
             std::filesystem::remove_all(testWs, ec);
             return ok ? 0 : 1;
         }
 
-        // If command is not a keyword, treat argument(s) as task string
+        // If command is not a keyword and doesn't start with '-', treat argument(s) as task string
         if (cmd[0] != '-') {
             std::string task = cmd;
             for (int i = 2; i < argc; ++i) {
@@ -113,35 +175,15 @@ int main(int argc, char* argv[]) {
                 }
             }
 
-            ArenaAgent agent(config);
-            agent.startNewSession(task);
-            bool ok = agent.run();
-            return ok ? 0 : 1;
-        }
-    }
-
-    // Interactive Mode
-    TerminalUI::printBanner();
-    std::cout << "Entering interactive mode. Type your task below, or 'exit' to quit.\n\n"
-              << "> " << std::flush;
-
-    std::string taskInput;
-    if (std::getline(std::cin, taskInput)) {
-        // Trim whitespace
-        while (!taskInput.empty() && (taskInput.back() == ' ' || taskInput.back() == '\r')) {
-            taskInput.pop_back();
-        }
-
-        if (taskInput == "exit" || taskInput == "quit" || taskInput.empty()) {
-            std::cout << "Exiting ArenaFight Agent.\n";
+            ReplEngine repl(agent);
+            repl.handleGoal(task);
             return 0;
         }
-
-        ArenaAgent agent(config);
-        agent.startNewSession(taskInput);
-        bool ok = agent.run();
-        return ok ? 0 : 1;
     }
+
+    // Launch Antigravity Interactive REPL
+    ReplEngine repl(agent);
+    repl.run();
 
     return 0;
 }
