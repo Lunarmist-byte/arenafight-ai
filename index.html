@@ -3,22 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AuraColor - Automatic & Interactive Background Randomizer</title>
-    <meta name="description" content="A state-of-the-art interactive web application that randomizes background colors on click or automatically on an interval, featuring live color telemetry and history.">
+    <title>ArenaFight // Antigravity 2.0 Autonomous Agent Studio</title>
+    <meta name="description" content="State-of-the-art Antigravity 2.0 autonomous agent platform for ArenaFight. Features multi-turn chat canvas, live artifacts, interactive task graphs, and 6-gate physical verification.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #6366f1;
-            --text-color: #ffffff;
-            --card-bg: rgba(255, 255, 255, 0.12);
-            --card-border: rgba(255, 255, 255, 0.22);
-            --card-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
-            --button-bg: rgba(255, 255, 255, 0.95);
-            --button-text: #0f172a;
-            --accent-glow: rgba(99, 102, 241, 0.4);
-            --transition-speed: 0.8s;
+            --bg-base: #080c14;
+            --bg-surface: #0e1424;
+            --bg-elevated: #162036;
+            --bg-input: #121a2d;
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(99, 102, 241, 0.35);
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --text-dim: #64748b;
+            --accent-primary: #6366f1;
+            --accent-primary-hover: #4f46e5;
+            --accent-glow: rgba(99, 102, 241, 0.25);
+            --accent-cyan: #06b6d4;
+            --accent-emerald: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-rose: #f43f5e;
+            --font-ui: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 16px;
+            --shadow-subtle: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+            --shadow-glow: 0 0 25px var(--accent-glow);
         }
 
         * {
@@ -28,22 +42,17 @@
         }
 
         body {
-            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: var(--font-ui);
+            background-color: var(--bg-base);
+            color: var(--text-main);
             min-height: 100vh;
             display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            align-items: center;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            transition: background-color var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1),
-                        color 0.4s ease;
-            overflow-x: hidden;
-            padding: 2rem 1.5rem 1.5rem;
-            position: relative;
+            overflow: hidden;
+            font-size: 14px;
+            line-height: 1.5;
         }
 
-        /* Subtle animated background mesh texture */
+        /* Subtle ambient gradient mesh */
         body::before {
             content: '';
             position: fixed;
@@ -51,768 +60,1911 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.15) 0%, transparent 40%),
-                        radial-gradient(circle at 80% 80%, rgba(0, 0, 0, 0.15) 0%, transparent 40%);
+            background: 
+                radial-gradient(circle at 15% 15%, rgba(99, 102, 241, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(6, 182, 212, 0.06) 0%, transparent 40%),
+                radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.04) 0%, transparent 50%);
             pointer-events: none;
             z-index: 0;
         }
 
-        header {
+        /* Layout Structure */
+        .app-container {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
             position: relative;
             z-index: 1;
-            text-align: center;
-            margin-bottom: 2rem;
-            animation: fadeInDown 0.8s ease-out;
         }
 
-        .badge {
-            display: inline-flex;
+        /* 1. LEFT-HAND SIDEBAR */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-surface);
+            border-right: 1px solid var(--border-subtle);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            z-index: 10;
+            backdrop-filter: blur(20px);
+            user-select: none;
+        }
+
+        .sidebar-header {
+            padding: 1.25rem 1rem 1rem;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .logo-row {
+            display: flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.35rem 1rem;
-            border-radius: 9999px;
-            background: rgba(255, 255, 255, 0.18);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--card-border);
-            font-size: 0.85rem;
-            font-weight: 500;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
+            justify-content: space-between;
             margin-bottom: 1rem;
         }
 
-        .pulse-dot {
-            width: 8px;
-            height: 8px;
-            background-color: #10b981;
-            border-radius: 50%;
-            display: inline-block;
-            box-shadow: 0 0 10px #10b981;
-            animation: pulse 2s infinite;
+        .brand-pill {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
         }
 
-        h1 {
-            font-size: clamp(2.2rem, 5vw, 3.6rem);
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-cyan));
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-weight: 800;
-            letter-spacing: -0.03em;
-            line-height: 1.1;
-            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
-            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+            color: #fff;
+            box-shadow: 0 4px 12px var(--accent-glow);
         }
 
-        .subtitle {
-            font-size: clamp(1rem, 2vw, 1.25rem);
-            font-weight: 300;
-            opacity: 0.9;
-            max-width: 580px;
-            margin: 0 auto;
-            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-        }
-
-        main {
-            position: relative;
-            z-index: 1;
-            width: 100%;
-            max-width: 560px;
+        .brand-text {
             display: flex;
             flex-direction: column;
-            align-items: center;
-            gap: 1.5rem;
         }
 
-        .glass-card {
-            width: 100%;
-            background: var(--card-bg);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border: 1px solid var(--card-border);
-            border-radius: 28px;
-            padding: 2.5rem 2rem;
-            box-shadow: var(--card-shadow);
-            display: flex;
-            flex-direction: column;
-            gap: 1.75rem;
-            animation: fadeInUp 0.8s ease-out;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .glass-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.4);
-        }
-
-        /* Color Telemetry Display */
-        .color-preview-box {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.5rem;
-            background: rgba(0, 0, 0, 0.15);
-            border-radius: 20px;
-            padding: 1.5rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .color-hex {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: clamp(2rem, 4vw, 2.8rem);
+        .brand-name {
+            font-size: 1.05rem;
             font-weight: 700;
-            letter-spacing: 0.05em;
-            cursor: pointer;
-            padding: 0.25rem 0.75rem;
-            border-radius: 12px;
-            transition: all 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
+            letter-spacing: -0.02em;
+            color: #fff;
         }
 
-        .color-hex:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: scale(1.03);
-        }
-
-        .telemetry-row {
-            display: flex;
-            gap: 1.25rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.88rem;
-            opacity: 0.85;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-
-        .telemetry-item span {
+        .brand-tag {
+            font-size: 0.7rem;
             font-weight: 600;
-        }
-
-        /* Action Buttons */
-        .controls-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 1rem;
-        }
-
-        .btn-primary {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.75rem;
-            width: 100%;
-            padding: 1.15rem 2rem;
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.15rem;
-            font-weight: 700;
-            color: var(--button-text);
-            background: var(--button-bg);
-            border: none;
-            border-radius: 18px;
-            cursor: pointer;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px) scale(1.01);
-            box-shadow: 0 16px 32px -6px rgba(0, 0, 0, 0.4);
-        }
-
-        .btn-primary:active {
-            transform: translateY(1px) scale(0.99);
-        }
-
-        .btn-secondary-row {
-            display: flex;
-            gap: 0.75rem;
-        }
-
-        .btn-toggle {
-            flex: 1;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            padding: 0.9rem 1.25rem;
-            background: rgba(255, 255, 255, 0.16);
-            border: 1px solid var(--card-border);
-            border-radius: 16px;
-            color: inherit;
-            font-family: 'Outfit', sans-serif;
-            font-size: 0.95rem;
-            font-weight: 600;
-            cursor: pointer;
-            backdrop-filter: blur(8px);
-            transition: all 0.2s ease;
-        }
-
-        .btn-toggle:hover {
-            background: rgba(255, 255, 255, 0.26);
-            transform: translateY(-1px);
-        }
-
-        .btn-toggle.active {
-            background: #10b981;
-            color: #ffffff;
-            border-color: #34d399;
-            box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
-        }
-
-        /* Auto Speed Controls */
-        .auto-settings {
-            display: none;
-            flex-direction: column;
-            gap: 0.5rem;
-            padding: 1rem 1.25rem;
-            background: rgba(0, 0, 0, 0.12);
-            border-radius: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            animation: fadeIn 0.3s ease;
-        }
-
-        .auto-settings.visible {
-            display: flex;
-        }
-
-        .slider-label {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.85rem;
-            font-weight: 500;
-            opacity: 0.9;
-        }
-
-        input[type="range"] {
-            -webkit-appearance: none;
-            width: 100%;
-            height: 6px;
-            border-radius: 9999px;
-            background: rgba(255, 255, 255, 0.3);
-            outline: none;
-            cursor: pointer;
-        }
-
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: #ffffff;
-            cursor: pointer;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-            transition: transform 0.1s ease;
-        }
-
-        input[type="range"]::-webkit-slider-thumb:hover {
-            transform: scale(1.2);
-        }
-
-        /* Palette Swatches History */
-        .history-section {
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            gap: 0.6rem;
-        }
-
-        .history-title {
-            font-size: 0.85rem;
-            font-weight: 600;
-            letter-spacing: 0.05em;
             text-transform: uppercase;
-            opacity: 0.8;
+            letter-spacing: 0.06em;
+            color: var(--accent-cyan);
+            font-family: var(--font-mono);
+        }
+
+        .version-badge {
+            background: rgba(99, 102, 241, 0.15);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: #a5b4fc;
+            padding: 0.2rem 0.5rem;
+            border-radius: 999px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            font-family: var(--font-mono);
+        }
+
+        .btn-new-session {
+            width: 100%;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-        }
-
-        .swatches-bar {
-            display: flex;
-            gap: 0.6rem;
-            overflow-x: auto;
-            padding: 0.3rem 0.1rem;
-            scrollbar-width: thin;
-        }
-
-        .swatch-item {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.65rem 1rem;
+            background: linear-gradient(135deg, var(--accent-primary), #4338ca);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-ui);
+            font-size: 0.85rem;
+            font-weight: 600;
             cursor: pointer;
-            border: 2px solid rgba(255, 255, 255, 0.4);
-            flex-shrink: 0;
-            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+            transition: all 0.2s ease;
         }
 
-        .swatch-item:hover {
-            transform: scale(1.2) translateY(-2px);
-            border-color: #ffffff;
-            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+        .btn-new-session:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45);
         }
 
-        /* Toast notification */
-        .toast {
-            position: fixed;
-            bottom: 6rem;
-            background: rgba(15, 23, 42, 0.9);
-            color: #ffffff;
-            backdrop-filter: blur(12px);
-            padding: 0.75rem 1.5rem;
-            border-radius: 9999px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            opacity: 0;
-            transform: translateY(20px);
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            pointer-events: none;
-            z-index: 999;
-        }
-
-        .toast.show {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        /* Footer Credit Section */
-        footer {
-            position: relative;
-            z-index: 1;
-            margin-top: 2rem;
-            text-align: center;
-            font-size: 0.92rem;
-            opacity: 0.9;
-        }
-
-        .credit-box {
-            display: inline-flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.4rem;
-            padding: 0.75rem 1.5rem;
+        .workspace-selector {
+            padding: 0.8rem 1rem;
             background: rgba(0, 0, 0, 0.2);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-radius: 9999px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .workspace-pill {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--text-main);
+            background: var(--bg-elevated);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            border: 1px solid var(--border-subtle);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 160px;
+        }
+
+        /* Sidebar Navigation & Sessions List */
+        .sidebar-nav {
+            padding: 0.8rem 0.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+            padding: 0.5rem 0.75rem;
+            color: var(--text-muted);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.15s ease;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-link.active {
+            color: #fff;
+            background: rgba(99, 102, 241, 0.12);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+
+        .nav-badge {
+            margin-left: auto;
+            font-size: 0.7rem;
+            font-family: var(--font-mono);
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            background: var(--bg-elevated);
+            color: var(--text-dim);
+        }
+
+        .sidebar-section-title {
+            padding: 1rem 1rem 0.4rem;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-dim);
+        }
+
+        .sessions-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.25rem 0.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .session-item {
+            padding: 0.65rem 0.75rem;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.15s ease;
+        }
+
+        .session-item:hover {
+            background: rgba(255, 255, 255, 0.03);
+            border-color: var(--border-subtle);
+        }
+
+        .session-item.active {
+            background: rgba(99, 102, 241, 0.1);
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+
+        .session-title {
+            font-size: 0.82rem;
+            font-weight: 500;
+            color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 0.2rem;
+        }
+
+        .session-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            font-family: var(--font-mono);
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            margin-right: 4px;
+        }
+
+        .status-dot.verified { background: var(--accent-emerald); box-shadow: 0 0 6px var(--accent-emerald); }
+        .status-dot.executing { background: var(--accent-amber); box-shadow: 0 0 6px var(--accent-amber); }
+        .status-dot.idle { background: var(--text-dim); }
+
+        /* Sidebar Footer (Credit section per rule) */
+        .sidebar-footer {
+            padding: 0.9rem 1rem;
+            border-top: 1px solid var(--border-subtle);
+            background: rgba(0, 0, 0, 0.25);
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
         }
 
         .credit-text {
-            font-weight: 500;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .credit-text strong {
+            color: #fff;
         }
 
         .credit-links {
             display: flex;
-            gap: 1.25rem;
-            font-size: 0.85rem;
+            gap: 0.75rem;
+            font-size: 0.75rem;
         }
 
         .credit-links a {
-            color: inherit;
+            color: var(--accent-cyan);
             text-decoration: none;
-            font-weight: 600;
             display: inline-flex;
             align-items: center;
-            gap: 0.35rem;
-            border-bottom: 1px dashed rgba(255, 255, 255, 0.4);
-            padding-bottom: 1px;
-            transition: all 0.2s ease;
+            gap: 0.25rem;
+            transition: color 0.15s ease;
         }
 
         .credit-links a:hover {
-            border-bottom-style: solid;
-            border-bottom-color: #ffffff;
+            color: #fff;
+            text-decoration: underline;
+        }
+
+        /* 2. MAIN CHAT CANVAS (CENTER) */
+        .chat-canvas {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            background: rgba(11, 16, 27, 0.6);
+            position: relative;
+        }
+
+        .canvas-header {
+            height: 58px;
+            padding: 0 1.5rem;
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(14, 20, 36, 0.8);
+            backdrop-filter: blur(12px);
+            z-index: 5;
+        }
+
+        .canvas-title-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            min-width: 0;
+        }
+
+        .canvas-title {
+            font-size: 1rem;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .mode-chip {
+            padding: 0.2rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .canvas-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-icon {
+            background: transparent;
+            border: 1px solid var(--border-subtle);
+            color: var(--text-muted);
+            width: 32px;
+            height: 32px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .btn-icon:hover {
+            color: #fff;
+            background: var(--bg-elevated);
+            border-color: var(--border-hover);
+        }
+
+        /* Message Stream */
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .message-row {
+            display: flex;
+            gap: 1rem;
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .message-row.user {
+            justify-content: flex-end;
+        }
+
+        .avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+
+        .avatar.agent {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-cyan));
+            color: #fff;
+            box-shadow: 0 2px 10px var(--accent-glow);
+        }
+
+        .avatar.user {
+            background: #334155;
+            color: #e2e8f0;
+        }
+
+        .message-content {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .message-bubble {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 1rem 1.25rem;
+            font-size: 0.92rem;
+            color: var(--text-main);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .message-row.user .message-bubble {
+            background: rgba(99, 102, 241, 0.15);
+            border-color: rgba(99, 102, 241, 0.3);
+            max-width: 70%;
+        }
+
+        /* Thinking Process Block */
+        .thinking-disclosure {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            font-size: 0.82rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .thinking-summary {
+            padding: 0.5rem 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            color: #a5b4fc;
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            font-weight: 500;
+            user-select: none;
+            background: rgba(99, 102, 241, 0.08);
+        }
+
+        .thinking-summary:hover {
+            background: rgba(99, 102, 241, 0.14);
+        }
+
+        .thinking-body {
+            padding: 0.75rem 0.85rem;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: #cbd5e1;
+            line-height: 1.6;
+            border-top: 1px solid rgba(99, 102, 241, 0.15);
+            white-space: pre-wrap;
+        }
+
+        /* Tool Execution Card */
+        .tool-card {
+            background: rgba(2, 6, 23, 0.85);
+            border: 1px solid var(--border-subtle);
+            border-left: 3px solid var(--accent-cyan);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            margin: 0.4rem 0;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+        }
+
+        .tool-card-header {
+            padding: 0.5rem 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.02);
+            cursor: pointer;
+        }
+
+        .tool-name-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tool-badge {
+            background: rgba(6, 182, 212, 0.15);
+            color: var(--accent-cyan);
+            padding: 0.15rem 0.45rem;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.72rem;
+        }
+
+        .tool-target {
+            color: #e2e8f0;
+            font-weight: 500;
+        }
+
+        .tool-status-badge {
+            font-size: 0.7rem;
+            padding: 0.15rem 0.45rem;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .tool-status-badge.pass {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+        }
+
+        .tool-status-badge.running {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+        }
+
+        .tool-terminal-body {
+            padding: 0.65rem 0.85rem;
+            background: #020617;
+            border-top: 1px solid var(--border-subtle);
+            color: #94a3b8;
+            font-size: 0.76rem;
+            max-height: 180px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        /* Interactive Plan / Action Card */
+        .plan-action-card {
+            background: rgba(99, 102, 241, 0.08);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: var(--radius-md);
+            padding: 1.25rem;
+            margin: 0.5rem 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .plan-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .plan-card-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #e0e7ff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .plan-action-buttons {
+            display: flex;
+            gap: 0.6rem;
+            margin-top: 0.5rem;
+        }
+
+        .btn-proceed {
+            background: linear-gradient(135deg, var(--accent-emerald), #059669);
+            color: #fff;
+            border: none;
+            padding: 0.5rem 1.25rem;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            transition: all 0.15s ease;
+        }
+
+        .btn-proceed:hover {
             transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.45);
         }
 
-        /* Keyframes */
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(0.85); }
+        .btn-edit-plan, .btn-cancel-plan {
+            background: var(--bg-elevated);
+            color: var(--text-muted);
+            border: 1px solid var(--border-subtle);
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-sm);
+            font-weight: 500;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
         }
 
-        @keyframes fadeInDown {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
+        .btn-edit-plan:hover, .btn-cancel-plan:hover {
+            color: #fff;
+            border-color: var(--border-hover);
         }
 
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+        /* Slash & Mention Autocomplete Popovers */
+        .autocomplete-popover {
+            position: absolute;
+            bottom: 85px;
+            left: 2rem;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-hover);
+            border-radius: var(--radius-md);
+            width: 320px;
+            box-shadow: var(--shadow-subtle), var(--shadow-glow);
+            z-index: 50;
+            overflow: hidden;
+            display: none;
+            flex-direction: column;
+            backdrop-filter: blur(20px);
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+        .popover-header {
+            padding: 0.5rem 0.8rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-dim);
+            background: rgba(0, 0, 0, 0.2);
+            border-bottom: 1px solid var(--border-subtle);
         }
 
-        @media (max-width: 480px) {
-            .glass-card {
-                padding: 1.75rem 1.25rem;
-            }
-            .btn-secondary-row {
-                flex-direction: column;
-            }
+        .popover-item {
+            padding: 0.55rem 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: background 0.15s ease;
         }
+
+        .popover-item:hover, .popover-item.selected {
+            background: rgba(99, 102, 241, 0.15);
+        }
+
+        .popover-cmd {
+            font-family: var(--font-mono);
+            font-weight: 600;
+            color: var(--accent-cyan);
+            font-size: 0.82rem;
+        }
+
+        .popover-desc {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* Quick Action Chips Bar */
+        .quick-chips {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1.5rem;
+            overflow-x: auto;
+        }
+
+        .chip {
+            padding: 0.35rem 0.75rem;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.15s ease;
+            user-select: none;
+        }
+
+        .chip:hover {
+            color: #fff;
+            border-color: var(--border-hover);
+            background: var(--bg-elevated);
+        }
+
+        /* Chat Input Bar */
+        .chat-input-area {
+            padding: 0.75rem 1.5rem 1.25rem;
+            background: rgba(14, 20, 36, 0.95);
+            border-top: 1px solid var(--border-subtle);
+            position: relative;
+        }
+
+        .input-box {
+            background: var(--bg-input);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 0.75rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .input-box:focus-within {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 2px var(--accent-glow);
+        }
+
+        .chat-textarea {
+            width: 100%;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-main);
+            font-family: var(--font-ui);
+            font-size: 0.92rem;
+            resize: none;
+            min-height: 48px;
+            max-height: 160px;
+            line-height: 1.5;
+        }
+
+        .input-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .toolbar-left {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .model-selector-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.25rem 0.6rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            font-size: 0.75rem;
+            font-family: var(--font-mono);
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+
+        .btn-send {
+            background: var(--accent-primary);
+            color: #fff;
+            border: none;
+            padding: 0.45rem 1rem;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-ui);
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: all 0.15s ease;
+        }
+
+        .btn-send:hover {
+            background: var(--accent-primary-hover);
+        }
+
+        /* 3. RIGHT AUXILIARY PANE */
+        .aux-pane {
+            width: 480px;
+            background: var(--bg-surface);
+            border-left: 1px solid var(--border-subtle);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            z-index: 10;
+            backdrop-filter: blur(20px);
+        }
+
+        .aux-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-subtle);
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .aux-tab {
+            flex: 1;
+            padding: 0.8rem 0.5rem;
+            text-align: center;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.15s ease;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+        }
+
+        .aux-tab:hover {
+            color: #fff;
+        }
+
+        .aux-tab.active {
+            color: var(--accent-cyan);
+            border-bottom-color: var(--accent-cyan);
+            background: rgba(6, 182, 212, 0.06);
+        }
+
+        .aux-tab-badge {
+            background: var(--bg-elevated);
+            color: var(--text-main);
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.68rem;
+            font-family: var(--font-mono);
+        }
+
+        .aux-content {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .aux-panel {
+            display: none;
+            padding: 1.25rem;
+            height: 100%;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .aux-panel.active {
+            display: flex;
+        }
+
+        /* Artifacts Panel */
+        .artifact-selector-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+        }
+
+        .artifact-select {
+            background: var(--bg-input);
+            border: 1px solid var(--border-subtle);
+            color: #fff;
+            padding: 0.4rem 0.6rem;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            outline: none;
+        }
+
+        .artifact-preview-card {
+            background: var(--bg-input);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 1.25rem;
+            flex: 1;
+            overflow-y: auto;
+            font-size: 0.88rem;
+            line-height: 1.6;
+        }
+
+        /* Task Graph Panel */
+        .task-graph-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+        }
+
+        .task-node-card {
+            background: var(--bg-input);
+            border: 1px solid var(--border-subtle);
+            border-left: 3px solid var(--accent-primary);
+            border-radius: var(--radius-sm);
+            padding: 0.85rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .task-node-card.completed {
+            border-left-color: var(--accent-emerald);
+        }
+
+        .task-node-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .task-node-title {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #fff;
+        }
+
+        .task-node-deps {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            color: var(--text-dim);
+        }
+
+        /* Verification Gates Panel */
+        .gates-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .gate-card {
+            background: var(--bg-input);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            padding: 0.85rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .gate-card.passed {
+            border-color: rgba(16, 185, 129, 0.3);
+            background: rgba(16, 185, 129, 0.05);
+        }
+
+        .gate-name {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .gate-status {
+            font-family: var(--font-mono);
+            font-weight: 700;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .gate-status.pass { color: #34d399; }
+        .gate-status.pending { color: #fbbf24; }
+
+        .confidence-meter-card {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(6, 182, 212, 0.1));
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: var(--radius-md);
+            padding: 1rem;
+            text-align: center;
+            margin-top: 0.5rem;
+        }
+
+        .confidence-val {
+            font-size: 2.2rem;
+            font-weight: 800;
+            font-family: var(--font-mono);
+            color: var(--accent-cyan);
+        }
+
+        .confidence-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        /* Terminal Logs Panel */
+        .terminal-box {
+            background: #020617;
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 1rem;
+            flex: 1;
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            line-height: 1.6;
+            color: #cbd5e1;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        /* Customization Modal / Drawer */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-hover);
+            border-radius: var(--radius-lg);
+            width: 600px;
+            max-width: 90vw;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: var(--shadow-subtle), var(--shadow-glow);
+        }
+
+        .modal-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        /* Markdown styling helpers */
+        .md-h1, .md-h2, .md-h3 { color: #fff; font-weight: 700; margin: 0.6rem 0 0.3rem; }
+        .md-code { font-family: var(--font-mono); background: rgba(0, 0, 0, 0.35); padding: 0.15rem 0.35rem; border-radius: 4px; color: #a5b4fc; }
+        .md-pre { background: #020617; border: 1px solid var(--border-subtle); padding: 0.75rem; border-radius: var(--radius-sm); overflow-x: auto; font-family: var(--font-mono); font-size: 0.8rem; margin: 0.5rem 0; }
+        .md-alert { border-left: 3px solid var(--accent-primary); background: rgba(99, 102, 241, 0.1); padding: 0.65rem 0.85rem; border-radius: 4px; margin: 0.5rem 0; font-size: 0.85rem; }
+        .diff-add { color: #34d399; }
+        .diff-del { color: #f43f5e; }
     </style>
 </head>
 <body>
 
-    <header>
-        <div class="badge" id="status-badge">
-            <span class="pulse-dot" id="status-dot"></span>
-            <span id="status-text">Manual Mode</span>
-        </div>
-        <h1>AuraColor Dynamic</h1>
-        <p class="subtitle">Experience ambient gradients and dynamic generative palettes on every click or in real-time automatic mode.</p>
-    </header>
+<div class="app-container">
 
-    <main>
-        <div class="glass-card" id="main-card">
-            <!-- Telemetry Box -->
-            <div class="color-preview-box">
-                <div class="color-hex" id="color-hex-val" title="Click to copy HEX code">
-                    #6366F1
-                </div>
-                <div class="telemetry-row">
-                    <div class="telemetry-item">RGB: <span id="color-rgb-val">99, 102, 241</span></div>
-                    <div class="telemetry-item">HSL: <span id="color-hsl-val">239°, 84%, 67%</span></div>
-                </div>
-            </div>
-
-            <!-- Controls -->
-            <div class="controls-grid">
-                <button type="button" class="btn-primary" id="randomize-btn">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-                        <path d="M16 8h.01"></path>
-                        <path d="M8 8h.01"></path>
-                        <path d="M8 16h.01"></path>
-                        <path d="M16 16h.01"></path>
-                        <path d="M12 12h.01"></path>
-                    </svg>
-                    Randomize Background Color
-                </button>
-
-                <div class="btn-secondary-row">
-                    <button type="button" class="btn-toggle" id="auto-toggle-btn">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                        </svg>
-                        <span id="auto-btn-text">Make It Automatic</span>
-                    </button>
-
-                    <button type="button" class="btn-toggle" id="copy-btn">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                        </svg>
-                        Copy Hex
-                    </button>
-                </div>
-
-                <!-- Speed Control for Automatic Mode -->
-                <div class="auto-settings" id="auto-settings">
-                    <div class="slider-label">
-                        <span>Auto Transition Interval</span>
-                        <span id="speed-display">2.0 seconds</span>
+    <!-- 1. LEFT-HAND SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-row">
+                <div class="brand-pill">
+                    <div class="logo-icon">▲</div>
+                    <div class="brand-text">
+                        <span class="brand-name">ArenaFight</span>
+                        <span class="brand-tag">ANTIGRAVITY 2.0</span>
                     </div>
-                    <input type="range" id="speed-slider" min="0.5" max="5.0" step="0.5" value="2.0">
+                </div>
+                <span class="version-badge">v2.0</span>
+            </div>
+            <button class="btn-new-session" id="btnNewSession">
+                <span>+</span> New Conversation
+            </button>
+        </div>
+
+        <div class="workspace-selector">
+            <span>📁 Project:</span>
+            <span class="workspace-pill" title="c:\Users\amals\Documents\Codeworks\Arenafight-ai">Arenafight-ai</span>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-link active" id="navChat">
+                <span>💬</span> Chat Canvas
+            </div>
+            <div class="nav-link" id="navSkills">
+                <span>⚡</span> Skills & Rules
+                <span class="nav-badge" id="skillsCountBadge">3 Skills</span>
+            </div>
+            <div class="nav-link" id="navSchedule">
+                <span>⏱️</span> Scheduled Tasks
+                <span class="nav-badge" id="schedCountBadge">Active</span>
+            </div>
+            <div class="nav-link" id="navSettings">
+                <span>⚙️</span> Settings & Models
+            </div>
+        </nav>
+
+        <div class="sidebar-section-title">Conversations</div>
+        <div class="sessions-list" id="sessionsList">
+            <!-- Dynamically populated sessions -->
+            <div class="session-item active" data-id="sess_current">
+                <div class="session-title">Antigravity Interactive Session</div>
+                <div class="session-meta">
+                    <span><span class="status-dot verified"></span>VERIFIED</span>
+                    <span>Just now</span>
                 </div>
             </div>
-
-            <!-- Palette History -->
-            <div class="history-section">
-                <div class="history-title">
-                    <span>Recent Palettes</span>
-                    <span id="history-count">1 saved</span>
+            <div class="session-item" data-id="sess_crawler">
+                <div class="session-title">Build High-Speed Crawler</div>
+                <div class="session-meta">
+                    <span><span class="status-dot verified"></span>100% Evidence</span>
+                    <span>1h ago</span>
                 </div>
-                <div class="swatches-bar" id="swatches-bar">
-                    <!-- Populated dynamically -->
+            </div>
+            <div class="session-item" data-id="sess_hardware">
+                <div class="session-title">ESP32 Circuit Simulation</div>
+                <div class="session-meta">
+                    <span><span class="status-dot verified"></span>Wokwi Ready</span>
+                    <span>3h ago</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Made by Lunarmist-byte Footer -->
+        <div class="sidebar-footer">
+            <div class="credit-text">
+                Made by <strong>Lunarmist-byte</strong>
+            </div>
+            <div class="credit-links">
+                <a href="https://github.com/Lunarmist-byte" target="_blank" rel="noopener noreferrer">
+                    <span>★</span> GitHub
+                </a>
+                <a href="https://www.linkedin.com/in/amal-s-kumar-ba69a1290/" target="_blank" rel="noopener noreferrer">
+                    <span>↗</span> LinkedIn
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- 2. MAIN CHAT CANVAS (CENTER) -->
+    <main class="chat-canvas">
+        <header class="canvas-header">
+            <div class="canvas-title-group">
+                <h1 class="canvas-title" id="canvasTitle">Antigravity Interactive Session</h1>
+                <div class="mode-chip">
+                    <span class="status-dot verified"></span> Autonomous Verifier
+                </div>
+            </div>
+            <div class="canvas-actions">
+                <button class="btn-icon" id="btnToggleAux" title="Toggle Auxiliary Pane">◫</button>
+            </div>
+        </header>
+
+        <!-- Message Thread -->
+        <div class="chat-messages" id="chatMessages">
+            <!-- Initial Greeting Message -->
+            <div class="message-row agent">
+                <div class="avatar agent">▲</div>
+                <div class="message-content">
+                    <div class="thinking-disclosure">
+                        <div class="thinking-summary">
+                            <span>✦</span> Thinking Process (Antigravity Core)
+                        </div>
+                        <div class="thinking-body">Initializing ArenaFight agent runtime with Antigravity 2.0 orchestration.
+Scanning workspace for active rules, skills, and knowledge items...
+Custom rules loaded: user_global_credit, evidence_first.
+Discovered skills: [code-architect], [hardware-engineer], [verifier].
+All 6 verification gates active and listening for execution evidence.</div>
+                    </div>
+
+                    <div class="message-bubble">
+                        <p>Welcome to <strong>ArenaFight Antigravity 2.0</strong>! I am your autonomous, multi-model engineering agent equipped with physical compiler and test verification.</p>
+                        <br>
+                        <p>You can execute slash commands or ask questions directly:</p>
+                        <ul style="margin-left: 1.5rem; margin-top: 0.4rem;">
+                            <li><code class="md-code">/goal &lt;task&gt;</code> — Full autonomous goal execution with self-healing until 100% verified</li>
+                            <li><code class="md-code">/plan &lt;task&gt;</code> — Generate an interactive plan artifact with dependencies before writing code</li>
+                            <li><code class="md-code">/grill-me &lt;topic&gt;</code> — Requirements interview to probe edge cases and design decisions</li>
+                            <li><code class="md-code">/learn &lt;insight&gt;</code> — Persist Knowledge Items (KIs) into repository memory</li>
+                            <li><code class="md-code">/schedule &lt;delay&gt; &lt;task&gt;</code> — Background scheduled job runner</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Action Chips -->
+        <div class="quick-chips">
+            <div class="chip" data-cmd="/plan Build a high-reliability hardware motor driver with Wokwi">📋 /plan Hardware Controller</div>
+            <div class="chip" data-cmd="/goal Create a multi-threaded async worker pool with tests">🚀 /goal Worker Pool</div>
+            <div class="chip" data-cmd="/grill-me Concurrency, memory bounds, and failure modes">🎙️ /grill-me Interview</div>
+            <div class="chip" data-cmd="/learn In this project, all pointers must use std::unique_ptr">🧠 /learn Convention</div>
+            <div class="chip" data-cmd="/models">🤖 /models</div>
+        </div>
+
+        <!-- Slash & Mention Autocomplete Popover -->
+        <div class="autocomplete-popover" id="slashPopover">
+            <div class="popover-header">Slash Commands</div>
+            <div class="popover-item selected" data-val="/goal ">
+                <span class="popover-cmd">/goal</span>
+                <span class="popover-desc">Autonomous goal pursuit</span>
+            </div>
+            <div class="popover-item" data-val="/plan ">
+                <span class="popover-cmd">/plan</span>
+                <span class="popover-desc">Structured plan artifact</span>
+            </div>
+            <div class="popover-item" data-val="/grill-me ">
+                <span class="popover-cmd">/grill-me</span>
+                <span class="popover-desc">Requirements interview</span>
+            </div>
+            <div class="popover-item" data-val="/learn ">
+                <span class="popover-cmd">/learn</span>
+                <span class="popover-desc">Persist repository knowledge</span>
+            </div>
+            <div class="popover-item" data-val="/schedule ">
+                <span class="popover-cmd">/schedule</span>
+                <span class="popover-desc">Timed background execution</span>
+            </div>
+            <div class="popover-item" data-val="/artifacts">
+                <span class="popover-cmd">/artifacts</span>
+                <span class="popover-desc">List project artifacts</span>
+            </div>
+            <div class="popover-item" data-val="/skills">
+                <span class="popover-cmd">/skills</span>
+                <span class="popover-desc">List active skills</span>
+            </div>
+            <div class="popover-item" data-val="/rules">
+                <span class="popover-cmd">/rules</span>
+                <span class="popover-desc">List active rules</span>
+            </div>
+        </div>
+
+        <!-- Chat Input Bar -->
+        <div class="chat-input-area">
+            <div class="input-box">
+                <textarea 
+                    class="chat-textarea" 
+                    id="chatInput" 
+                    placeholder="Ask ArenaFight anything, type '/' for commands, or '@' to attach context..."
+                    rows="1"></textarea>
+                <div class="input-toolbar">
+                    <div class="toolbar-left">
+                        <div class="model-selector-badge" id="btnModelSelect">
+                            <span>🤖</span> <span id="activeModelLabel">Gemini 2.5 Flash / Claude 3.7</span>
+                        </div>
+                        <button class="btn-icon" id="btnSlashTrigger" title="Slash Commands">/</button>
+                        <button class="btn-icon" id="btnAtTrigger" title="Attach Context">@</button>
+                    </div>
+                    <button class="btn-send" id="btnSend">
+                        <span>Send</span> <span>▲</span>
+                    </button>
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- Toast Notification -->
-    <div class="toast" id="toast">Copied to clipboard!</div>
-
-    <!-- Made by Lunarmist-byte Credit Footer -->
-    <footer>
-        <div class="credit-box">
-            <span class="credit-text">Made by <strong>Lunarmist-byte</strong></span>
-            <div class="credit-links">
-                <a href="https://github.com/Lunarmist-byte" target="_blank" rel="noopener noreferrer" id="credit-github">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
-                    </svg>
-                    GitHub
-                </a>
-                <a href="https://www.linkedin.com/in/amal-s-kumar-ba69a1290/" target="_blank" rel="noopener noreferrer" id="credit-linkedin">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
-                    </svg>
-                    LinkedIn
-                </a>
+    <!-- 3. RIGHT AUXILIARY PANE -->
+    <aside class="aux-pane" id="auxPane">
+        <div class="aux-tabs">
+            <div class="aux-tab active" data-tab="tabArtifacts">
+                <span>📄</span> Artifacts <span class="aux-tab-badge" id="artifactsBadge">2</span>
+            </div>
+            <div class="aux-tab" data-tab="tabTaskGraph">
+                <span>📊</span> Plan Graph <span class="aux-tab-badge" id="tasksBadge">3</span>
+            </div>
+            <div class="aux-tab" data-tab="tabGates">
+                <span>🛡️</span> 6 Gates
+            </div>
+            <div class="aux-tab" data-tab="tabTerminal">
+                <span>💻</span> Terminal
             </div>
         </div>
-    </footer>
 
-    <script>
-        // State
-        let currentColor = { r: 99, g: 102, b: 241, hex: '#6366f1' };
-        let isAutoMode = false;
-        let autoIntervalId = null;
-        let autoIntervalSeconds = 2.0;
-        const colorHistory = [];
-        const MAX_HISTORY = 12;
+        <div class="aux-content">
+            <!-- TAB 1: ARTIFACTS -->
+            <div class="aux-panel active" id="tabArtifacts">
+                <div class="artifact-selector-row">
+                    <select class="artifact-select" id="artifactSelect">
+                        <option value="art_plan">execution_plan.md</option>
+                        <option value="art_verif">verification_report.md</option>
+                        <option value="art_diff">code_diff.md</option>
+                    </select>
+                    <button class="btn-icon" id="btnCopyArtifact" title="Copy Artifact">📋</button>
+                </div>
+                <div class="artifact-preview-card" id="artifactPreview">
+                    <h2 class="md-h2"># Execution Plan: Hardware Motor Driver</h2>
+                    <div class="md-alert">
+                        <strong>[!IMPORTANT]</strong> Review this execution plan before proceeding. The plan will execute autonomously once approved.
+                    </div>
+                    <p><strong>Status:</strong> Ready for User Review (RequestFeedback: true)</p>
+                    <br>
+                    <h3 class="md-h3">Execution Milestones</h3>
+                    <ol style="margin-left: 1.5rem;">
+                        <li><strong>Environment & Board Registry:</strong> Validate Raspberry Pi Pico pin current tolerances and PWM capability.</li>
+                        <li><strong>Firmware Scaffolding:</strong> Generate C++20 QoS non-blocking firmware with watchdogs.</li>
+                        <li><strong>Wokwi Diagram:</strong> Scaffold <code class="md-code">diagram.json</code> with stepper motor and driver chips.</li>
+                        <li><strong>Verification Pass:</strong> Ensure compiler exits code 0 and all 6 gates are satisfied.</li>
+                    </ol>
+                    <br>
+                    <button class="btn-proceed" id="btnProceedInArtifact" style="width: 100%;">
+                        Proceed with Plan Execution
+                    </button>
+                </div>
+            </div>
 
-        // DOM Elements
-        const randomizeBtn = document.getElementById('randomize-btn');
-        const autoToggleBtn = document.getElementById('auto-toggle-btn');
-        const autoBtnText = document.getElementById('auto-btn-text');
-        const autoSettings = document.getElementById('auto-settings');
-        const speedSlider = document.getElementById('speed-slider');
-        const speedDisplay = document.getElementById('speed-display');
-        const copyBtn = document.getElementById('copy-btn');
-        const colorHexVal = document.getElementById('color-hex-val');
-        const colorRgbVal = document.getElementById('color-rgb-val');
-        const colorHslVal = document.getElementById('color-hsl-val');
-        const swatchesBar = document.getElementById('swatches-bar');
-        const historyCount = document.getElementById('history-count');
-        const statusBadge = document.getElementById('status-badge');
-        const statusDot = document.getElementById('status-dot');
-        const statusText = document.getElementById('status-text');
-        const toast = document.getElementById('toast');
+            <!-- TAB 2: TASK GRAPH -->
+            <div class="aux-panel" id="tabTaskGraph">
+                <div class="task-graph-container" id="taskGraphList">
+                    <div class="task-node-card completed">
+                        <div class="task-node-header">
+                            <span class="task-node-title">1. Inspect workspace structure</span>
+                            <span class="tool-status-badge pass">COMPLETED</span>
+                        </div>
+                        <span class="task-node-deps">Dependencies: [none] • Model: Claude 3.7</span>
+                    </div>
+                    <div class="task-node-card completed">
+                        <div class="task-node-header">
+                            <span class="task-node-title">2. Implement firmware & diagram</span>
+                            <span class="tool-status-badge pass">COMPLETED</span>
+                        </div>
+                        <span class="task-node-deps">Dependencies: [task_1] • Model: Claude 3.7</span>
+                    </div>
+                    <div class="task-node-card">
+                        <div class="task-node-header">
+                            <span class="task-node-title">3. Verify code & run self-tests</span>
+                            <span class="tool-status-badge running">READY</span>
+                        </div>
+                        <span class="task-node-deps">Dependencies: [task_2] • Model: Independent Verifier</span>
+                    </div>
+                </div>
+            </div>
 
-        // Color Math & Generation
-        function getRandomVibrantColor() {
-            // Pick a vibrant HSL color for rich aesthetics (avoids muddy colors)
-            const hue = Math.floor(Math.random() * 360);
-            const saturation = Math.floor(Math.random() * 35) + 65; // 65% - 100%
-            const lightness = Math.floor(Math.random() * 30) + 40;   // 40% - 70%
+            <!-- TAB 3: 6 VERIFICATION GATES -->
+            <div class="aux-panel" id="tabGates">
+                <div class="gates-grid">
+                    <div class="gate-card passed">
+                        <div class="gate-name">Gate 1: Files Exist</div>
+                        <div class="gate-status pass">✔ PASS (Non-zero)</div>
+                    </div>
+                    <div class="gate-card passed">
+                        <div class="gate-name">Gate 2: Code Compiles</div>
+                        <div class="gate-status pass">✔ PASS (Exit 0)</div>
+                    </div>
+                    <div class="gate-card passed">
+                        <div class="gate-name">Gate 3: Tests Pass</div>
+                        <div class="gate-status pass">✔ PASS (16/16)</div>
+                    </div>
+                    <div class="gate-card passed">
+                        <div class="gate-name">Gate 4: Reqs Satisfied</div>
+                        <div class="gate-status pass">✔ PASS (100%)</div>
+                    </div>
+                    <div class="gate-card passed">
+                        <div class="gate-name">Gate 5: Blind Review</div>
+                        <div class="gate-status pass">✔ PASS (Adversarial)</div>
+                    </div>
+                    <div class="gate-card passed">
+                        <div class="gate-name">Gate 6: Contradictions</div>
+                        <div class="gate-status pass">✔ PASS (Zero)</div>
+                    </div>
+                </div>
 
-            const { r, g, b } = hslToRgb(hue, saturation, lightness);
-            const hex = rgbToHex(r, g, b);
-            return { r, g, b, hex, h: hue, s: saturation, l: lightness };
+                <div class="confidence-meter-card">
+                    <div class="confidence-val">98%</div>
+                    <div class="confidence-label">Physical Evidence Confidence</div>
+                    <p style="font-size: 0.78rem; color: #94a3b8; margin-top: 0.4rem;">
+                        Level 1 & 2 Execution Evidence strictly outranks model consensus.
+                    </p>
+                </div>
+            </div>
+
+            <!-- TAB 4: TERMINAL CONSOLE -->
+            <div class="aux-panel" id="tabTerminal">
+                <div class="terminal-box" id="terminalOutput">
+[ARENAFIGHT ANTIGRAVITY ENGINE] Session initialized.
+[EVIDENCE_INIT] Claim registry active with 6 verification gates.
+[MODEL_ROUTER] Providers registered: [Claude Code CLI, OpenRouter, Ollama, TestMock].
+[C++20 COMPILER] cmake -B build -G Ninja -> Exit 0 (0.8s)
+[TEST_RUNNER] ctest --test-dir build -> 16/16 Passed (1.2s)
+[ARTIFACTS] Generated execution_plan.md and verification_report.md
+[VERIFIER] All 6 verification gates passed with zero unresolved contradictions.
+arena ❯ _</div>
+            </div>
+        </div>
+    </aside>
+
+</div>
+
+<!-- Customization & Skills Modal -->
+<div class="modal-overlay" id="skillsModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h2 class="md-h2">Skills & Customizations</h2>
+            <button class="btn-icon" id="btnCloseSkillsModal">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="sidebar-section-title">Active Workspace Skills</div>
+            <div class="tool-card">
+                <div class="tool-card-header">
+                    <span class="tool-target">⚡ code-architect</span>
+                    <span class="tool-status-badge pass">ACTIVE</span>
+                </div>
+                <div class="tool-terminal-body">Modular system design, clean APIs, and RAII memory safety in C++ and Python.</div>
+            </div>
+            <div class="tool-card">
+                <div class="tool-card-header">
+                    <span class="tool-target">⚡ hardware-engineer</span>
+                    <span class="tool-status-badge pass">ACTIVE</span>
+                </div>
+                <div class="tool-terminal-body">Microcontroller pinouts, circuit design, Wokwi diagram simulation, and extreme QoS embedded firmware.</div>
+            </div>
+            <div class="tool-card">
+                <div class="tool-card-header">
+                    <span class="tool-target">⚡ verifier</span>
+                    <span class="tool-status-badge pass">ACTIVE</span>
+                </div>
+                <div class="tool-terminal-body">Independent adversarial code review, compiler test verification, and hallucination prevention.</div>
+            </div>
+
+            <div class="sidebar-section-title" style="margin-top: 1rem;">Active Custom Rules</div>
+            <div class="md-alert">
+                <strong>user_global_credit</strong>: Always add a 'Made by Lunarmist-byte' credit section with GitHub and LinkedIn links to all projects.
+            </div>
+            <div class="md-alert">
+                <strong>evidence_first</strong>: Physical execution evidence strictly dominates model consensus. Never fake task completion.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Made by Lunarmist-byte
+// GitHub: https://github.com/Lunarmist-byte
+// LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/
+
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const btnSend = document.getElementById('btnSend');
+const slashPopover = document.getElementById('slashPopover');
+const auxPane = document.getElementById('auxPane');
+const btnToggleAux = document.getElementById('btnToggleAux');
+const skillsModal = document.getElementById('skillsModal');
+const navSkills = document.getElementById('navSkills');
+const btnCloseSkillsModal = document.getElementById('btnCloseSkillsModal');
+const terminalOutput = document.getElementById('terminalOutput');
+const artifactSelect = document.getElementById('artifactSelect');
+const artifactPreview = document.getElementById('artifactPreview');
+const btnCopyArtifact = document.getElementById('btnCopyArtifact');
+const btnNewSession = document.getElementById('btnNewSession');
+
+// Pre-stored sample artifacts
+const artifactsData = {
+    art_plan: {
+        title: "execution_plan.md",
+        content: `<h2 class="md-h2"># Execution Plan: Hardware Motor Driver</h2>
+<div class="md-alert">
+    <strong>[!IMPORTANT]</strong> Review this execution plan before proceeding. The plan will execute autonomously once approved.
+</div>
+<p><strong>Status:</strong> Ready for User Review (RequestFeedback: true)</p>
+<br>
+<h3 class="md-h3">Execution Milestones</h3>
+<ol style="margin-left: 1.5rem;">
+    <li><strong>Environment & Board Registry:</strong> Validate Raspberry Pi Pico pin current tolerances and PWM capability.</li>
+    <li><strong>Firmware Scaffolding:</strong> Generate C++20 QoS non-blocking firmware with watchdogs.</li>
+    <li><strong>Wokwi Diagram:</strong> Scaffold <code class="md-code">diagram.json</code> with stepper motor and driver chips.</li>
+    <li><strong>Verification Pass:</strong> Ensure compiler exits code 0 and all 6 gates are satisfied.</li>
+</ol>
+<br>
+<button class="btn-proceed" id="btnProceedInArtifact" style="width: 100%;">
+    Proceed with Plan Execution
+</button>`
+    },
+    art_verif: {
+        title: "verification_report.md",
+        content: `<h2 class="md-h2"># Verification Report (Antigravity Evidence)</h2>
+<div class="md-alert" style="border-left-color: var(--accent-emerald); background: rgba(16, 185, 129, 0.1);">
+    <strong>[!NOTE]</strong> Status: 100% VERIFIED across all compiler, test, and adversarial gates.
+</div>
+<br>
+<h3 class="md-h3">Verified Invariants</h3>
+<ul style="margin-left: 1.5rem;">
+    <li><strong>Gate 1: Files Exist:</strong> <code>diagram.json</code> (4.1KB), <code>main.cpp</code> (3.8KB) confirmed present on filesystem.</li>
+    <li><strong>Gate 2: Code Compiles:</strong> <code>cmake --build build</code> exited code 0. Zero warnings.</li>
+    <li><strong>Gate 3: Automated Tests:</strong> 16/16 unit and integration test assertions passed.</li>
+    <li><strong>Gate 5: Adversarial Review:</strong> No buffer overflows or command injection paths found.</li>
+    <li><strong>Gate 6: Claim Contradictions:</strong> Zero conflicting claims in ClaimRegistry.</li>
+</ul>
+<br>
+<p><em>Report generated by ArenaFight Antigravity Core. Made by Lunarmist-byte.</em></p>`
+    },
+    art_diff: {
+        title: "code_diff.md",
+        content: `<h2 class="md-h2"># Code Changes: PWM Watchdog Implementation</h2>
+<pre class="md-pre"><code><span class="diff-del">- void updateMotor() { analogWrite(PIN_PWM, speed); }</span>
+<span class="diff-add">+ void updateMotor() {</span>
+<span class="diff-add">+     // QoS Safety Guard: Prevent stall overcurrent</span>
+<span class="diff-add">+     if (speed > MAX_SAFE_DUTY) speed = MAX_SAFE_DUTY;</span>
+<span class="diff-add">+     analogWrite(PIN_PWM, speed);</span>
+<span class="diff-add">+     watchdog_update();</span>
+<span class="diff-add">+ }</span></code></pre>`
+    }
+};
+
+// Switch Artifacts
+artifactSelect.addEventListener('change', (e) => {
+    const art = artifactsData[e.target.value];
+    if (art) {
+        artifactPreview.innerHTML = art.content;
+        attachProceedListener();
+    }
+});
+
+// Copy artifact to clipboard
+btnCopyArtifact.addEventListener('click', () => {
+    const text = artifactPreview.innerText;
+    navigator.clipboard.writeText(text);
+    btnCopyArtifact.textContent = '✔';
+    setTimeout(() => { btnCopyArtifact.textContent = '📋'; }, 1500);
+});
+
+// Tabs in Auxiliary Pane
+document.querySelectorAll('.aux-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.aux-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.aux-panel').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        const targetId = tab.dataset.tab;
+        document.getElementById(targetId).classList.add('active');
+    });
+});
+
+// Toggle Auxiliary Pane
+btnToggleAux.addEventListener('click', () => {
+    auxPane.style.display = auxPane.style.display === 'none' ? 'flex' : 'none';
+});
+
+// Skills Modal
+navSkills.addEventListener('click', () => {
+    skillsModal.style.display = 'flex';
+});
+
+btnCloseSkillsModal.addEventListener('click', () => {
+    skillsModal.style.display = 'none';
+});
+
+window.addEventListener('click', (e) => {
+    if (e.target === skillsModal) {
+        skillsModal.style.display = 'none';
+    }
+});
+
+// Autocomplete popover for '/'
+chatInput.addEventListener('input', (e) => {
+    const val = e.target.value;
+    if (val.startsWith('/')) {
+        slashPopover.style.display = 'flex';
+    } else {
+        slashPopover.style.display = 'none';
+    }
+});
+
+document.querySelectorAll('.popover-item').forEach(item => {
+    item.addEventListener('click', () => {
+        chatInput.value = item.dataset.val;
+        slashPopover.style.display = 'none';
+        chatInput.focus();
+    });
+});
+
+// Quick Action Chips
+document.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+        chatInput.value = chip.dataset.cmd;
+        handleSendMessage();
+    });
+});
+
+// New Session
+btnNewSession.addEventListener('click', () => {
+    chatMessages.innerHTML = `
+        <div class="message-row agent">
+            <div class="avatar agent">▲</div>
+            <div class="message-content">
+                <div class="thinking-disclosure">
+                    <div class="thinking-summary">✦ Thinking Process</div>
+                    <div class="thinking-body">Session reset. New conversation initialized with Antigravity 2.0 orchestration.</div>
+                </div>
+                <div class="message-bubble">
+                    <p>New session started! What objective would you like to achieve? (Type <code class="md-code">/plan</code> or <code class="md-code">/goal</code> to begin).</p>
+                </div>
+            </div>
+        </div>
+    `;
+    logTerminal('[SESSION] New conversation session created.');
+});
+
+function logTerminal(msg) {
+    terminalOutput.textContent += '\n' + msg;
+    terminalOutput.scrollTop = terminalOutput.scrollHeight;
+}
+
+// Send Message Handler
+function handleSendMessage() {
+    const text = chatInput.value.trim();
+    if (!text) return;
+
+    slashPopover.style.display = 'none';
+    chatInput.value = '';
+
+    // Append User message
+    const userRow = document.createElement('div');
+    userRow.className = 'message-row user';
+    userRow.innerHTML = `
+        <div class="message-content">
+            <div class="message-bubble">${escapeHtml(text)}</div>
+        </div>
+        <div class="avatar user">U</div>
+    `;
+    chatMessages.appendChild(userRow);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    logTerminal(`arena ❯ ${text}`);
+
+    // Process Slash Commands or Conversational Prompt
+    setTimeout(() => {
+        if (text.startsWith('/goal')) {
+            executeGoalFlow(text.replace('/goal', '').trim() || "Autonomous Goal Execution");
+        } else if (text.startsWith('/plan')) {
+            executePlanFlow(text.replace('/plan', '').trim() || "Hardware & Software Project");
+        } else if (text.startsWith('/grill-me')) {
+            executeGrillMeFlow(text.replace('/grill-me', '').trim() || "Target Architecture");
+        } else if (text.startsWith('/learn')) {
+            executeLearnFlow(text.replace('/learn', '').trim() || "Project Invariant");
+        } else if (text.startsWith('/artifacts')) {
+            executeArtifactsListFlow();
+        } else if (text.startsWith('/skills')) {
+            executeSkillsFlow();
+        } else if (text.startsWith('/models')) {
+            executeModelsFlow();
+        } else {
+            executeConversationalFlow(text);
         }
+    }, 400);
+}
 
-        function hslToRgb(h, s, l) {
-            s /= 100;
-            l /= 100;
-            const k = n => (n + h / 30) % 12;
-            const a = s * Math.min(l, 1 - l);
-            const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
-            return {
-                r: Math.round(255 * f(0)),
-                g: Math.round(255 * f(8)),
-                b: Math.round(255 * f(4))
-            };
-        }
+function escapeHtml(str) {
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
 
-        function rgbToHex(r, g, b) {
-            return "#" + [r, g, b].map(x => {
-                const hex = x.toString(16);
-                return hex.length === 1 ? "0" + hex : hex;
-            }).join("");
-        }
+function executePlanFlow(task) {
+    const agentRow = document.createElement('div');
+    agentRow.className = 'message-row agent';
+    agentRow.innerHTML = `
+        <div class="avatar agent">▲</div>
+        <div class="message-content">
+            <div class="thinking-disclosure">
+                <div class="thinking-summary">✦ Thinking Process</div>
+                <div class="thinking-body">Analyzing task: "${escapeHtml(task)}"
+Decomposing into task graph with explicit dependencies and verification gates.
+Matched skill: [code-architect], [hardware-engineer].
+Generating Plan Artifact: execution_plan.md</div>
+            </div>
 
-        function rgbToHsl(r, g, b) {
-            r /= 255; g /= 255; b /= 255;
-            const max = Math.max(r, g, b), min = Math.min(r, g, b);
-            let h, s, l = (max + min) / 2;
+            <div class="plan-action-card">
+                <div class="plan-card-header">
+                    <span class="plan-card-title">📋 Execution Plan Generated</span>
+                    <span class="tool-status-badge running">Awaiting Review</span>
+                </div>
+                <p>I have structured a verification-backed plan for <strong>${escapeHtml(task)}</strong> with milestones, file dependencies, and acceptance criteria.</p>
+                <div class="plan-action-buttons">
+                    <button class="btn-proceed" onclick="proceedWithCurrentPlan()">Proceed with Execution</button>
+                    <button class="btn-edit-plan" onclick="chatInput.value='/plan ' + '${escapeHtml(task)}' + ' (Add unit tests)'; chatInput.focus();">Edit Constraints</button>
+                    <button class="btn-cancel-plan" onclick="this.closest('.plan-action-card').style.opacity='0.6';">Cancel</button>
+                </div>
+            </div>
+        </div>
+    `;
+    chatMessages.appendChild(agentRow);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
 
-            if (max === min) {
-                h = s = 0;
-            } else {
-                const d = max - min;
-                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-                switch (max) {
-                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-                    case g: h = (b - r) / d + 2; break;
-                    case b: h = (r - g) / d + 4; break;
-                }
-                h /= 6;
-            }
-            return {
-                h: Math.round(h * 360),
-                s: Math.round(s * 100),
-                l: Math.round(l * 100)
-            };
-        }
+    // Switch auxiliary tab to Artifacts
+    document.querySelector('.aux-tab[data-tab="tabArtifacts"]').click();
+    logTerminal(`[PLAN] Artifact generated: execution_plan.md for task: ${task}`);
+}
 
-        // Relative luminance for dynamic high-contrast UI
-        function getLuminance(r, g, b) {
-            const a = [r, g, b].map(v => {
-                v /= 255;
-                return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
-            });
-            return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
-        }
+window.proceedWithCurrentPlan = function() {
+    executeGoalFlow("Hardware Motor Driver Verification Plan");
+};
 
-        function applyColor(colorObj, recordHistory = true) {
-            currentColor = colorObj;
-            const { r, g, b, hex } = colorObj;
-            const hsl = colorObj.h !== undefined ? colorObj : rgbToHsl(r, g, b);
+function executeGoalFlow(task) {
+    const agentRow = document.createElement('div');
+    agentRow.className = 'message-row agent';
+    agentRow.innerHTML = `
+        <div class="avatar agent">▲</div>
+        <div class="message-content">
+            <div class="thinking-disclosure">
+                <div class="thinking-summary">✦ Thinking Process</div>
+                <div class="thinking-body">Executing autonomous goal loop for: "${escapeHtml(task)}"
+Executing Task Graph:
+- Task 1: Environment Inspection
+- Task 2: Code Authoring
+- Task 3: Independent Physical Verification
+Running 6 Verification Gates...</div>
+            </div>
 
-            // Apply background color
-            document.documentElement.style.setProperty('--bg-color', hex);
+            <div class="message-bubble">
+                <p>🚀 <strong>Autonomous Goal Pursuit Active:</strong> Executing task graph with physical evidence verification.</p>
+            </div>
 
-            // Dynamic text and card contrast
-            const luminance = getLuminance(r, g, b);
-            const isLightBg = luminance > 0.45;
+            <!-- Tool Execution 1 -->
+            <div class="tool-card">
+                <div class="tool-card-header">
+                    <div class="tool-name-group">
+                        <span class="tool-badge">run_command</span>
+                        <span class="tool-target">cmake --build build</span>
+                    </div>
+                    <span class="tool-status-badge pass">PASS (Exit 0, 0.9s)</span>
+                </div>
+                <div class="tool-terminal-body">[1/4] Building CXX object CMakeFiles/firmware.dir/src/main.cpp.obj
+[2/4] Linking CXX executable firmware.elf
+Build succeeded with 0 warnings.</div>
+            </div>
 
-            if (isLightBg) {
-                document.documentElement.style.setProperty('--text-color', '#0f172a');
-                document.documentElement.style.setProperty('--card-bg', 'rgba(0, 0, 0, 0.08)');
-                document.documentElement.style.setProperty('--card-border', 'rgba(0, 0, 0, 0.18)');
-                document.documentElement.style.setProperty('--button-bg', '#0f172a');
-                document.documentElement.style.setProperty('--button-text', '#ffffff');
-            } else {
-                document.documentElement.style.setProperty('--text-color', '#ffffff');
-                document.documentElement.style.setProperty('--card-bg', 'rgba(255, 255, 255, 0.14)');
-                document.documentElement.style.setProperty('--card-border', 'rgba(255, 255, 255, 0.25)');
-                document.documentElement.style.setProperty('--button-bg', '#ffffff');
-                document.documentElement.style.setProperty('--button-text', '#0f172a');
-            }
+            <!-- Tool Execution 2 -->
+            <div class="tool-card">
+                <div class="tool-card-header">
+                    <div class="tool-name-group">
+                        <span class="tool-badge">run_tests</span>
+                        <span class="tool-target">ctest --test-dir build</span>
+                    </div>
+                    <span class="tool-status-badge pass">PASS (16/16 Passed)</span>
+                </div>
+                <div class="tool-terminal-body">Test project C:/.../build
+    Start  1: ConfigTest .......... Passed (0.02 sec)
+    Start  2: FileToolsTest ....... Passed (0.01 sec)
+    Start  3: QoSVerification .... Passed (0.05 sec)
+100% tests passed, 0 tests failed out of 16.</div>
+            </div>
 
-            // Update UI telemetry
-            colorHexVal.textContent = hex.toUpperCase();
-            colorRgbVal.textContent = `${r}, ${g}, ${b}`;
-            colorHslVal.textContent = `${hsl.h}°, ${hsl.s}%, ${hsl.l}%`;
+            <div class="message-bubble" style="border-left: 3px solid var(--accent-emerald);">
+                <p>✔ <strong>Objective Verified &amp; Complete!</strong></p>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem;">
+                    All 6 Verification Gates passed. Verification report persisted to <code class="md-code">.arena/artifacts/verification_report.md</code>.
+                </p>
+            </div>
+        </div>
+    `;
+    chatMessages.appendChild(agentRow);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
 
-            if (recordHistory) {
-                addToHistory(hex);
-            }
-        }
+    // Switch auxiliary tab to Verification Gates
+    document.querySelector('.aux-tab[data-tab="tabGates"]').click();
+    logTerminal(`[GOAL] 100% VERIFIED: ${task}. All gates satisfied.`);
+}
 
-        function addToHistory(hex) {
-            // Deduplicate top entry
-            if (colorHistory.length > 0 && colorHistory[0].toLowerCase() === hex.toLowerCase()) {
-                return;
-            }
-            colorHistory.unshift(hex);
-            if (colorHistory.length > MAX_HISTORY) {
-                colorHistory.pop();
-            }
-            renderHistory();
-        }
+function executeGrillMeFlow(topic) {
+    const agentRow = document.createElement('div');
+    agentRow.className = 'message-row agent';
+    agentRow.innerHTML = `
+        <div class="avatar agent">▲</div>
+        <div class="message-content">
+            <div class="thinking-disclosure">
+                <div class="thinking-summary">✦ Thinking Process</div>
+                <div class="thinking-body">Running Antigravity Requirements Interview for: "${escapeHtml(topic)}"
+Probing failure modes, reentrancy, timing bounds, and testing invariants.</div>
+            </div>
+            <div class="message-bubble">
+                <h3 class="md-h3">🎙️ Requirements &amp; Architecture Interview</h3>
+                <p>Before implementing <strong>${escapeHtml(topic)}</strong>, let's eliminate ambiguities:</p>
+                <ol style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                    <li><strong>Concurrency &amp; Reentrancy:</strong> Should operations be synchronized via process mutex or lock-free atomics?</li>
+                    <li><strong>Sensor / API Timeout:</strong> What is the fallback behavior if a hardware sensor or remote model times out?</li>
+                    <li><strong>Acceptance Evidence:</strong> What specific automated tests or compiler flags (e.g. AddressSanitizer) must pass?</li>
+                </ol>
+                <br>
+                <p style="font-size: 0.85rem; color: var(--text-muted);">Reply with your preferences or click below to proceed with resilient defaults.</p>
+                <button class="btn-proceed" style="margin-top: 0.6rem;" onclick="chatInput.value='/plan ' + '${escapeHtml(topic)}' + ' (Resilient QoS Defaults)'; handleSendMessage();">
+                    Accept Resilient Defaults &amp; Generate Plan
+                </button>
+            </div>
+        </div>
+    `;
+    chatMessages.appendChild(agentRow);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    logTerminal(`[GRILL-ME] Interview initiated for topic: ${topic}`);
+}
 
-        function renderHistory() {
-            swatchesBar.innerHTML = '';
-            colorHistory.forEach(hex => {
-                const swatch = document.createElement('div');
-                swatch.className = 'swatch-item';
-                swatch.style.backgroundColor = hex;
-                swatch.title = `Restore ${hex}`;
-                swatch.addEventListener('click', () => {
-                    const r = parseInt(hex.slice(1, 3), 16);
-                    const g = parseInt(hex.slice(3, 5), 16);
-                    const b = parseInt(hex.slice(5, 7), 16);
-                    applyColor({ r, g, b, hex }, false);
-                    showToast(`Restored ${hex.toUpperCase()}`);
-                });
-                swatchesBar.appendChild(swatch);
-            });
-            historyCount.textContent = `${colorHistory.length} saved`;
-        }
+function executeLearnFlow(insight) {
+    const agentRow = document.createElement('div');
+    agentRow.className = 'message-row agent';
+    agentRow.innerHTML = `
+        <div class="avatar agent">▲</div>
+        <div class="message-content">
+            <div class="thinking-disclosure">
+                <div class="thinking-summary">✦ Thinking Process</div>
+                <div class="thinking-body">Saving persistent Knowledge Item into .arena/knowledge/
+Updating repository memory and context injection graph.</div>
+            </div>
+            <div class="message-bubble" style="border-left: 3px solid var(--accent-cyan);">
+                <p>🧠 <strong>Knowledge Item Persisted!</strong></p>
+                <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 0.3rem;">
+                    <strong>Insight:</strong> "${escapeHtml(insight)}"
+                </p>
+                <p style="font-size: 0.78rem; color: var(--accent-cyan); font-family: var(--font-mono); margin-top: 0.4rem;">
+                    Path: .arena/knowledge/ki_learned/metadata.json
+                </p>
+            </div>
+        </div>
+    `;
+    chatMessages.appendChild(agentRow);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    logTerminal(`[LEARN] Persisted knowledge item: ${insight}`);
+}
 
-        // Automatic Mode Logic
-        function startAutomaticMode() {
-            if (isAutoMode) return;
-            isAutoMode = true;
-            autoToggleBtn.classList.add('active');
-            autoBtnText.textContent = 'Stop Automatic';
-            autoSettings.classList.add('visible');
-            statusBadge.style.background = 'rgba(16, 185, 129, 0.3)';
-            statusText.textContent = 'Auto Cycling Active';
-            statusDot.style.backgroundColor = '#10b981';
+function executeArtifactsListFlow() {
+    document.querySelector('.aux-tab[data-tab="tabArtifacts"]').click();
+    const agentRow = document.createElement('div');
+    agentRow.className = 'message-row agent';
+    agentRow.innerHTML = `
+        <div class="avatar agent">▲</div>
+        <div class="message-content">
+            <div class="message-bubble">
+                <p>Opened the <strong>Artifacts Viewer</strong> in the auxiliary pane. Available artifacts:</p>
+                <ul style="margin-left: 1.5rem; margin-top: 0.4rem;">
+                    <li><code class="md-code">execution_plan.md</code> — Task graph with milestone requirements</li>
+                    <li><code class="md-code">verification_report.md</code> — Gate checks and direct execution evidence</li>
+                    <li><code class="md-code">code_diff.md</code> — Working tree changes and diff validation</li>
+                </ul>
+            </div>
+        </div>
+    `;
+    chatMessages.appendChild(agentRow);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
 
-            // Next change right away, then interval
-            applyColor(getRandomVibrantColor());
-            autoIntervalId = setInterval(() => {
-                applyColor(getRandomVibrantColor());
-            }, autoIntervalSeconds * 1000);
-        }
+function executeSkillsFlow() {
+    skillsModal.style.display = 'flex';
+}
 
-        function stopAutomaticMode() {
-            if (!isAutoMode) return;
-            isAutoMode = false;
-            autoToggleBtn.classList.remove('active');
-            autoBtnText.textContent = 'Make It Automatic';
-            autoSettings.classList.remove('visible');
-            statusBadge.style.background = 'rgba(255, 255, 255, 0.18)';
-            statusText.textContent = 'Manual Mode';
-            statusDot.style.backgroundColor = '#6366f1';
+function executeModelsFlow() {
+    const agentRow = document.createElement('div');
+    agentRow.className = 'message-row agent';
+    agentRow.innerHTML = `
+        <div class="avatar agent">▲</div>
+        <div class="message-content">
+            <div class="message-bubble">
+                <h3 class="md-h3">🤖 Available AI Providers &amp; Models</h3>
+                <ul style="margin-left: 1.5rem; margin-top: 0.4rem;">
+                    <li><strong>Claude Code CLI:</strong> <code>claude-3.7-sonnet</code> (Autonomous reasoning &amp; code authoring)</li>
+                    <li><strong>OpenRouter Cloud:</strong> <code>deepseek-r1</code>, <code>claude-3.5-sonnet</code>, <code>qwen2.5-coder-32b</code></li>
+                    <li><strong>Ollama (Local):</strong> <code>qwen2.5:14b</code>, <code>llama3.3:70b</code> (Hardware mutex protected)</li>
+                    <li><strong>Offline TestMock:</strong> Deterministic model simulator for offline self-testing</li>
+                </ul>
+            </div>
+        </div>
+    `;
+    chatMessages.appendChild(agentRow);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
 
-            if (autoIntervalId) {
-                clearInterval(autoIntervalId);
-                autoIntervalId = null;
-            }
-        }
+function executeConversationalFlow(prompt) {
+    const agentRow = document.createElement('div');
+    agentRow.className = 'message-row agent';
+    agentRow.innerHTML = `
+        <div class="avatar agent">▲</div>
+        <div class="message-content">
+            <div class="thinking-disclosure">
+                <div class="thinking-summary">✦ Thinking Process</div>
+                <div class="thinking-body">Query: "${escapeHtml(prompt)}"
+Context injected from @git, custom rules, and active skills.
+Formulating evidence-backed response adhering to QoS guidelines.</div>
+            </div>
+            <div class="message-bubble">
+                <p>I have analyzed your query: <em>"${escapeHtml(prompt)}"</em>.</p>
+                <p style="margin-top: 0.5rem;">ArenaFight operates with physical verification doctrine. Would you like me to:</p>
+                <div class="plan-action-buttons">
+                    <button class="btn-proceed" onclick="executeGoalFlow('${escapeHtml(prompt)}')">🚀 Run /goal</button>
+                    <button class="btn-edit-plan" onclick="executePlanFlow('${escapeHtml(prompt)}')">📋 Create /plan</button>
+                    <button class="btn-cancel-plan" onclick="executeGrillMeFlow('${escapeHtml(prompt)}')">🎙️ Interview /grill-me</button>
+                </div>
+            </div>
+        </div>
+    `;
+    chatMessages.appendChild(agentRow);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
 
-        function toggleAutomaticMode() {
-            if (isAutoMode) {
-                stopAutomaticMode();
-                showToast('Automatic mode stopped');
-            } else {
-                startAutomaticMode();
-                showToast(`Automatic mode started (${autoIntervalSeconds}s)`);
-            }
-        }
-
-        function showToast(msg) {
-            toast.textContent = msg;
-            toast.classList.add('show');
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 2000);
-        }
-
-        function copyHex() {
-            const hex = colorHexVal.textContent.trim();
-            navigator.clipboard.writeText(hex).then(() => {
-                showToast(`Copied ${hex} to clipboard!`);
-            }).catch(() => {
-                showToast('Failed to copy to clipboard');
-            });
-        }
-
-        // Event Listeners
-        randomizeBtn.addEventListener('click', () => {
-            applyColor(getRandomVibrantColor());
+function attachProceedListener() {
+    const btn = document.getElementById('btnProceedInArtifact');
+    if (btn) {
+        btn.addEventListener('click', () => {
+            executeGoalFlow("Hardware Motor Driver Verification Plan");
         });
+    }
+}
+attachProceedListener();
 
-        autoToggleBtn.addEventListener('click', toggleAutomaticMode);
+btnSend.addEventListener('click', handleSendMessage);
+chatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSendMessage();
+    }
+});
 
-        speedSlider.addEventListener('input', (e) => {
-            autoIntervalSeconds = parseFloat(e.target.value);
-            speedDisplay.textContent = `${autoIntervalSeconds.toFixed(1)} seconds`;
-            document.documentElement.style.setProperty('--transition-speed', `${Math.min(0.8, autoIntervalSeconds * 0.4)}s`);
-
-            if (isAutoMode) {
-                clearInterval(autoIntervalId);
-                autoIntervalId = setInterval(() => {
-                    applyColor(getRandomVibrantColor());
-                }, autoIntervalSeconds * 1000);
-            }
-        });
-
-        copyBtn.addEventListener('click', copyHex);
-        colorHexVal.addEventListener('click', copyHex);
-
-        // Keyboard Shortcut: Spacebar randomizes color
-        window.addEventListener('keydown', (e) => {
-            if (e.code === 'Space' && e.target === document.body) {
-                e.preventDefault();
-                applyColor(getRandomVibrantColor());
-            }
-        });
-
-        // Initial setup
-        applyColor(currentColor);
-    </script>
+</script>
 </body>
 </html>

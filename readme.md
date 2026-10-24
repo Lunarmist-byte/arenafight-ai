@@ -285,37 +285,80 @@ ctest --test-dir build --output-on-failure
 
 ---
 
-## 7. CLI Usage
+## 7. Antigravity Interactive REPL & Slash Commands
+
+ArenaFight provides a Google Antigravity-style interactive multi-turn REPL and slash command suite:
 
 ```bash
-# Launch interactive mode
+# Launch Antigravity Interactive Multi-Turn REPL
 ./build/arena
 
-# Execute a single autonomous task
-./build/arena "Build a C++ CLI todo application with persistence, tests, and documentation"
+# Autonomous Goal Pursuit (pursues until all 6 verification gates pass)
+./build/arena goal "Build a multi-threaded crawler with tests and documentation"
 
-# Run with test mock provider (offline testing)
-./build/arena "Create a calculator module" --mock
+# Generate Interactive Plan Artifact with milestones & dependencies
+./build/arena plan "Scaffold an embedded motor controller with Wokwi"
+
+# Interactive Requirements & Edge Cases Interview
+./build/arena grill-me "High-throughput asynchronous event bus"
+
+# Inspect and view generated artifacts
+./build/arena artifacts
+
+# List active workspace skills (.arena/skills/*/SKILL.md)
+./build/arena skills
+
+# List active custom & system rules (.arena/rules/)
+./build/arena rules
 
 # Resume a previous session
 ./build/arena resume <session-id>
 
-# List all past sessions
-./build/arena sessions
-
-# List all available models across providers
-./build/arena models
-
-# Inspect current configuration
-./build/arena config
-
-# Run built-in self-test suite
+# Run built-in automated self-test suite (16/16 test assertions)
 ./build/arena test
+```
+
+### REPL Slash Commands (inside `arena ❯`)
+* `/goal <task>`: Autonomous goal pursuit with self-healing until fully verified.
+* `/plan <task>`: Deconstructs the task into a structured plan artifact with milestones and acceptance criteria; prompts user to `[P]roceed`, `[E]dit`, or `[C]ancel`.
+* `/grill-me <topic>`: Proactive requirements interview probing concurrency, edge cases, timing bounds, and failure modes.
+* `/learn <insight>`: Persists repository conventions and rules into `.arena/knowledge/` and memory.
+* `/schedule <delay_sec> <task>`: Schedules delayed or recurring background jobs.
+* `/artifacts [id]`: Lists and inspects project artifacts with YAML metadata.
+* `/skills [name]`: Inspects discovered skills.
+* `/rules`: Lists active system and workspace rules.
+* `/models`: Discovers and switches models across Claude Code, OpenRouter, and Ollama.
+* `/status`: Displays session telemetry, verified facts, and gate statuses.
+* `/exit` / `/quit`: Exits the session.
+
+### Context Mentions (`@`)
+* `@file <path>`: Attaches file content directly into prompt context.
+* `@git`: Attaches working tree status and diff.
+* `@claims`: Injects ClaimRegistry verified evidence.
+* `@memory`: Injects recent discoveries and decisions.
+
+---
+
+## 8. Antigravity 2.0 Web UI (`index.html`)
+
+ArenaFight features a state-of-the-art **Antigravity 2.0 Web Studio**:
+* **Left Sidebar**: Workspace indicator, session history, skills drawer, scheduled tasks monitor, settings modal, and Lunarmist-byte authorship credits.
+* **Chat Canvas**: Interactive multi-turn feed with collapsible Thinking Process disclosures, live Tool Execution cards (`run_command`, `write_file`, `run_tests`), interactive Plan Cards with "Proceed with Execution", and slash command autocomplete (`/`).
+* **Auxiliary Pane**: 
+  1. *Artifacts Viewer*: Interactive markdown previewer with diff blocks, copy button, and plan execution actions.
+  2. *Task Graph*: Visual task nodes with dependencies and status badges.
+  3. *6 Verification Gates*: Live dashboard tracking files, compilation, tests, requirements, adversarial review, and contradiction state with physical confidence score.
+  4. *Terminal Console*: Real-time ANSI-rendered terminal log output.
+
+To launch the Web UI, simply open `index.html` in any web browser or serve it via local web server:
+```bash
+# Open in browser directly
+explorer index.html
 ```
 
 ---
 
-## 8. Configuration (`config.json`)
+## 9. Configuration (`config.json`)
 
 ```json
 {
@@ -352,7 +395,7 @@ Environment variables override configuration automatically:
 
 ---
 
-## 9. Developer Guide & Code Architecture
+## 10. Developer Guide & Code Architecture
 
 ArenaFight includes a local developer guide and code tutorial (`docs/DEV_TUTORIAL.md`) covering:
 * Embedding `ArenaFight` as a static/shared C++20 library in external projects.

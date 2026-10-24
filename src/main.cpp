@@ -52,7 +52,9 @@ int main(int argc, char* argv[]) {
         } else if (arg == "--mock") {
             config.test_mock_enabled = true;
             config.default_provider = "TestMock";
-        if (arg == "--help" || arg == "-h" || arg == "help") {
+        } else if (arg == "--no-mock-fallback") {
+            config.auto_mock_fallback = false;
+        } else if (arg == "--help" || arg == "-h" || arg == "help") {
             printUsage();
             return 0;
         }
@@ -87,14 +89,14 @@ int main(int argc, char* argv[]) {
 
         if (cmd == "artifacts") {
             ReplEngine repl(agent);
-            std::string arg = (argc > 2) ? argv[2] : "";
+            std::string arg = (argc > 2 && argv[2][0] != '-') ? argv[2] : "";
             repl.handleArtifacts(arg);
             return 0;
         }
 
         if (cmd == "skills") {
             ReplEngine repl(agent);
-            std::string arg = (argc > 2) ? argv[2] : "";
+            std::string arg = (argc > 2 && argv[2][0] != '-') ? argv[2] : "";
             repl.handleSkills(arg);
             return 0;
         }
