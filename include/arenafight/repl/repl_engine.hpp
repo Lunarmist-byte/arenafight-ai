@@ -45,6 +45,14 @@ public:
     void handleStatus(const std::string& args);
     void handleHelp(const std::string& args);
 
+    // Hardware Studio handlers
+    void handleBoards(const std::string& filter);
+    void handleBoard(const std::string& boardId);
+    void handleComponents(const std::string& filter);
+    void handleScaffold(const std::string& args);
+    void handleQoS(const std::string& path);
+    void handleCalculate(const std::string& args);
+
     // Mentions resolver (@file, @git, @memory, @claims)
     std::string resolveMentions(const std::string& prompt);
 

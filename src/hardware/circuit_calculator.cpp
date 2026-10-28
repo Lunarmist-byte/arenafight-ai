@@ -125,8 +125,8 @@ CircuitCalculationResult CircuitCalculator::calculateVoltageDivider(
 
     double ratio = targetOutputVoltage / inputVoltage;
     // R2 / (R1 + R2) = ratio => R1 = R2 * (1 - ratio) / ratio
-    double r2Target = (targetResistanceKOhms * 1000.0) * ratio;
-    double r1Target = (targetResistanceKOhms * 1000.0) * (1.0 - ratio);
+    double r2Target = targetResistanceKOhms * 1000.0;
+    double r1Target = r2Target * (1.0 - ratio) / ratio;
 
     double r2Standard = findNearestStandardResistor(r2Target);
     double r1Standard = findNearestStandardResistor(r1Target);

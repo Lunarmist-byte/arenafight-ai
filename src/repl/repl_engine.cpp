@@ -1,6 +1,11 @@
 #include "arenafight/repl/repl_engine.hpp"
 #include "arenafight/ui/terminal_ui.hpp"
 #include "arenafight/common/logger.hpp"
+#include "arenafight/hardware/hardware_manager.hpp"
+#include "arenafight/hardware/board_registry.hpp"
+#include "arenafight/hardware/circuit_calculator.hpp"
+#include "arenafight/hardware/hardware_validator.hpp"
+#include "arenafight/hardware/hardware_scaffolder.hpp"
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -119,6 +124,48 @@ void ReplEngine::registerCommands() {
         "View current session state, claims confidence, and verification telemetry",
         "/status",
         [this](const std::string& args) { handleStatus(args); }
+    };
+
+    slashCommands_["/boards"] = {
+        "/boards",
+        "List all supported microcontroller boards and architectures",
+        "/boards [filter]",
+        [this](const std::string& args) { handleBoards(args); }
+    };
+
+    slashCommands_["/board"] = {
+        "/board",
+        "Inspect microcontroller pinouts, strapping pins, and voltages",
+        "/board <board-id>",
+        [this](const std::string& args) { handleBoard(args); }
+    };
+
+    slashCommands_["/components"] = {
+        "/components",
+        "List supported sensors, actuators, and communication ICs",
+        "/components [filter]",
+        [this](const std::string& args) { handleComponents(args); }
+    };
+
+    slashCommands_["/scaffold"] = {
+        "/scaffold",
+        "Scaffold an embedded project with Wokwi diagram and QoS firmware",
+        "/scaffold <board> <project_name>",
+        [this](const std::string& args) { handleScaffold(args); }
+    };
+
+    slashCommands_["/qos"] = {
+        "/qos",
+        "Evaluate embedded firmware for zero-heap, non-blocking QoS compliance",
+        "/qos [path]",
+        [this](const std::string& args) { handleQoS(args); }
+    };
+
+    slashCommands_["/calculate"] = {
+        "/calculate",
+        "Calculate circuit values: led, divider, i2c pullup, or battery lifetime",
+        "/calculate <led|divider|i2c|battery> <args>",
+        [this](const std::string& args) { handleCalculate(args); }
     };
 
     slashCommands_["/clear"] = {
@@ -547,6 +594,182 @@ void ReplEngine::handleHelp(const std::string& args) {
         }
     }
     printHelpTable();
+}
+
+void ReplEngine::handleBoards(const std::string& filter) {
+    auto boards = HardwareBoardRegistry::instance().getAllBoards();
+    if (!filter.empty()) {
+        std::vector<BoardSpec> filtered;
+        for (const auto& b : boards) {
+            if (b.id.find(filter) != std::string::npos || b.name.find(filter) != std::string::npos) {
+                filtered.push_back(b);
+            }
+        }
+        TerminalUI::printBoardsTable(filtered);
+    } else {
+        TerminalUI::printBoardsTable(boards);
+    }
+}
+
+void ReplEngine::handleBoard(const std::string& boardId) {
+    std::string id = boardId;
+    if (id.empty()) {
+        id = askUserInteractive("Enter board ID to inspect (e.g., esp32, pico, arduino_uno, stm32f401):");
+    }
+    if (id.empty()) id = "esp32";
+
+    auto b = HardwareBoardRegistry::instance().getBoard(id);
+    if (!b) b = HardwareBoardRegistry::instance().findBoard(id);
+
+    if (b) {
+        TerminalUI::printBoardDetails(*b);
+    } else {
+        std::cout << ANSI_YELLOW << "Microcontroller board '" << id << "' not found. Run /boards to view available boards.\n" << ANSI_RESET;
+    }
+}
+
+void ReplEngine::handleComponents(const std::string& filter) {
+    auto comps = HardwareBoardRegistry::instance().getAllComponents();
+    if (!filter.empty()) {
+        std::vector<ComponentSpec> filtered;
+        for (const auto& c : comps) {
+            if (c.id.find(filter) != std::string::npos || c.name.find(filter) != std::string::npos || c.category.find(filter) != std::string::npos) {
+                filtered.push_back(c);
+            }
+        }
+        TerminalUI::printComponentsTable(filtered);
+    } else {
+        TerminalUI::printComponentsTable(comps);
+    }
+}
+
+void ReplEngine::handleScaffold(const std::string& args) {
+    std::stringstream ss(args);
+    std::string boardId, projectName;
+    ss >> boardId >> projectName;
+
+    if (boardId.empty()) {
+        boardId = askUserInteractive("Enter target microcontroller board (esp32, pico, arduino_uno):");
+    }
+    if (projectName.empty()) {
+        projectName = askUserInteractive("Enter project name:");
+    }
+    if (boardId.empty()) boardId = "esp32";
+    if (projectName.empty()) projectName = "embedded_project";
+
+    std::cout << "\n" << ANSI_CYAN << "[HARDWARE STUDIO]" << ANSI_RESET
+              << " Scaffolding embedded project for board: " << boardId << "...\n";
+
+    ScaffoldOptions opts;
+    opts.boardId = boardId;
+    opts.projectName = projectName;
+    opts.outputDir = agent_.getConfig().workspace_dir;
+    opts.generateWokwiSimulation = true;
+
+    auto res = HardwareManager::instance().scaffold(opts);
+    if (res.success) {
+        std::cout << ANSI_GREEN << ANSI_BOLD << "[SCAFFOLD SUCCESS]" << ANSI_RESET << "\n"
+                  << "Project Path: " << res.projectDir << "\n"
+                  << "Files Created (" << res.filesCreated.size() << "):\n";
+        for (const auto& f : res.filesCreated) {
+            std::cout << "  * " << f << "\n";
+        }
+        std::cout << "\nWokwi Simulation Diagram: " << res.wokwiDiagramPath << "\n";
+
+        std::string artContent = "# Hardware Project Scaffold: " + projectName + "\n\n"
+            + "- **Target Board:** " + boardId + "\n"
+            + "- **Wokwi Simulation:** `" + res.wokwiDiagramPath + "`\n"
+            + "- **PlatformIO Configuration:** `" + res.projectDir + "/platformio.ini`\n"
+            + "- **QoS Firmware Source:** `" + res.projectDir + "/src/main.cpp`\n\n";
+
+        ArtifactMetadata meta;
+        meta.userFacing = true;
+        meta.requestFeedback = false;
+        meta.summary = "Scaffolded embedded project with Wokwi simulation";
+
+        artifacts_.createArtifact(
+            "Hardware Scaffold: " + projectName,
+            "hardware_scaffold.md",
+            ArtifactType::REPORT,
+            artContent,
+            meta
+        );
+
+        std::cout << ANSI_CYAN << "Artifact recorded: .arena/artifacts/hardware_scaffold.md\n" << ANSI_RESET;
+    } else {
+        std::cout << ANSI_RED << "[SCAFFOLD FAILED] " << res.message << ANSI_RESET << "\n";
+    }
+}
+
+void ReplEngine::handleQoS(const std::string& path) {
+    std::string target = path;
+    if (target.empty()) target = agent_.getConfig().workspace_dir;
+
+    std::cout << "\n" << ANSI_CYAN << "[FIRMWARE QoS EVALUATION]" << ANSI_RESET
+              << " Inspecting: " << target << "...\n";
+
+    auto qos = HardwareManager::instance().evaluateProjectQoS(target);
+    TerminalUI::printQoSTelemetryReport(qos);
+}
+
+void ReplEngine::handleCalculate(const std::string& args) {
+    std::stringstream ss(args);
+    std::string type;
+    ss >> type;
+
+    if (type == "led") {
+        double vcc = 5.0, vf = 2.0, ma = 15.0;
+        ss >> vcc >> vf >> ma;
+        auto res = CircuitCalculator::calculateLedResistor(vcc, vf, ma);
+        std::cout << "\n" << ANSI_BOLD << "LED Resistor Calculation:" << ANSI_RESET << "\n"
+                  << "  Formula: " << res.formulaUsed << "\n"
+                  << "  Summary: " << res.summary << "\n\n";
+        for (const auto& rec : res.componentRecommendations) {
+            std::cout << "  * " << rec << "\n";
+        }
+        std::cout << "\n";
+    } else if (type == "divider") {
+        double vin = 5.0, vout = 3.3, rk = 10.0;
+        ss >> vin >> vout >> rk;
+        auto res = CircuitCalculator::calculateVoltageDivider(vin, vout, rk);
+        std::cout << "\n" << ANSI_BOLD << "Voltage Divider Calculation (5V -> 3.3V Level Shifting):" << ANSI_RESET << "\n"
+                  << "  Formula: " << res.formulaUsed << "\n"
+                  << "  Summary: " << res.summary << "\n\n";
+        for (const auto& rec : res.componentRecommendations) {
+            std::cout << "  * " << rec << "\n";
+        }
+        std::cout << "\n";
+    } else if (type == "i2c") {
+        double vcc = 3.3;
+        int speed = 100;
+        ss >> vcc >> speed;
+        auto res = CircuitCalculator::calculateI2cPullup(vcc, speed);
+        std::cout << "\n" << ANSI_BOLD << "I2C Bus Pull-Up Resistor Calculation:" << ANSI_RESET << "\n"
+                  << "  Formula: " << res.formulaUsed << "\n"
+                  << "  Summary: " << res.summary << "\n\n";
+        for (const auto& rec : res.componentRecommendations) {
+            std::cout << "  * " << rec << "\n";
+        }
+        std::cout << "\n";
+    } else if (type == "battery") {
+        double mah = 2500.0, actMa = 80.0, slpUa = 15.0, actSec = 2.0, slpSec = 58.0;
+        ss >> mah >> actMa >> slpUa >> actSec >> slpSec;
+        auto res = CircuitCalculator::calculateBatteryLife(mah, actMa, slpUa, actSec, slpSec);
+        std::cout << "\n" << ANSI_BOLD << "Battery & Deep Sleep Power Budget:" << ANSI_RESET << "\n"
+                  << "  Formula: " << res.formulaUsed << "\n"
+                  << "  Summary: " << res.summary << "\n\n";
+        for (const auto& rec : res.componentRecommendations) {
+            std::cout << "  * " << rec << "\n";
+        }
+        std::cout << "\n";
+    } else {
+        std::cout << ANSI_YELLOW << "Usage: /calculate <led|divider|i2c|battery> [args]\n"
+                  << "  /calculate led 5.0 2.0 15        (Supply V, Forward Vf, Current mA)\n"
+                  << "  /calculate divider 5.0 3.3 10    (Vin, Target Vout, R2 kOhms)\n"
+                  << "  /calculate i2c 3.3 100           (Supply V, Bus speed kHz)\n"
+                  << "  /calculate battery 2500 80 15 2 58 (Capacity mAh, Active mA, Sleep uA, Act Sec, Sleep Sec)\n\n"
+                  << ANSI_RESET;
+    }
 }
 
 void ReplEngine::processInput(const std::string& rawInput) {

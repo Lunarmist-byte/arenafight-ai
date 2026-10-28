@@ -23,6 +23,12 @@
 #include "arenafight/verifier/independent_reviewer.hpp"
 #include "arenafight/evidence/claim_registry.hpp"
 #include "arenafight/agent/arena_agent.hpp"
+#include "arenafight/hardware/hardware_manager.hpp"
+#include "arenafight/hardware/board_registry.hpp"
+#include "arenafight/hardware/circuit_calculator.hpp"
+#include "arenafight/hardware/hardware_validator.hpp"
+#include "arenafight/hardware/hardware_scaffolder.hpp"
+#include "arenafight/tools/hardware_tools.hpp"
 #include <thread>
 #include <chrono>
 
@@ -583,6 +589,158 @@ bool testAutoMockFallback() {
     return true;
 }
 
+bool testHardwareBoardRegistry() {
+    std::cout << "[TEST] 17. Hardware Board Registry & Pinout constraints... " << std::flush;
+    auto& reg = HardwareBoardRegistry::instance();
+    auto esp32 = reg.getBoard("esp32");
+    TEST_ASSERT(esp32.has_value(), "ESP32 board must be present in registry");
+    TEST_ASSERT(esp32->logicVoltage == LogicVoltage::VOLTAGE_3V3, "ESP32 logic voltage must be 3.3V");
+    TEST_ASSERT(esp32->architecture == McuArchitecture::XTENSA_LX6, "ESP32 architecture must be Xtensa LX6");
+
+    // Check strapping pin
+    auto gpio0It = esp32->pins.find("GPIO0");
+    TEST_ASSERT(gpio0It != esp32->pins.end(), "GPIO0 must exist in ESP32 pinout");
+    TEST_ASSERT(gpio0It->second.isStrappingPin, "GPIO0 must be marked as strapping pin");
+
+    // Check input only pin
+    auto gpio34It = esp32->pins.find("GPIO34");
+    TEST_ASSERT(gpio34It != esp32->pins.end(), "GPIO34 must exist in ESP32 pinout");
+    TEST_ASSERT(gpio34It->second.isInputOnly, "GPIO34 must be input-only");
+
+    // Check Raspberry Pi Pico
+    auto pico = reg.getBoard("pico");
+    TEST_ASSERT(pico.has_value(), "Pico board must be present in registry");
+    TEST_ASSERT(pico->architecture == McuArchitecture::ARM_CORTEX_M0PLUS, "Pico architecture must be Cortex-M0+");
+
+    // Check Arduino Uno
+    auto uno = reg.getBoard("arduino_uno");
+    TEST_ASSERT(uno.has_value(), "Arduino Uno must be present in registry");
+    TEST_ASSERT(uno->logicVoltage == LogicVoltage::VOLTAGE_5V, "Arduino Uno logic voltage must be 5.0V");
+
+    std::cout << "PASSED\n";
+    return true;
+}
+
+bool testCircuitCalculator() {
+    std::cout << "[TEST] 18. Circuit Calculator (LED, Divider, I2C pullup, Battery)... " << std::flush;
+    
+    // 1. LED current limiting resistor: 5V Vcc, 2.0V Vf, 20mA -> (5 - 2) / 0.02 = 150 Ohms
+    auto ledRes = CircuitCalculator::calculateLedResistor(5.0, 2.0, 20.0);
+    double exactOhms = ledRes.resultValues["exactResistance_Ohms"].get<double>();
+    double stdOhms = ledRes.resultValues["standardResistance_Ohms"].get<double>();
+    TEST_ASSERT(exactOhms >= 149.0 && exactOhms <= 151.0, "LED resistor must be ~150 Ohms");
+    TEST_ASSERT(stdOhms >= 140.0 && stdOhms <= 160.0, "Standard resistor must be ~150 Ohms");
+
+    // 2. Voltage divider: 5V in, 3.3V out, R2 = 10k -> R1 = 10k * (5 - 3.3) / 3.3 = ~5.15k
+    auto divRes = CircuitCalculator::calculateVoltageDivider(5.0, 3.3, 10.0);
+    double r1Ohms = divRes.resultValues["R1_top_Ohms"].get<double>();
+    TEST_ASSERT(r1Ohms > 4500.0 && r1Ohms < 5500.0, "Voltage divider R1 must be ~5.15k Ohms");
+
+    // 3. I2C pullup: 3.3V, 100kHz standard mode -> ~2.2k - 4.7k
+    auto i2cRes = CircuitCalculator::calculateI2cPullup(3.3, 100);
+    double i2cOhms = i2cRes.resultValues["recommended_Ohms"].get<double>();
+    TEST_ASSERT(i2cOhms >= 1000.0 && i2cOhms <= 10000.0, "I2C pullup must be in standard range");
+
+    // 4. Battery life: 2500 mAh, 80mA active for 2s, 15uA sleep for 58s
+    auto batRes = CircuitCalculator::calculateBatteryLife(2500.0, 80.0, 15.0, 2.0, 58.0);
+    double hours = batRes.resultValues["lifeHours"].get<double>();
+    TEST_ASSERT(hours > 500.0, "Battery lifetime must exceed 500 hours");
+
+    std::cout << "PASSED\n";
+    return true;
+}
+
+bool testHardwareValidatorAndHazards() {
+    std::cout << "[TEST] 19. Hardware Validator & Hazard Detection (Strapping pins, Input-only, I2C conflict)... " << std::flush;
+    auto esp32 = HardwareBoardRegistry::instance().getBoard("esp32");
+    TEST_ASSERT(esp32.has_value(), "ESP32 board must be present");
+
+    // Test Case A: Attempting to use input-only GPIO34 as OUTPUT -> CRITICAL_ERROR
+    std::vector<PinAssignment> badPins;
+    PinAssignment a1;
+    a1.boardPin = "GPIO34";
+    a1.componentId = "led";
+    a1.componentPin = "A";
+    a1.function = PinFunction::GPIO_OUT; // Invalid!
+    badPins.push_back(a1);
+
+    auto repA = HardwareValidator::validateCircuit(*esp32, badPins, {});
+    TEST_ASSERT(!repA.isValid, "Validation must FAIL when assigning output to input-only pin");
+    TEST_ASSERT(repA.criticalCount >= 1, "Must report at least 1 critical error for input-only pin violation");
+
+    // Test Case B: Attempting to use strapping pin GPIO12 -> WARNING
+    std::vector<PinAssignment> strapPins;
+    PinAssignment a2;
+    a2.boardPin = "GPIO12";
+    a2.componentId = "relay";
+    a2.componentPin = "IN";
+    a2.function = PinFunction::GPIO_OUT;
+    strapPins.push_back(a2);
+
+    auto repB = HardwareValidator::validateCircuit(*esp32, strapPins, {});
+    TEST_ASSERT(repB.warningCount >= 1, "Must generate warning for strapping pin usage");
+
+    // Test Case C: I2C address conflict with two sensors on same address
+    std::vector<ComponentSpec> conflictComponents;
+    ComponentSpec c1;
+    c1.id = "bme280_1";
+    c1.name = "BME280 Sensor 1";
+    c1.defaultI2cAddress = 0x76;
+    c1.operatingVoltage = LogicVoltage::VOLTAGE_3V3;
+    conflictComponents.push_back(c1);
+
+    ComponentSpec c2;
+    c2.id = "bme280_2";
+    c2.name = "BME280 Sensor 2";
+    c2.defaultI2cAddress = 0x76; // Duplicate!
+    c2.operatingVoltage = LogicVoltage::VOLTAGE_3V3;
+    conflictComponents.push_back(c2);
+
+    auto repC = HardwareValidator::validateCircuit(*esp32, {}, conflictComponents);
+    TEST_ASSERT(!repC.isValid, "Validation must FAIL on I2C address conflict");
+    TEST_ASSERT(repC.criticalCount >= 1, "Must report critical error on I2C collision");
+
+    std::cout << "PASSED\n";
+    return true;
+}
+
+bool testHardwareScaffolderAndQoS() {
+    std::cout << "[TEST] 20. Hardware Scaffolder (Wokwi, PlatformIO, QoS Firmware Analysis)... " << std::flush;
+    std::string testWs = "sandbox_hw_scaffold";
+    std::filesystem::create_directories(testWs);
+
+    ScaffoldOptions opts;
+    opts.boardId = "esp32";
+    opts.projectName = "test_sensor_hub";
+    opts.outputDir = testWs;
+    opts.generateWokwiSimulation = true;
+
+    PinAssignment pa;
+    pa.boardPin = "GPIO21";
+    pa.componentId = "bme280";
+    pa.componentPin = "SDA";
+    pa.function = PinFunction::I2C_SDA;
+    opts.pinAssignments.push_back(pa);
+
+    auto res = HardwareManager::instance().scaffold(opts);
+    TEST_ASSERT(res.success, "Scaffold must succeed");
+    TEST_ASSERT(std::filesystem::exists(res.projectDir + "/include/hardware_config.h"), "hardware_config.h must exist");
+    TEST_ASSERT(std::filesystem::exists(res.projectDir + "/src/main.cpp"), "src/main.cpp must exist");
+    TEST_ASSERT(std::filesystem::exists(res.projectDir + "/platformio.ini"), "platformio.ini must exist");
+    TEST_ASSERT(std::filesystem::exists(res.projectDir + "/diagram.json"), "diagram.json must exist for Wokwi");
+    TEST_ASSERT(std::filesystem::exists(res.projectDir + "/README.md"), "README.md must exist");
+
+    // Evaluate QoS on generated firmware
+    auto qos = HardwareManager::instance().evaluateProjectQoS(res.projectDir);
+    TEST_ASSERT(qos.overallScore >= 70, "Generated scaffolded firmware must achieve high QoS score");
+    TEST_ASSERT(qos.watchdogCompliant, "Scaffolded firmware must include watchdog timer");
+    TEST_ASSERT(qos.staticMemoryCompliant, "Scaffolded firmware must adhere to static allocation (zero heap)");
+
+    safeRemoveAll(testWs);
+    std::cout << "PASSED\n";
+    return true;
+}
+
 int main() {
     std::cout << "\n====================================================\n"
               << "          ARENAFIGHT AGENT TEST SUITE               \n"
@@ -592,7 +750,7 @@ int main() {
               << "====================================================\n\n";
 
     int passed = 0;
-    int total = 16;
+    int total = 20;
 
     if (testConfig()) passed++;
     if (testFileTools()) passed++;
@@ -610,6 +768,10 @@ int main() {
     if (testBlindAndAdversarialReview()) passed++;
     if (testVerificationGatesAndUncertainty()) passed++;
     if (testAutoMockFallback()) passed++;
+    if (testHardwareBoardRegistry()) passed++;
+    if (testCircuitCalculator()) passed++;
+    if (testHardwareValidatorAndHazards()) passed++;
+    if (testHardwareScaffolderAndQoS()) passed++;
 
     std::cout << "\n----------------------------------------------------\n";
     std::cout << "TEST RESULTS: " << passed << "/" << total << " PASSED\n";

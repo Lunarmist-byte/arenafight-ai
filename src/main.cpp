@@ -25,6 +25,12 @@ void printUsage() {
               << "  arena artifacts                List and inspect project artifacts\n"
               << "  arena skills                   List active skills\n"
               << "  arena rules                    Display active workspace and system rules\n"
+              << "  arena boards                   List supported microcontroller boards\n"
+              << "  arena board <id>               Inspect microcontroller pinout & strapping pins\n"
+              << "  arena components               List supported sensors, actuators & ICs\n"
+              << "  arena scaffold <board> <proj>  Scaffold hardware project with Wokwi simulation\n"
+              << "  arena qos [path]               Evaluate embedded C++ firmware QoS\n"
+              << "  arena calculate <type> <args>  Calculate circuit values (led, divider, i2c, battery)\n"
               << "  arena resume <session-id>      Resume an existing session\n"
               << "  arena sessions                 List past saved sessions\n"
               << "  arena models                   Discover and list models across all backends\n"
@@ -104,6 +110,54 @@ int main(int argc, char* argv[]) {
         if (cmd == "rules") {
             ReplEngine repl(agent);
             repl.handleRules("");
+            return 0;
+        }
+
+        if (cmd == "boards") {
+            ReplEngine repl(agent);
+            std::string filter = (argc > 2 && argv[2][0] != '-') ? argv[2] : "";
+            repl.handleBoards(filter);
+            return 0;
+        }
+
+        if (cmd == "board") {
+            ReplEngine repl(agent);
+            std::string id = (argc > 2 && argv[2][0] != '-') ? argv[2] : "";
+            repl.handleBoard(id);
+            return 0;
+        }
+
+        if (cmd == "components") {
+            ReplEngine repl(agent);
+            std::string filter = (argc > 2 && argv[2][0] != '-') ? argv[2] : "";
+            repl.handleComponents(filter);
+            return 0;
+        }
+
+        if (cmd == "scaffold-hardware" || cmd == "scaffold") {
+            ReplEngine repl(agent);
+            std::string args;
+            for (int i = 2; i < argc; ++i) {
+                if (argv[i][0] != '-') args += std::string(argv[i]) + " ";
+            }
+            repl.handleScaffold(args);
+            return 0;
+        }
+
+        if (cmd == "qos") {
+            ReplEngine repl(agent);
+            std::string path = (argc > 2 && argv[2][0] != '-') ? argv[2] : "";
+            repl.handleQoS(path);
+            return 0;
+        }
+
+        if (cmd == "calculate") {
+            ReplEngine repl(agent);
+            std::string args;
+            for (int i = 2; i < argc; ++i) {
+                if (argv[i][0] != '-') args += std::string(argv[i]) + " ";
+            }
+            repl.handleCalculate(args);
             return 0;
         }
 
