@@ -1,6 +1,8 @@
 #include "arenafight/repl/repl_engine.hpp"
 #include "arenafight/ui/terminal_ui.hpp"
 #include "arenafight/common/logger.hpp"
+#include "arenafight/common/process.hpp"
+#include "arenafight/providers/opencode_provider.hpp"
 #include "arenafight/hardware/hardware_manager.hpp"
 #include "arenafight/hardware/board_registry.hpp"
 #include "arenafight/hardware/circuit_calculator.hpp"
@@ -124,6 +126,20 @@ void ReplEngine::registerCommands() {
         "View current session state, claims confidence, and verification telemetry",
         "/status",
         [this](const std::string& args) { handleStatus(args); }
+    };
+
+    slashCommands_["/opencode"] = {
+        "/opencode",
+        "OpenCode integration status, model discovery, and prompt execution",
+        "/opencode [status|models|run <prompt>|sync]",
+        [this](const std::string& args) { handleOpenCode(args); }
+    };
+
+    slashCommands_["/ui"] = {
+        "/ui",
+        "Launch the Simplistic Web UI dashboard in your browser",
+        "/ui [simple|studio]",
+        [this](const std::string& args) { handleUI(args); }
     };
 
     slashCommands_["/boards"] = {
@@ -477,7 +493,7 @@ void ReplEngine::handleSchedule(const std::string& args) {
                   << "[TIMER FIRED]" << ANSI_RESET << " Executing scheduled task: " << task << "\n";
         agent_.startNewSession(task);
         agent_.run();
-        std::cout << "\narena ❯ " << std::flush;
+        std::cout << "\narena > " << std::flush;
     }).detach();
 }
 
@@ -579,6 +595,115 @@ void ReplEngine::handleStatus(const std::string&) {
               << "Contradictions: " << session.getClaimRegistry().getContradictions().size() << "\n"
               << "Workspace    : " << agent_.getConfig().workspace_dir << "\n"
               << "----------------------------------------------------\n\n";
+}
+
+void ReplEngine::handleOpenCode(const std::string& args) {
+    std::string trimmed = trim(args);
+    auto providerPtr = agent_.getRouter().getProviderByName("OpenCode");
+    auto ocProvider = std::dynamic_pointer_cast<OpenCodeProvider>(providerPtr);
+
+    if (trimmed.empty() || trimmed == "status") {
+        std::cout << "\n" << ANSI_BOLD << "OpenCode CLI Integration Status:" << ANSI_RESET << "\n"
+                  << "----------------------------------------------------\n";
+        if (ocProvider) {
+            bool avail = ocProvider->available();
+            std::cout << "Command      : " << ocProvider->getOpenCodeCommand() << "\n"
+                      << "Status       : " << (avail ? (ANSI_GREEN + std::string("AVAILABLE") + ANSI_RESET) : (ANSI_YELLOW + std::string("UNAVAILABLE") + ANSI_RESET)) << "\n"
+                      << "Details      : " << ocProvider->getStatusMessage() << "\n";
+            if (avail) {
+                auto models = ocProvider->discoverModels();
+                std::cout << "Models (" << models.size() << ")  :\n";
+                for (const auto& m : models) {
+                    std::cout << "  - " << ANSI_CYAN << m.id << ANSI_RESET << " (" << m.name << ")\n";
+                }
+            } else {
+                std::cout << "\nTo install OpenCode CLI:\n"
+                          << "  " << ANSI_CYAN << "npm install -g @opencode/cli" << ANSI_RESET << "\n"
+                          << "  or: " << ANSI_CYAN << "curl -fsSL https://opencode.ai/v2/install | bash" << ANSI_RESET << "\n";
+            }
+        } else {
+            std::cout << ANSI_YELLOW << "OpenCodeProvider is not registered in the active agent router." << ANSI_RESET << "\n";
+        }
+        std::cout << "----------------------------------------------------\n"
+                  << " Made by Lunarmist-byte | https://github.com/Lunarmist-byte\n\n";
+        return;
+    }
+
+    if (trimmed == "models") {
+        if (ocProvider) {
+            auto models = ocProvider->discoverModels();
+            std::cout << "\n" << ANSI_BOLD << "OpenCode Models (" << models.size() << "):" << ANSI_RESET << "\n";
+            for (const auto& m : models) {
+                std::cout << "  * " << ANSI_CYAN << m.id << ANSI_RESET << " : " << m.description << "\n";
+            }
+            std::cout << "\n";
+        }
+        return;
+    }
+
+    if (trimmed == "sync" || trimmed == "export") {
+        bool ok = OpenCodeProvider::exportOpenCodeWorkspace(
+            agent_.getConfig().workspace_dir,
+            agent_.getSession().objective,
+            "Autonomous ArenaFight execution loop with physical verification."
+        );
+        if (ok) {
+            std::cout << "\n" << ANSI_GREEN << ANSI_BOLD << "[OPENCODE WORKSPACE SYNCED]" << ANSI_RESET << "\n"
+                      << "Created: .opencode/opencode.json and .opencode/INSTRUCTIONS.md\n"
+                      << "OpenCode and ArenaFight can now collaborate in this workspace.\n\n";
+        } else {
+            std::cout << ANSI_RED << "Failed to export OpenCode workspace configuration." << ANSI_RESET << "\n";
+        }
+        return;
+    }
+
+    if (trimmed.rfind("run ", 0) == 0) {
+        std::string prompt = trim(trimmed.substr(4));
+        if (prompt.empty()) {
+            std::cout << ANSI_RED << "Usage: /opencode run <prompt>" << ANSI_RESET << "\n";
+            return;
+        }
+        if (!ocProvider || !ocProvider->available()) {
+            std::cout << ANSI_YELLOW << "OpenCode CLI is not available. Please install it or check configuration." << ANSI_RESET << "\n";
+            return;
+        }
+        std::cout << ANSI_CYAN << "[OpenCode Execution Initiated]..." << ANSI_RESET << "\n";
+        AgentRequest req;
+        req.userPrompt = prompt;
+        AgentResponse res = ocProvider->generate(req);
+        if (res.success) {
+            std::cout << "\n" << ANSI_GREEN << ANSI_BOLD << "[OpenCode Output]" << ANSI_RESET << "\n"
+                      << res.content << "\n\n";
+        } else {
+            std::cout << ANSI_RED << "[OpenCode Error] " << res.errorMessage << ANSI_RESET << "\n\n";
+        }
+        return;
+    }
+
+    std::cout << ANSI_YELLOW << "Unknown opencode sub-command. Try: /opencode [status|models|run <prompt>|sync]\n" << ANSI_RESET;
+}
+
+void ReplEngine::handleUI(const std::string& args) {
+    std::string targetFile = "simple_ui.html";
+    if (args.find("studio") != std::string::npos) {
+        targetFile = "index.html";
+    }
+
+    std::filesystem::path p = std::filesystem::absolute(targetFile);
+    std::cout << "\n" << ANSI_CYAN << ANSI_BOLD
+              << "[LAUNCHING ARENAFIGHT UI]" << ANSI_RESET << "\n"
+              << "Interface: " << (targetFile == "simple_ui.html" ? "Simplistic Minimalist UI" : "Advanced Antigravity Studio") << "\n"
+              << "File     : " << p.string() << "\n"
+              << "URL      : file:///" << p.generic_string() << "\n\n";
+
+    // Launch default browser
+    if (ProcessExecutor::isWindows()) {
+        std::string launchCmd = "start \"\" \"" + p.string() + "\"";
+        ProcessExecutor::executeShell(launchCmd, ".", 2000);
+    } else {
+        std::string launchCmd = "xdg-open \"" + p.string() + "\" 2>/dev/null || open \"" + p.string() + "\"";
+        ProcessExecutor::executeShell(launchCmd, ".", 2000);
+    }
 }
 
 void ReplEngine::handleHelp(const std::string& args) {
@@ -818,7 +943,7 @@ void ReplEngine::run() {
     printReplBanner();
 
     while (running_) {
-        std::cout << ANSI_GREEN << ANSI_BOLD << "arena ❯ " << ANSI_RESET << std::flush;
+        std::cout << ANSI_GREEN << ANSI_BOLD << "arena > " << ANSI_RESET << std::flush;
         std::string input;
         if (!std::getline(std::cin, input)) {
             break;

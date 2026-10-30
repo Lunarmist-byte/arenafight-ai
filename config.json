@@ -13,6 +13,8 @@
     ],
     "claude_command": "claude",
     "anthropic_api_key": "",
+    "opencode_command": "opencode",
+    "opencode_model": "opencode-default",
     "max_iterations": 30,
     "max_tool_calls": 100,
     "max_retries": 3,

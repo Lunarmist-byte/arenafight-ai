@@ -44,6 +44,8 @@ public:
     void handleModels(const std::string& args);
     void handleStatus(const std::string& args);
     void handleHelp(const std::string& args);
+    void handleOpenCode(const std::string& args);
+    void handleUI(const std::string& args);
 
     // Hardware Studio handlers
     void handleBoards(const std::string& filter);

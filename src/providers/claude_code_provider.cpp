@@ -1,6 +1,7 @@
 #include "arenafight/providers/claude_code_provider.hpp"
 #include "arenafight/common/process.hpp"
 #include "arenafight/common/logger.hpp"
+#include "arenafight/common/fs_utils.hpp"
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -129,24 +130,8 @@ AgentResponse ClaudeCodeProvider::generate(const AgentRequest& request) {
     // Use temporary prompt file to prevent shell escaping issues, managed via RAII guard
     auto nowTicks = std::chrono::high_resolution_clock::now().time_since_epoch().count();
     std::string tmpPromptFile = ".claude_prompt_" + std::to_string(nowTicks) + ".tmp";
-    
-    struct FileCleanupGuard {
-        std::string path;
-        ~FileCleanupGuard() {
-            if (!path.empty()) {
-                std::error_code ec;
-                std::filesystem::remove(path, ec);
-            }
-        }
-    } fileGuard{tmpPromptFile};
-
-    {
-        std::ofstream pf(tmpPromptFile, std::ios::trunc);
-        if (pf.is_open()) {
-            pf << prompt;
-            pf.close();
-        }
-    }
+    TempFileGuard fileGuard(tmpPromptFile);
+    FileUtils::writeTextFile(tmpPromptFile, prompt);
 
     std::string runCmd;
     if (ProcessExecutor::isWindows()) {

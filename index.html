@@ -1137,24 +1137,28 @@
         </div>
 
         <div class="workspace-selector">
-            <span>📁 Project:</span>
+            <span>Project:</span>
             <span class="workspace-pill" title="c:\Users\amals\Documents\Codeworks\Arenafight-ai">Arenafight-ai</span>
         </div>
 
         <nav class="sidebar-nav">
+            <a href="simple_ui.html" class="nav-link" style="text-decoration: none; color: inherit; background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.3);">
+                <span>Simplistic UI</span>
+                <span class="nav-badge" style="background: var(--accent-primary); color: #fff;">Minimal</span>
+            </a>
             <div class="nav-link active" id="navChat">
-                <span>💬</span> Chat Canvas
+                <span>Chat Canvas</span>
             </div>
             <div class="nav-link" id="navSkills">
-                <span>⚡</span> Skills & Rules
+                <span>Skills &amp; Rules</span>
                 <span class="nav-badge" id="skillsCountBadge">3 Skills</span>
             </div>
             <div class="nav-link" id="navSchedule">
-                <span>⏱️</span> Scheduled Tasks
+                <span>Scheduled Tasks</span>
                 <span class="nav-badge" id="schedCountBadge">Active</span>
             </div>
             <div class="nav-link" id="navSettings">
-                <span>⚙️</span> Settings & Models
+                <span>Settings &amp; Models</span>
             </div>
         </nav>
 
@@ -1191,10 +1195,10 @@
             </div>
             <div class="credit-links">
                 <a href="https://github.com/Lunarmist-byte" target="_blank" rel="noopener noreferrer">
-                    <span>★</span> GitHub
+                    <span>GitHub</span>
                 </a>
                 <a href="https://www.linkedin.com/in/amal-s-kumar-ba69a1290/" target="_blank" rel="noopener noreferrer">
-                    <span>↗</span> LinkedIn
+                    <span>LinkedIn</span>
                 </a>
             </div>
         </div>
@@ -1210,7 +1214,10 @@
                 </div>
             </div>
             <div class="canvas-actions">
-                <button class="btn-icon" id="btnToggleAux" title="Toggle Auxiliary Pane">◫</button>
+                <a href="simple_ui.html" style="text-decoration: none; color: var(--text-main); font-size: 0.8rem; padding: 0.35rem 0.65rem; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); margin-right: 0.5rem; display: inline-flex; align-items: center; gap: 0.3rem;">
+                    Simplistic UI
+                </a>
+                <button class="btn-icon" id="btnToggleAux" title="Toggle Auxiliary Pane">Layout</button>
             </div>
         </header>
 
@@ -1222,7 +1229,7 @@
                 <div class="message-content">
                     <div class="thinking-disclosure">
                         <div class="thinking-summary">
-                            <span>✦</span> Thinking Process (Antigravity Core)
+                            <span>[Thinking Process]</span> Antigravity Core
                         </div>
                         <div class="thinking-body">Initializing ArenaFight agent runtime with Antigravity 2.0 orchestration.
 Scanning workspace for active rules, skills, and knowledge items...
@@ -1249,11 +1256,11 @@ All 6 verification gates active and listening for execution evidence.</div>
 
         <!-- Quick Action Chips -->
         <div class="quick-chips">
-            <div class="chip" data-cmd="/plan Build a high-reliability hardware motor driver with Wokwi">📋 /plan Hardware Controller</div>
-            <div class="chip" data-cmd="/goal Create a multi-threaded async worker pool with tests">🚀 /goal Worker Pool</div>
-            <div class="chip" data-cmd="/grill-me Concurrency, memory bounds, and failure modes">🎙️ /grill-me Interview</div>
-            <div class="chip" data-cmd="/learn In this project, all pointers must use std::unique_ptr">🧠 /learn Convention</div>
-            <div class="chip" data-cmd="/models">🤖 /models</div>
+            <div class="chip" data-cmd="/plan Build a high-reliability hardware motor driver with Wokwi">/plan Hardware Controller</div>
+            <div class="chip" data-cmd="/goal Create a multi-threaded async worker pool with tests">/goal Worker Pool</div>
+            <div class="chip" data-cmd="/grill-me Concurrency, memory bounds, and failure modes">/grill-me Interview</div>
+            <div class="chip" data-cmd="/learn In this project, all pointers must use std::unique_ptr">/learn Convention</div>
+            <div class="chip" data-cmd="/models">/models</div>
         </div>
 
         <!-- Slash & Mention Autocomplete Popover -->
@@ -1304,7 +1311,7 @@ All 6 verification gates active and listening for execution evidence.</div>
                 <div class="input-toolbar">
                     <div class="toolbar-left">
                         <div class="model-selector-badge" id="btnModelSelect">
-                            <span>🤖</span> <span id="activeModelLabel">Gemini 2.5 Flash / Claude 3.7</span>
+                            <span id="activeModelLabel">Gemini 2.5 Flash / Claude 3.7</span>
                         </div>
                         <button class="btn-icon" id="btnSlashTrigger" title="Slash Commands">/</button>
                         <button class="btn-icon" id="btnAtTrigger" title="Attach Context">@</button>
@@ -1321,16 +1328,16 @@ All 6 verification gates active and listening for execution evidence.</div>
     <aside class="aux-pane" id="auxPane">
         <div class="aux-tabs">
             <div class="aux-tab active" data-tab="tabArtifacts">
-                <span>📄</span> Artifacts <span class="aux-tab-badge" id="artifactsBadge">2</span>
+                <span>Artifacts</span> <span class="aux-tab-badge" id="artifactsBadge">2</span>
             </div>
             <div class="aux-tab" data-tab="tabTaskGraph">
-                <span>📊</span> Plan Graph <span class="aux-tab-badge" id="tasksBadge">3</span>
+                <span>Plan Graph</span> <span class="aux-tab-badge" id="tasksBadge">3</span>
             </div>
             <div class="aux-tab" data-tab="tabGates">
-                <span>🛡️</span> 6 Gates
+                <span>6 Gates</span>
             </div>
             <div class="aux-tab" data-tab="tabTerminal">
-                <span>💻</span> Terminal
+                <span>Terminal</span>
             </div>
         </div>
 
@@ -1343,7 +1350,7 @@ All 6 verification gates active and listening for execution evidence.</div>
                         <option value="art_verif">verification_report.md</option>
                         <option value="art_diff">code_diff.md</option>
                     </select>
-                    <button class="btn-icon" id="btnCopyArtifact" title="Copy Artifact">📋</button>
+                    <button class="btn-icon" id="btnCopyArtifact" title="Copy Artifact" style="font-size:0.75rem; padding: 0.2rem 0.5rem;">Copy</button>
                 </div>
                 <div class="artifact-preview-card" id="artifactPreview">
                     <h2 class="md-h2"># Execution Plan: Hardware Motor Driver</h2>
@@ -1398,27 +1405,27 @@ All 6 verification gates active and listening for execution evidence.</div>
                 <div class="gates-grid">
                     <div class="gate-card passed">
                         <div class="gate-name">Gate 1: Files Exist</div>
-                        <div class="gate-status pass">✔ PASS (Non-zero)</div>
+                        <div class="gate-status pass">PASS (Non-zero)</div>
                     </div>
                     <div class="gate-card passed">
                         <div class="gate-name">Gate 2: Code Compiles</div>
-                        <div class="gate-status pass">✔ PASS (Exit 0)</div>
+                        <div class="gate-status pass">PASS (Exit 0)</div>
                     </div>
                     <div class="gate-card passed">
                         <div class="gate-name">Gate 3: Tests Pass</div>
-                        <div class="gate-status pass">✔ PASS (16/16)</div>
+                        <div class="gate-status pass">PASS (16/16)</div>
                     </div>
                     <div class="gate-card passed">
                         <div class="gate-name">Gate 4: Reqs Satisfied</div>
-                        <div class="gate-status pass">✔ PASS (100%)</div>
+                        <div class="gate-status pass">PASS (100%)</div>
                     </div>
                     <div class="gate-card passed">
                         <div class="gate-name">Gate 5: Blind Review</div>
-                        <div class="gate-status pass">✔ PASS (Adversarial)</div>
+                        <div class="gate-status pass">PASS (Adversarial)</div>
                     </div>
                     <div class="gate-card passed">
                         <div class="gate-name">Gate 6: Contradictions</div>
-                        <div class="gate-status pass">✔ PASS (Zero)</div>
+                        <div class="gate-status pass">PASS (Zero)</div>
                     </div>
                 </div>
 
@@ -1436,12 +1443,12 @@ All 6 verification gates active and listening for execution evidence.</div>
                 <div class="terminal-box" id="terminalOutput">
 [ARENAFIGHT ANTIGRAVITY ENGINE] Session initialized.
 [EVIDENCE_INIT] Claim registry active with 6 verification gates.
-[MODEL_ROUTER] Providers registered: [Claude Code CLI, OpenRouter, Ollama, TestMock].
+[MODEL_ROUTER] Providers registered: [OpenCode CLI, Claude Code CLI, OpenRouter, Ollama, TestMock].
 [C++20 COMPILER] cmake -B build -G Ninja -> Exit 0 (0.8s)
-[TEST_RUNNER] ctest --test-dir build -> 16/16 Passed (1.2s)
+[TEST_RUNNER] ctest --test-dir build -> 21/21 Passed (1.2s)
 [ARTIFACTS] Generated execution_plan.md and verification_report.md
 [VERIFIER] All 6 verification gates passed with zero unresolved contradictions.
-arena ❯ _</div>
+arena > _</div>
             </div>
         </div>
     </aside>
@@ -1452,28 +1459,28 @@ arena ❯ _</div>
 <div class="modal-overlay" id="skillsModal">
     <div class="modal-card">
         <div class="modal-header">
-            <h2 class="md-h2">Skills & Customizations</h2>
-            <button class="btn-icon" id="btnCloseSkillsModal">✕</button>
+            <h2 class="md-h2">Skills &amp; Customizations</h2>
+            <button class="btn-icon" id="btnCloseSkillsModal">Close</button>
         </div>
         <div class="modal-body">
             <div class="sidebar-section-title">Active Workspace Skills</div>
             <div class="tool-card">
                 <div class="tool-card-header">
-                    <span class="tool-target">⚡ code-architect</span>
+                    <span class="tool-target">code-architect</span>
                     <span class="tool-status-badge pass">ACTIVE</span>
                 </div>
                 <div class="tool-terminal-body">Modular system design, clean APIs, and RAII memory safety in C++ and Python.</div>
             </div>
             <div class="tool-card">
                 <div class="tool-card-header">
-                    <span class="tool-target">⚡ hardware-engineer</span>
+                    <span class="tool-target">hardware-engineer</span>
                     <span class="tool-status-badge pass">ACTIVE</span>
                 </div>
                 <div class="tool-terminal-body">Microcontroller pinouts, circuit design, Wokwi diagram simulation, and extreme QoS embedded firmware.</div>
             </div>
             <div class="tool-card">
                 <div class="tool-card-header">
-                    <span class="tool-target">⚡ verifier</span>
+                    <span class="tool-target">verifier</span>
                     <span class="tool-status-badge pass">ACTIVE</span>
                 </div>
                 <div class="tool-terminal-body">Independent adversarial code review, compiler test verification, and hallucination prevention.</div>
@@ -1576,8 +1583,8 @@ artifactSelect.addEventListener('change', (e) => {
 btnCopyArtifact.addEventListener('click', () => {
     const text = artifactPreview.innerText;
     navigator.clipboard.writeText(text);
-    btnCopyArtifact.textContent = '✔';
-    setTimeout(() => { btnCopyArtifact.textContent = '📋'; }, 1500);
+    btnCopyArtifact.textContent = 'Copied';
+    setTimeout(() => { btnCopyArtifact.textContent = 'Copy'; }, 1500);
 });
 
 // Tabs in Auxiliary Pane
@@ -1644,7 +1651,7 @@ btnNewSession.addEventListener('click', () => {
             <div class="avatar agent">▲</div>
             <div class="message-content">
                 <div class="thinking-disclosure">
-                    <div class="thinking-summary">✦ Thinking Process</div>
+                    <div class="thinking-summary">[Thinking Process]</div>
                     <div class="thinking-body">Session reset. New conversation initialized with Antigravity 2.0 orchestration.</div>
                 </div>
                 <div class="message-bubble">
@@ -1681,7 +1688,7 @@ function handleSendMessage() {
     chatMessages.appendChild(userRow);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 
-    logTerminal(`arena ❯ ${text}`);
+    logTerminal(`arena > ${text}`);
 
     // Process Slash Commands or Conversational Prompt
     setTimeout(() => {
@@ -1716,7 +1723,7 @@ function executePlanFlow(task) {
         <div class="avatar agent">▲</div>
         <div class="message-content">
             <div class="thinking-disclosure">
-                <div class="thinking-summary">✦ Thinking Process</div>
+                <div class="thinking-summary">[Thinking Process]</div>
                 <div class="thinking-body">Analyzing task: "${escapeHtml(task)}"
 Decomposing into task graph with explicit dependencies and verification gates.
 Matched skill: [code-architect], [hardware-engineer].
@@ -1725,7 +1732,7 @@ Generating Plan Artifact: execution_plan.md</div>
 
             <div class="plan-action-card">
                 <div class="plan-card-header">
-                    <span class="plan-card-title">📋 Execution Plan Generated</span>
+                    <span class="plan-card-title">Execution Plan Generated</span>
                     <span class="tool-status-badge running">Awaiting Review</span>
                 </div>
                 <p>I have structured a verification-backed plan for <strong>${escapeHtml(task)}</strong> with milestones, file dependencies, and acceptance criteria.</p>
@@ -1756,7 +1763,7 @@ function executeGoalFlow(task) {
         <div class="avatar agent">▲</div>
         <div class="message-content">
             <div class="thinking-disclosure">
-                <div class="thinking-summary">✦ Thinking Process</div>
+                <div class="thinking-summary">[Thinking Process]</div>
                 <div class="thinking-body">Executing autonomous goal loop for: "${escapeHtml(task)}"
 Executing Task Graph:
 - Task 1: Environment Inspection
@@ -1766,7 +1773,7 @@ Running 6 Verification Gates...</div>
             </div>
 
             <div class="message-bubble">
-                <p>🚀 <strong>Autonomous Goal Pursuit Active:</strong> Executing task graph with physical evidence verification.</p>
+                <p><strong>Autonomous Goal Pursuit Active:</strong> Executing task graph with physical evidence verification.</p>
             </div>
 
             <!-- Tool Execution 1 -->
@@ -1800,7 +1807,7 @@ Build succeeded with 0 warnings.</div>
             </div>
 
             <div class="message-bubble" style="border-left: 3px solid var(--accent-emerald);">
-                <p>✔ <strong>Objective Verified &amp; Complete!</strong></p>
+                <p><strong>Objective Verified &amp; Complete!</strong></p>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem;">
                     All 6 Verification Gates passed. Verification report persisted to <code class="md-code">.arena/artifacts/verification_report.md</code>.
                 </p>
@@ -1822,12 +1829,12 @@ function executeGrillMeFlow(topic) {
         <div class="avatar agent">▲</div>
         <div class="message-content">
             <div class="thinking-disclosure">
-                <div class="thinking-summary">✦ Thinking Process</div>
+                <div class="thinking-summary">[Thinking Process]</div>
                 <div class="thinking-body">Running Antigravity Requirements Interview for: "${escapeHtml(topic)}"
 Probing failure modes, reentrancy, timing bounds, and testing invariants.</div>
             </div>
             <div class="message-bubble">
-                <h3 class="md-h3">🎙️ Requirements &amp; Architecture Interview</h3>
+                <h3 class="md-h3">Requirements &amp; Architecture Interview</h3>
                 <p>Before implementing <strong>${escapeHtml(topic)}</strong>, let's eliminate ambiguities:</p>
                 <ol style="margin-left: 1.5rem; margin-top: 0.5rem;">
                     <li><strong>Concurrency &amp; Reentrancy:</strong> Should operations be synchronized via process mutex or lock-free atomics?</li>
@@ -1854,12 +1861,12 @@ function executeLearnFlow(insight) {
         <div class="avatar agent">▲</div>
         <div class="message-content">
             <div class="thinking-disclosure">
-                <div class="thinking-summary">✦ Thinking Process</div>
+                <div class="thinking-summary">[Thinking Process]</div>
                 <div class="thinking-body">Saving persistent Knowledge Item into .arena/knowledge/
 Updating repository memory and context injection graph.</div>
             </div>
             <div class="message-bubble" style="border-left: 3px solid var(--accent-cyan);">
-                <p>🧠 <strong>Knowledge Item Persisted!</strong></p>
+                <p><strong>Knowledge Item Persisted!</strong></p>
                 <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 0.3rem;">
                     <strong>Insight:</strong> "${escapeHtml(insight)}"
                 </p>
@@ -1906,8 +1913,9 @@ function executeModelsFlow() {
         <div class="avatar agent">▲</div>
         <div class="message-content">
             <div class="message-bubble">
-                <h3 class="md-h3">🤖 Available AI Providers &amp; Models</h3>
+                <h3 class="md-h3">Available AI Providers &amp; Models</h3>
                 <ul style="margin-left: 1.5rem; margin-top: 0.4rem;">
+                    <li><strong>OpenCode CLI:</strong> <code>opencode-default</code>, <code>claude-3-7-sonnet</code>, <code>gemini-2.5-pro</code>, <code>deepseek-r1</code></li>
                     <li><strong>Claude Code CLI:</strong> <code>claude-3.7-sonnet</code> (Autonomous reasoning &amp; code authoring)</li>
                     <li><strong>OpenRouter Cloud:</strong> <code>deepseek-r1</code>, <code>claude-3.5-sonnet</code>, <code>qwen2.5-coder-32b</code></li>
                     <li><strong>Ollama (Local):</strong> <code>qwen2.5:14b</code>, <code>llama3.3:70b</code> (Hardware mutex protected)</li>
@@ -1927,7 +1935,7 @@ function executeConversationalFlow(prompt) {
         <div class="avatar agent">▲</div>
         <div class="message-content">
             <div class="thinking-disclosure">
-                <div class="thinking-summary">✦ Thinking Process</div>
+                <div class="thinking-summary">[Thinking Process]</div>
                 <div class="thinking-body">Query: "${escapeHtml(prompt)}"
 Context injected from @git, custom rules, and active skills.
 Formulating evidence-backed response adhering to QoS guidelines.</div>
@@ -1936,9 +1944,9 @@ Formulating evidence-backed response adhering to QoS guidelines.</div>
                 <p>I have analyzed your query: <em>"${escapeHtml(prompt)}"</em>.</p>
                 <p style="margin-top: 0.5rem;">ArenaFight operates with physical verification doctrine. Would you like me to:</p>
                 <div class="plan-action-buttons">
-                    <button class="btn-proceed" onclick="executeGoalFlow('${escapeHtml(prompt)}')">🚀 Run /goal</button>
-                    <button class="btn-edit-plan" onclick="executePlanFlow('${escapeHtml(prompt)}')">📋 Create /plan</button>
-                    <button class="btn-cancel-plan" onclick="executeGrillMeFlow('${escapeHtml(prompt)}')">🎙️ Interview /grill-me</button>
+                    <button class="btn-proceed" onclick="executeGoalFlow('${escapeHtml(prompt)}')">Run /goal</button>
+                    <button class="btn-edit-plan" onclick="executePlanFlow('${escapeHtml(prompt)}')">Create /plan</button>
+                    <button class="btn-cancel-plan" onclick="executeGrillMeFlow('${escapeHtml(prompt)}')">Interview /grill-me</button>
                 </div>
             </div>
         </div>

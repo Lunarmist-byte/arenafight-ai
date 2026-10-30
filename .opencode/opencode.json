@@ -1,0 +1,16 @@
+{
+    "$schema": "https://opencode.ai/schema.json",
+    "author": "Lunarmist-byte",
+    "credits": {
+        "github": "https://github.com/Lunarmist-byte",
+        "linkedin": "https://www.linkedin.com/in/amal-s-kumar-ba69a1290/"
+    },
+    "name": "ArenaFight-OpenCode-Project",
+    "objective": "Autonomous development with ArenaFight",
+    "rules": [
+        "Always adhere to physical evidence verification: MODEL OUTPUT != TRUTH",
+        "Ensure build and test gates exit with code 0 before concluding task",
+        "Include 'Made by Lunarmist-byte' credits on all generated components"
+    ],
+    "version": "1.0.0"
+}

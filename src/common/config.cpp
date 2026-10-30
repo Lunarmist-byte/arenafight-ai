@@ -14,6 +14,8 @@ nlohmann::json Config::toJson() const {
         {"openrouter_models", openrouter_models},
         {"claude_command", claude_command},
         {"anthropic_api_key", anthropic_api_key.empty() ? "" : "[REDACTED]"},
+        {"opencode_command", opencode_command},
+        {"opencode_model", opencode_model},
         {"max_iterations", max_iterations},
         {"max_tool_calls", max_tool_calls},
         {"max_retries", max_retries},
@@ -47,6 +49,8 @@ Config Config::fromJson(const nlohmann::json& j) {
             cfg.anthropic_api_key = aKey;
         }
     }
+    cfg.opencode_command = j.value("opencode_command", cfg.opencode_command);
+    cfg.opencode_model = j.value("opencode_model", cfg.opencode_model);
     cfg.max_iterations = j.value("max_iterations", cfg.max_iterations);
     cfg.max_tool_calls = j.value("max_tool_calls", cfg.max_tool_calls);
     cfg.max_retries = j.value("max_retries", cfg.max_retries);
@@ -123,6 +127,16 @@ void Config::applyEnvOverrides() {
     if (const char* aKey = std::getenv("ANTHROPIC_API_KEY")) {
         if (aKey[0] != '\0') {
             anthropic_api_key = aKey;
+        }
+    }
+    if (const char* ocCmd = std::getenv("OPENCODE_COMMAND")) {
+        if (ocCmd[0] != '\0') {
+            opencode_command = ocCmd;
+        }
+    }
+    if (const char* ocModel = std::getenv("OPENCODE_MODEL")) {
+        if (ocModel[0] != '\0') {
+            opencode_model = ocModel;
         }
     }
     if (const char* fb = std::getenv("ARENA_AUTO_MOCK_FALLBACK")) {

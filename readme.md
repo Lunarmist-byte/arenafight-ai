@@ -2,7 +2,7 @@
 
 An autonomous, local-first multi-model AI agent orchestration runtime and execution system built in **C++20**.
 
-ArenaFight Agent is designed for autonomous coding, research, and debugging workflows (akin to **Antigravity** and **Claude Code** execution). It moves beyond standard chatbot question-and-answer patterns by operating an autonomous, self-evaluating execution loop: understanding tasks, generating structured task graphs with dependencies, invoking tools, updating persistent memory, independently verifying physical evidence, debugging failures, and replanning until the objective is genuinely achieved.
+ArenaFight Agent is designed for autonomous coding, research, embedded systems engineering, and physical debugging workflows (akin to **Google Antigravity** and **Claude Code** execution). It moves beyond standard chatbot question-and-answer patterns by operating an autonomous, self-evaluating execution loop: understanding tasks, generating structured task graphs with explicit dependencies, invoking tools, updating persistent memory, independently verifying physical evidence, debugging failures, and replanning until the objective is genuinely achieved.
 
 ---
 
@@ -13,7 +13,8 @@ ArenaFight Agent is designed for autonomous coding, research, and debugging work
 ---
 
 ## 1. Core Architecture
-The system executes an autonomous cycle:
+
+The system executes an autonomous closed-loop cycle:
 
 ```text
                +----------------------------------+
@@ -89,19 +90,23 @@ ArenaFight never outputs *"Task complete"* based on conversational agreement. Co
 
 ## 2. Hallucination-Resistant Multi-Model Architecture
 
-ArenaFight enforces an inviolable system invariant: **`MODEL OUTPUT ≠ TRUTH`**.
+ArenaFight enforces an inviolable system invariant: **`MODEL OUTPUT != TRUTH`**.
 
 Multiple models frequently share identical incorrect assumptions, training data artifacts, outdated API knowledge, or reasoning errors. Therefore, ArenaFight **prefers concrete evidence over model consensus**.
 
 ```text
 MODEL OUTPUT
-     ↓
+     |
+     v
    CLAIM (Hypothesis / Inference)
-     ↓
+     |
+     v
   EVIDENCE (Compiler, Tests, Files, Exit Codes)
-     ↓
+     |
+     v
  VERIFICATION (6 Verification Gates)
-     ↓
+     |
+     v
  TRUSTED STATE (Persistent Verified Memory)
 ```
 
@@ -125,7 +130,7 @@ Evidence types are ranked hierarchically. Higher levels strictly dominate lower 
 
 ### 3. Separation of Facts from Hypotheses
 The system rigorously classifies claims as `FACT`, `HYPOTHESIS`, `ASSUMPTION`, `INFERENCE`, or `UNKNOWN`.
-* If a model says: *"The segmentation fault is caused by use-after-free"*, the system registers it as `KnowledgeType::HYPOTHESIS` with status `UNVERIFIED`.
+* If a model asserts: *"The segmentation fault is caused by use-after-free"*, the system registers it as `KnowledgeType::HYPOTHESIS` with status `UNVERIFIED`.
 * It is **strictly prevented** from entering persistent memory as a `FACT` until concrete Level 1/Level 2 evidence (e.g. AddressSanitizer/GDB backtrace or test reproduction) is linked.
 
 ### 4. Consensus Is Supporting Evidence, Not Proof
@@ -149,185 +154,153 @@ Any file modification invalidates previous verification that depends on the modi
 * **Blind Review:** When evaluating multiple candidate solutions, they are anonymized (`SOLUTION A`, `SOLUTION B`) without provider or model labels to eliminate provider bias.
 * **Adversarial Review (`ReviewMode::ADVERSARIAL`):** An independent model is tasked with actively attempting to prove the solution wrong, probing for command injection, path traversal, buffer overflows, missing edge cases, and invalid API assumptions.
 
-### 8. The 6 Verification Gates
-A task can **never** be marked complete without passing all 6 verification gates:
-* **Gate 1: Files Exist:** All modified/created artifacts are physically verified on disk with non-zero size.
-* **Gate 2: Code Compiles:** Build system (`cmake --build build`, `cargo check`) exits with code `0`.
-* **Gate 3: Tests Pass:** Automated test suite (`ctest`, `pytest`) exits with code `0`.
-* **Gate 4: Requirements Satisfied:** 100% of task dependencies and plan items are fulfilled.
-* **Gate 5: Independent Review:** Adversarial review approved with no critical objections.
-* **Gate 6: No Contradictions:** Zero unresolved conflicting claims in the registry.
-
-### 9. Final Grounding Pass & Structured Reports
-Before producing final answers, ArenaFight runs a grounding pass that removes unsupported claims and generates structured evidence reports:
-* `## Result`
-* `## Changes`
-* `## Verification` (Build, Tests, Gates)
-* `## Evidence` (E001, E002, etc.)
-* `## Remaining Issues`
-* `## Confidence` (Evidence-derived percentage and rationale)
-
 ---
 
-## 3. Supported Model Backends
+## 3. The 6 Verification Gates
 
-ArenaFight provides a unified, extensible `ModelProvider` C++ interface:
+Before marking any task or objective complete, the system validates all 6 gates:
 
-### 1. Ollama (`OllamaProvider`)
-* **Local First:** Discovers locally installed models on the fly via `GET http://localhost:11434/api/tags`.
-* **Zero Hardcoding:** Parses model parameter size (7B, 14B, 32B, 70B), quantization level, and family directly from local metadata.
-* **Hardware Awareness (RTX 4060 8GB VRAM):** Enforces a process-wide mutex for local model execution to prevent multiple concurrent models from triggering GPU out-of-memory errors.
-
-### 2. OpenRouter (`OpenRouterProvider`)
-* Cloud multi-model routing using the `OPENROUTER_API_KEY` environment variable or `config.json`.
-* Discovers catalog via OpenRouter's API or configurable lists via `OPENROUTER_MODELS`.
-* Redacts secret API keys from console displays and persistent logs.
-
-### 3. Claude Code (`ClaudeCodeProvider`)
-* Non-interactive execution using the installed CLI: `claude -p`.
-* Leverages existing CLI authentication without requiring duplicate API keys.
-* Uses temporary prompt pipes with RAII file cleanup guards to eliminate shell quotation issues.
-
-### 4. Deterministic Test Engine (`TestMockProvider`)
-* Built-in deterministic model simulator for self-testing, continuous integration, and offline verification (`arena test` or `--mock`).
-
----
-
-## 3. Dynamic Model Router
-
-Instead of selecting one model for an entire session, the `ModelRouter` dispatches tasks based on specialized capability:
-
-| Task Type | Routing Strategy | Example Preferred Models |
+| Gate | Gate Name | Required Proof |
 | :--- | :--- | :--- |
-| **Planning** | Strong reasoning capability | `claude-3.5-sonnet`, `deepseek-r1`, `qwen2.5:72b` |
-| **Coding** | Specialized code generation | `Claude Code CLI`, `claude-3.7-sonnet`, `deepseek-coder` |
-| **Debugging** | Reasoning + error diagnosis | `deepseek-r1`, `claude-3.7-sonnet`, `qwen2.5-coder` |
-| **Review** | Cross-provider inspection | Independent reviewer model |
-| **Verification** | Independent from Coder | Prefers a different backend than the one that authored the code |
+| **Gate 1** | **Files Exist** | Required artifacts exist on filesystem with size > 0 bytes |
+| **Gate 2** | **Code Compiles** | Compiler command exits with code `0` and zero breaking errors |
+| **Gate 3** | **Tests Pass** | Automated test runner reports 0 failures and non-zero passed tests |
+| **Gate 4** | **Requirements Satisfied** | All planned requirements and acceptance criteria have corresponding evidence |
+| **Gate 5** | **Adversarial Review** | Independent verifier discovers 0 critical security or logic vulnerabilities |
+| **Gate 6** | **No Contradictions** | Zero unresolved contradictions in `ClaimRegistry` |
 
 ---
 
-## 4. Built-in Tool Registry
+## 4. OpenCode Integration (`OpenCodeProvider`)
 
-Tools return structured `ToolResult` objects containing stdout, stderr, exit code, and execution duration:
+ArenaFight features native integration with [OpenCode](https://opencode.ai) (`anomalyco/opencode`), the open-source AI coding agent CLI:
 
-* `read_file`: Line-numbered file inspection with optional `start_line` and `end_line`.
-* `write_file`: File creation with automatic parent directory generation.
-* `edit_file`: Targeted search-and-replace with patch validation and automatic `.bak` backup creation.
-* `create_directory`: Recursive directory creation (`mkdir -p`).
-* `delete_file`: File deletion with directory protection.
-* `list_directory`: Directory inspection with recursive depth control and item filtering.
-* `search_files`: Workspace grep and regular expression search across files.
-* `run_command`: Safe shell execution (PowerShell on Windows, bash on Linux) with destructive command interception.
-* `run_program`: Direct executable execution with argument lists.
-* `run_tests`: Automated test runner discovery (ctest, cargo test, npm test, pytest).
-* `git_status`: Working tree status (`git status -s -b`).
-* `git_diff`: File and directory diff inspection.
-* `git_log`: Git history inspection.
-* `ask_user`: Human-in-the-loop interactive prompting when blocked or confirming destructive actions.
+### Capabilities
+* **Model-Agnostic Engine:** Integrates with OpenCode CLI (`opencode` / `opencode.cmd`) detected automatically in PATH.
+* **Discovered Models:**
+  * `opencode-default`: OpenCode default autonomous agent
+  * `opencode/claude-3-7-sonnet`: Claude 3.7 Sonnet via OpenCode
+  * `opencode/gemini-2.5-pro`: Google Gemini 2.5 Pro via OpenCode
+  * `opencode/deepseek-r1`: DeepSeek R1 reasoning model via OpenCode
+  * `opencode/qwen-2.5-coder`: Qwen 2.5 Coder 32B via OpenCode
+* **Workspace Synchronization:** Automatically syncs verified invariants and constraints into `.opencode/opencode.json` and `.opencode/INSTRUCTIONS.md`.
 
----
-
-## 5. Memory Safety & Concurrency Architecture
-
-* **Zero Raw Owning Pointers:** All allocations use `std::unique_ptr`, `std::shared_ptr`, and standard containers.
-* **RAII for C Handles:** `CURL*`, `curl_slist*`, and escaped strings are wrapped in RAII custom deleters.
-* **Deadlock-Free Process Execution:** Windows and Linux process executors consume `stdout` and `stderr` pipes concurrently in separate threads, eliminating pipe buffer deadlocks.
-* **Atomic Session Persistence:** Writes to `session.json.tmp` and performs an atomic filesystem rename to prevent corrupt session files on unexpected shutdowns.
-* **Secret Redaction:** `Logger::sanitize()` masks API keys (`sk-or-v1-...`) and Authorization headers.
-
----
-
-## 6. Build Instructions
-
-### Prerequisites
-* **C++ Compiler:** C++20 compliant compiler (GCC 12+, Clang 14+, or MSVC 2022+)
-* **Build System:** CMake (3.20+) and Ninja (or Make)
-* **Libraries:** `libcurl`, `nlohmann/json` (automatically fetched via CMake `FetchContent` if not installed locally)
-
-### Windows (MSYS2 UCRT64 / MinGW)
+### CLI Usage with OpenCode
 ```bash
-# 1. Install prerequisites in MSYS2 UCRT64
-pacman -S mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-curl mingw-w64-ucrt-x86_64-nlohmann-json
+# Check OpenCode integration status & discovered models
+arena opencode status
+arena opencode models
 
-# 2. Configure build with CMake & Ninja
-cmake -B build -G "Ninja" -DCMAKE_PREFIX_PATH="C:/msys64/ucrt64" -DOPENSSL_ROOT_DIR="C:/msys64/ucrt64"
+# Run one-off prompts directly through OpenCode CLI
+arena opencode run "Explain project structure and verify invariants"
 
-# 3. Build executable and test suite
-cmake --build build
+# Synchronize .opencode/ workspace configuration
+arena opencode sync
 
-# 4. Run automated test suite
-ctest --test-dir build --output-on-failure
-```
-
-### Windows (Visual Studio 2022 / MSVC)
-```powershell
-cmake -B build -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
-cmake --build build --config Release
-ctest --test-dir build -C Release --output-on-failure
-```
-
-### Linux (Ubuntu / Debian)
-```bash
-sudo apt update && sudo apt install -y build-essential cmake ninja-build libcurl4-openssl-dev nlohmann-json3-dev
-cmake -B build -G "Ninja"
-cmake --build build
-ctest --test-dir build --output-on-failure
-```
-
-### Linux (Fedora)
-```bash
-sudo dnf install -y gcc-c++ cmake ninja-build libcurl-devel json-devel
-cmake -B build -G "Ninja"
-cmake --build build
-ctest --test-dir build --output-on-failure
+# Execute autonomous goal with OpenCode as primary provider
+arena --opencode "Scaffold a C++20 project with unit tests"
 ```
 
 ---
 
-## 7. Antigravity Interactive REPL & Slash Commands
+## 5. User Interfaces
 
-ArenaFight provides a Google Antigravity-style interactive multi-turn REPL and slash command suite:
-
+### 1. Simplistic UI (`simple_ui.html`)
+A focused, distraction-free minimalist interface designed for rapid developer iteration:
+* **Zen Layout:** Single-column clean card design with zero visual clutter.
+* **Zero Emojis:** Clean inline SVG icons and modern typography.
+* **Backend Selector:** Instantly toggle between **OpenCode CLI**, **Claude Code CLI**, **Ollama**, **OpenRouter**, or **Offline Mock**.
+* **Mode Actions:** Execute autonomously (`/goal`), draft milestones (`/plan`), run physical verification directly, bridge into OpenCode (`opencode run`), or conduct requirements interviews (`/grill-me`).
+* **6-Gate Verification Board:** Real-time visual pass/fail badges for physical verification invariants.
+* **Collapsible Terminal:** Telemetry and execution logs with copy and auto-scroll.
+* **One-Click Launch:**
 ```bash
-# Launch Antigravity Interactive Multi-Turn REPL
-./build/arena
+# Launch directly from ArenaFight CLI
+arena ui
 
-# Autonomous Goal Pursuit (pursues until all 6 verification gates pass)
-./build/arena goal "Build a multi-threaded crawler with tests and documentation"
-
-# Generate Interactive Plan Artifact with milestones & dependencies
-./build/arena plan "Scaffold an embedded motor controller with Wokwi"
-
-# Interactive Requirements & Edge Cases Interview
-./build/arena grill-me "High-throughput asynchronous event bus"
-
-# Inspect and view generated artifacts
-./build/arena artifacts
-
-# List active workspace skills (.arena/skills/*/SKILL.md)
-./build/arena skills
-
-# List active custom & system rules (.arena/rules/)
-./build/arena rules
-
-# Resume a previous session
-./build/arena resume <session-id>
-
-# Run built-in automated self-test suite (16/16 test assertions)
-./build/arena test
+# Or open in browser
+explorer simple_ui.html
 ```
 
-### REPL Slash Commands (inside `arena ❯`)
-* `/goal <task>`: Autonomous goal pursuit with self-healing until fully verified.
-* `/plan <task>`: Deconstructs the task into a structured plan artifact with milestones and acceptance criteria; prompts user to `[P]roceed`, `[E]dit`, or `[C]ancel`.
-* `/grill-me <topic>`: Proactive requirements interview probing concurrency, edge cases, timing bounds, and failure modes.
-* `/learn <insight>`: Persists repository conventions and rules into `.arena/knowledge/` and memory.
+### 2. Antigravity 2.0 Studio (`index.html`)
+For complex, multi-pane workflows requiring full IDE capabilities:
+* **Left Sidebar**: Workspace indicator, session history, skills drawer, scheduled tasks monitor.
+* **Chat Canvas**: Interactive multi-turn feed with collapsible Thinking Process disclosures, live Tool Execution cards, interactive Plan Cards with "Proceed with Execution", and slash command autocomplete (`/`).
+* **Auxiliary Pane**: Artifacts Viewer, Visual Task Graph, 6 Verification Gates, and ANSI Terminal Console.
+* Easily toggle between Studio and Simplistic UI via the top navigation header button (`Simplistic UI`).
+
+---
+
+## 6. Refactored C++20 Architecture
+
+The C++ codebase is refactored according to modern C++20 best practices:
+
+1. **Command Dispatcher Pattern (`src/main.cpp`):**
+   Replaced legacy chained `if-else` blocks with a structured `std::map<std::string, Handler>` command dispatch table with unified flag and argument tokenization.
+
+2. **Provider Factory Pattern (`src/providers/provider_factory.cpp`):**
+   Decoupled model backend instantiation out of `ArenaAgent` into a dedicated factory supporting `OpenCodeProvider`, `ClaudeCodeProvider`, `OllamaProvider`, `OpenRouterProvider`, and `TestMockProvider`.
+
+3. **RAII Temporary File Management (`include/arenafight/common/fs_utils.hpp`):**
+   `TempFileGuard` guarantees exception-safe cleanup of temporary prompt and execution files across all CLI backends.
+
+4. **Multi-Model Router Scoring (`src/router/model_router.cpp`):**
+   Dynamic task routing supports OpenCode backends with high capability scoring for coding and debugging tasks alongside Claude and local models.
+
+5. **Decoupled Verification Subsystems:**
+   `Verifier`, `IndependentReviewer`, and `ClaimRegistry` enforce strict separation between model hypotheses and physical tool evidence.
+
+---
+
+## 7. CLI Reference & Subcommands
+
+```text
+Usage:
+  arena                          Launch Antigravity Interactive REPL
+  arena "<task>"                  Execute a task autonomously (/goal)
+  arena goal "<task>"             Autonomous goal pursuit with verification
+  arena plan "<task>"             Generate structured plan artifact with milestones
+  arena grill-me "<topic>"        Interactive requirements interview
+  arena opencode [cmd]           OpenCode CLI integration (status|models|run|sync)
+  arena ui [simple|studio]       Launch Simplistic Web UI dashboard in browser
+  arena providers                Inspect all AI model backends status
+  arena artifacts                List and inspect project artifacts
+  arena skills                   List active skills
+  arena rules                    Display active workspace and system rules
+  arena boards                   List supported microcontroller boards
+  arena board <id>               Inspect microcontroller pinout & strapping pins
+  arena components               List supported sensors, actuators & ICs
+  arena scaffold <board> <proj>  Scaffold hardware project with Wokwi simulation
+  arena qos [path]               Evaluate embedded C++ firmware QoS
+  arena calculate <type> <args>  Calculate circuit values (led, divider, i2c, battery)
+  arena resume <session-id>      Resume an existing session
+  arena sessions                 List past saved sessions
+  arena models                   Discover and list models across all backends
+  arena config                   Display current configuration
+  arena test                     Run built-in automated self-tests
+
+Options:
+  --opencode                     Select OpenCode as primary provider
+  --claude                       Select Claude Code CLI as primary provider
+  --ollama                       Select Ollama as primary provider
+  --openrouter                   Select OpenRouter as primary provider
+  --mock                         Force built-in offline test mock provider
+  --no-mock-fallback             Disable automatic fallback to offline mock
+  --verbose, -v                  Enable debug output
+```
+
+### REPL Slash Commands (inside `arena > `)
+* `/goal <task>`: Autonomous goal execution until verified.
+* `/plan <task>`: Generates a plan artifact with milestones and dependencies.
+* `/grill-me <topic>`: Requirements interview to resolve edge cases and design decisions.
+* `/learn <insight>`: Persists repository conventions and rules into `.arena/knowledge/`.
 * `/schedule <delay_sec> <task>`: Schedules delayed or recurring background jobs.
 * `/artifacts [id]`: Lists and inspects project artifacts with YAML metadata.
 * `/skills [name]`: Inspects discovered skills.
 * `/rules`: Lists active system and workspace rules.
-* `/models`: Discovers and switches models across Claude Code, OpenRouter, and Ollama.
+* `/models`: Discovers and switches models across OpenCode, Claude Code, OpenRouter, and Ollama.
+* `/opencode`: OpenCode CLI status, model discovery, one-off execution, and `.opencode` sync.
+* `/ui`: Launches the Simplistic Web UI dashboard in your browser.
 * `/status`: Displays session telemetry, verified facts, and gate statuses.
 * `/exit` / `/quit`: Exits the session.
 
@@ -339,22 +312,14 @@ ArenaFight provides a Google Antigravity-style interactive multi-turn REPL and s
 
 ---
 
-## 8. Antigravity 2.0 Web UI (`index.html`)
+## 8. Hardware & Embedded QoS Studio
 
-ArenaFight features a state-of-the-art **Antigravity 2.0 Web Studio**:
-* **Left Sidebar**: Workspace indicator, session history, skills drawer, scheduled tasks monitor, settings modal, and Lunarmist-byte authorship credits.
-* **Chat Canvas**: Interactive multi-turn feed with collapsible Thinking Process disclosures, live Tool Execution cards (`run_command`, `write_file`, `run_tests`), interactive Plan Cards with "Proceed with Execution", and slash command autocomplete (`/`).
-* **Auxiliary Pane**: 
-  1. *Artifacts Viewer*: Interactive markdown previewer with diff blocks, copy button, and plan execution actions.
-  2. *Task Graph*: Visual task nodes with dependencies and status badges.
-  3. *6 Verification Gates*: Live dashboard tracking files, compilation, tests, requirements, adversarial review, and contradiction state with physical confidence score.
-  4. *Terminal Console*: Real-time ANSI-rendered terminal log output.
+ArenaFight provides embedded systems development and physical circuit tooling:
 
-To launch the Web UI, simply open `index.html` in any web browser or serve it via local web server:
-```bash
-# Open in browser directly
-explorer index.html
-```
+* **Board Registry:** Pinout constraint databases for ESP32, ESP32-S3, Raspberry Pi Pico, Arduino Uno/Nano, STM32F401, Teensy 4.0. Validates strapping pins, input-only pins (e.g. GPIO 34-39 on ESP32), and voltage tolerances.
+* **Circuit Calculator:** Calculates LED current-limiting resistors, resistor voltage dividers, I2C pullup resistor values (for bus capacitance and speed), and battery discharge runtimes.
+* **Wokwi Project Scaffolding:** Generates `diagram.json`, PlatformIO configurations (`platformio.ini`), and modern C++20 firmware templates.
+* **Firmware QoS Analyzer:** Evaluates firmware source for watchdog presence, non-blocking state machines, zero-heap static allocation compliance, and reentrancy safety.
 
 ---
 
@@ -375,6 +340,9 @@ explorer index.html
         "qwen/qwen-2.5-coder-32b-instruct"
     ],
     "claude_command": "claude",
+    "anthropic_api_key": "",
+    "opencode_command": "opencode",
+    "opencode_model": "opencode-default",
     "max_iterations": 30,
     "max_tool_calls": 100,
     "max_retries": 3,
@@ -383,11 +351,14 @@ explorer index.html
     "require_confirmation_for_destructive_commands": true,
     "default_provider": "auto",
     "workspace_dir": ".",
-    "test_mock_enabled": false
+    "test_mock_enabled": false,
+    "auto_mock_fallback": true
 }
 ```
 
 Environment variables override configuration automatically:
+* `OPENCODE_COMMAND`: Invocation command for OpenCode (default: `opencode`).
+* `OPENCODE_MODEL`: Default model selection for OpenCode.
 * `OPENROUTER_API_KEY`: Sets the OpenRouter authentication token.
 * `OPENROUTER_MODELS`: Comma-separated list of OpenRouter models to load.
 * `OLLAMA_URL`: Overrides the default Ollama API endpoint.
@@ -395,18 +366,35 @@ Environment variables override configuration automatically:
 
 ---
 
-## 10. Developer Guide & Code Architecture
+## 10. Building and Testing
 
-ArenaFight includes a local developer guide and code tutorial (`docs/DEV_TUTORIAL.md`) covering:
-* Embedding `ArenaFight` as a static/shared C++20 library in external projects.
-* Authoring custom tools inheriting from `Tool` with JSON validation and RAII cleanup.
-* Writing custom model providers (e.g. `llama.cpp` server, `vLLM`) via `ModelProvider`.
-* Domain-specific verification gates (AddressSanitizer checks, custom quality linters).
-* Session resumption, atomic disk layout, and hardware VRAM tuning.
+### Prerequisites
+* **C++ Compiler:** Supporting C++20 (`g++` 11+, `clang++` 13+, or MSVC 2022)
+* **Build System:** `cmake` (>= 3.20) and `ninja`
+* **Dependencies:** `libcurl`, `Threads` (nlohmann_json is automatically fetched via FetchContent if not found)
+
+### Building
+```bash
+# Configure build directory
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+# Build executable and test suite
+ninja -C build
+```
+
+### Running Tests
+The automated test suite executes **21** assertions covering configuration, tools, process safety, evidence hierarchy, multi-model consensus, and OpenCode integration:
+```bash
+# Run test suite executable directly
+./build/arena_test.exe
+
+# Or run via CTest
+ctest --test-dir build --output-on-failure
+```
 
 ---
 
 ## Credits
 **Made by Lunarmist-byte**
-* GitHub: [https://github.com/Lunarmist-byte](https://github.com/Lunarmist-byte)
-* LinkedIn: [https://www.linkedin.com/in/amal-s-kumar-ba69a1290/](https://www.linkedin.com/in/amal-s-kumar-ba69a1290/)
+* **GitHub:** [https://github.com/Lunarmist-byte](https://github.com/Lunarmist-byte)
+* **LinkedIn:** [https://www.linkedin.com/in/amal-s-kumar-ba69a1290/](https://www.linkedin.com/in/amal-s-kumar-ba69a1290/)

@@ -1,7 +1,6 @@
 #include "arenafight/agent/arena_agent.hpp"
-#include "arenafight/providers/ollama_provider.hpp"
-#include "arenafight/providers/openrouter_provider.hpp"
-#include "arenafight/providers/claude_code_provider.hpp"
+#include "arenafight/providers/provider_factory.hpp"
+#include "arenafight/providers/opencode_provider.hpp"
 #include "arenafight/providers/test_mock_provider.hpp"
 #include "arenafight/ui/terminal_ui.hpp"
 #include "arenafight/common/logger.hpp"
@@ -46,33 +45,10 @@ ArenaAgent::ArenaAgent(Config config)
 }
 
 void ArenaAgent::initialize() {
-    // 1. Ollama Provider
-    auto ollama = std::make_shared<OllamaProvider>(config_.ollama_url);
-    router_.registerProvider(ollama);
-
-    // 2. OpenRouter Provider
-    auto openrouter = std::make_shared<OpenRouterProvider>(
-        config_.openrouter_api_key,
-        config_.openrouter_base_url,
-        config_.openrouter_models
-    );
-    router_.registerProvider(openrouter);
-
-    // 3. Claude Code Provider
-    if (!config_.anthropic_api_key.empty()) {
-#ifdef _WIN32
-        _putenv_s("ANTHROPIC_API_KEY", config_.anthropic_api_key.c_str());
-#else
-        setenv("ANTHROPIC_API_KEY", config_.anthropic_api_key.c_str(), 1);
-#endif
-    }
-    auto claude = std::make_shared<ClaudeCodeProvider>(config_.claude_command);
-    router_.registerProvider(claude);
-
-    // 4. Test Mock Provider (for offline tests or simulation)
-    if (config_.test_mock_enabled) {
-        auto mock = std::make_shared<TestMockProvider>();
-        router_.registerProvider(mock);
+    // Register all configured providers via ProviderFactory
+    auto providers = ProviderFactory::createConfiguredProviders(config_);
+    for (auto& p : providers) {
+        router_.registerProvider(p);
     }
 
     router_.refreshModels();
@@ -175,9 +151,10 @@ bool ArenaAgent::run() {
         if (config_.auto_mock_fallback) {
             Logger::instance().warn("No active AI model backends detected. Automatically falling back to Offline Mock Provider (TestMock).");
             std::cout << "\n\033[33m[NOTICE] No active AI model backends detected!\033[0m\n"
-                      << "  1. Claude Code CLI : Not authenticated or not found in PATH\n"
-                      << "  2. OpenRouter      : No API key configured\n"
-                      << "  3. Ollama          : Server offline or no models pulled\n\n"
+                      << "  1. OpenCode CLI    : Not installed or not in PATH (npm i -g @opencode/cli)\n"
+                      << "  2. Claude Code CLI : Not authenticated or not found in PATH\n"
+                      << "  3. OpenRouter      : No API key configured\n"
+                      << "  4. Ollama          : Server offline or no models pulled\n\n"
                       << "\033[36m[AUTO-FALLBACK] Automatically switching to built-in Offline Mock Provider (TestMock) for execution.\033[0m\n\n";
 
             config_.test_mock_enabled = true;
@@ -189,10 +166,11 @@ bool ArenaAgent::run() {
             Logger::instance().error("Execution halted: No active AI model backends found.");
             std::cout << "\n\033[31m[ERROR] No active AI model backends detected!\033[0m\n\n"
                       << "Arenafight Agent requires at least one working backend:\n"
-                      << "  1. Claude Code CLI : Run 'claude login' in terminal\n"
-                      << "  2. OpenRouter      : Set OPENROUTER_API_KEY environment variable or edit config.json\n"
-                      << "  3. Ollama          : Start Ollama ('ollama serve') with a pulled model\n"
-                      << "  4. Offline Mock    : Run with '--mock' flag for built-in self-test mode\n\n";
+                      << "  1. OpenCode CLI    : Install via 'npm install -g @opencode/cli'\n"
+                      << "  2. Claude Code CLI : Run 'claude login' in terminal\n"
+                      << "  3. OpenRouter      : Set OPENROUTER_API_KEY environment variable or edit config.json\n"
+                      << "  4. Ollama          : Start Ollama ('ollama serve') with a pulled model\n"
+                      << "  5. Offline Mock    : Run with '--mock' flag for built-in self-test mode\n\n";
             TerminalUI::printFooter();
             session_.currentState = "FAILED_NO_PROVIDERS";
             session_.saveToDisk();

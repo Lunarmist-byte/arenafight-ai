@@ -45,7 +45,9 @@ set(CORE_SOURCES
     src/providers/ollama_provider.cpp
     src/providers/openrouter_provider.cpp
     src/providers/claude_code_provider.cpp
+    src/providers/opencode_provider.cpp
     src/providers/test_mock_provider.cpp
+    src/providers/provider_factory.cpp
     src/tools/tool.cpp
     src/tools/file_tools.cpp
     src/tools/search_tools.cpp

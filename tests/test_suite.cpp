@@ -9,6 +9,7 @@
 #include "arenafight/providers/ollama_provider.hpp"
 #include "arenafight/providers/openrouter_provider.hpp"
 #include "arenafight/providers/claude_code_provider.hpp"
+#include "arenafight/providers/opencode_provider.hpp"
 #include "arenafight/providers/test_mock_provider.hpp"
 #include "arenafight/tools/file_tools.hpp"
 #include "arenafight/tools/search_tools.hpp"
@@ -150,7 +151,7 @@ bool testProcessExecutorAndSafety() {
 }
 
 bool testProviderDetection() {
-    std::cout << "[TEST] 5. Provider detection (Ollama, OpenRouter, Claude Code)... " << std::flush;
+    std::cout << "[TEST] 5. Provider detection (Ollama, OpenRouter, Claude Code, OpenCode)... " << std::flush;
     OllamaProvider ollama("http://localhost:11434");
     bool ollamaOnline = ollama.available();
     // Ollama detection must not crash even if offline
@@ -169,13 +170,18 @@ bool testProviderDetection() {
     bool claudeFound = claude.isInstalled();
     auto claudeModels = claude.discoverModels();
 
+    OpenCodeProvider opencode;
+    bool opencodeFound = opencode.isInstalled();
+    auto opencodeModels = opencode.discoverModels();
+
     TestMockProvider mock;
     TEST_ASSERT(mock.available(), "TestMockProvider must be available");
     auto mockModels = mock.discoverModels();
     TEST_ASSERT(mockModels.size() >= 3, "Mock provider must have reasoning, coding, and verifier models");
 
     std::cout << "PASSED (Ollama: " << (ollamaOnline ? "ONLINE" : "OFFLINE (Graceful)")
-              << ", Claude CLI: " << (claudeFound ? "INSTALLED" : "NOT FOUND") << ")\n";
+              << ", Claude CLI: " << (claudeFound ? "INSTALLED" : "NOT FOUND")
+              << ", OpenCode CLI: " << (opencodeFound ? "INSTALLED" : "NOT FOUND") << ")\n";
     return true;
 }
 
@@ -575,6 +581,7 @@ bool testAutoMockFallback() {
     cfg.openrouter_api_key = "";     // No API key
     cfg.ollama_url = "http://127.0.0.1:54321"; // Non-existent offline URL
     cfg.claude_command = "non_existent_claude_binary_xyz";
+    cfg.opencode_command = "non_existent_opencode_binary_xyz";
 
     ArenaAgent agent(cfg);
     agent.startNewSession("Test automatic mock fallback execution");
@@ -741,6 +748,66 @@ bool testHardwareScaffolderAndQoS() {
     return true;
 }
 
+bool testOpenCodeProviderIntegration() {
+    std::cout << "[TEST] 21. OpenCode Provider & Workspace integration... " << std::flush;
+
+    OpenCodeProvider oc("opencode", "opencode-default");
+    TEST_ASSERT(oc.name() == "OpenCode", "Provider name must be OpenCode");
+
+    // Enable mock mode for deterministic offline testing
+    oc.setMockMode(true);
+    TEST_ASSERT(oc.available(), "OpenCode must be available in mock mode");
+    TEST_ASSERT(oc.isInstalled(), "OpenCode must report installed in mock mode");
+    TEST_ASSERT(oc.getDetectedVersion() == "1.1.0-mock", "Detected version should match mock version");
+
+    auto models = oc.discoverModels();
+    TEST_ASSERT(models.size() >= 4, "OpenCode must discover default, Sonnet, Gemini, and R1 models");
+
+    bool hasDefault = false;
+    for (const auto& m : models) {
+        if (m.id == "opencode-default") hasDefault = true;
+    }
+    TEST_ASSERT(hasDefault, "opencode-default must be in discovered models");
+
+    // Test generation and tool call extraction
+    AgentRequest req;
+    req.userPrompt = "Write output file";
+    ToolDefinition td;
+    td.name = "write_file";
+    td.description = "Writes file to disk";
+    req.tools.push_back(td);
+
+    AgentResponse res = oc.generate(req);
+    TEST_ASSERT(res.success, "OpenCode generation must succeed");
+    TEST_ASSERT(!res.toolCalls.empty(), "OpenCode must produce tool call in mock mode");
+    TEST_ASSERT(res.toolCalls[0].name == "write_file", "Tool call name must be write_file");
+
+    // Test workspace export
+    std::string testWs = "sandbox_opencode_ws";
+    safeRemoveAll(testWs);
+    std::filesystem::create_directories(testWs);
+
+    bool exportOk = OpenCodeProvider::exportOpenCodeWorkspace(
+        testWs,
+        "Test OpenCode integration with ArenaFight",
+        "Must verify all compiler outputs"
+    );
+    TEST_ASSERT(exportOk, "Exporting OpenCode workspace must succeed");
+    TEST_ASSERT(std::filesystem::exists(testWs + "/.opencode/opencode.json"), ".opencode/opencode.json must exist");
+    TEST_ASSERT(std::filesystem::exists(testWs + "/.opencode/INSTRUCTIONS.md"), ".opencode/INSTRUCTIONS.md must exist");
+
+    // Verify credits in exported instructions
+    std::ifstream instStream(testWs + "/.opencode/INSTRUCTIONS.md");
+    std::string instContent((std::istreambuf_iterator<char>(instStream)), std::istreambuf_iterator<char>());
+    TEST_ASSERT(instContent.find("Made by Lunarmist-byte") != std::string::npos, "Instructions must contain Lunarmist-byte credit");
+    TEST_ASSERT(instContent.find("https://github.com/Lunarmist-byte") != std::string::npos, "Instructions must contain GitHub link");
+
+    safeRemoveAll(testWs);
+
+    std::cout << "PASSED\n";
+    return true;
+}
+
 int main() {
     std::cout << "\n====================================================\n"
               << "          ARENAFIGHT AGENT TEST SUITE               \n"
@@ -750,7 +817,7 @@ int main() {
               << "====================================================\n\n";
 
     int passed = 0;
-    int total = 20;
+    int total = 21;
 
     if (testConfig()) passed++;
     if (testFileTools()) passed++;
@@ -772,6 +839,7 @@ int main() {
     if (testCircuitCalculator()) passed++;
     if (testHardwareValidatorAndHazards()) passed++;
     if (testHardwareScaffolderAndQoS()) passed++;
+    if (testOpenCodeProviderIntegration()) passed++;
 
     std::cout << "\n----------------------------------------------------\n";
     std::cout << "TEST RESULTS: " << passed << "/" << total << " PASSED\n";

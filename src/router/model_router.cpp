@@ -150,7 +150,9 @@ ModelSelection ModelRouter::selectModel(
         case TaskType::CODING: {
             for (const auto& entry : candidates) {
                 const auto& id = entry.second.id;
-                if (entry.first->name() == "ClaudeCode" ||
+                if (entry.first->name() == "OpenCode" ||
+                    entry.first->name() == "ClaudeCode" ||
+                    id.find("opencode") != std::string::npos ||
                     id.find("coder") != std::string::npos ||
                     id.find("3.7-sonnet") != std::string::npos ||
                     id.find("qwen") != std::string::npos ||
@@ -158,7 +160,7 @@ ModelSelection ModelRouter::selectModel(
                     id.find("mock-coder") != std::string::npos) {
                     selection.provider = entry.first;
                     selection.model = entry.second;
-                    selection.reason = "Specialized coding backend selected for Coding";
+                    selection.reason = "Specialized coding backend (" + entry.first->name() + ") selected for Coding";
                     return selection;
                 }
             }
@@ -167,14 +169,17 @@ ModelSelection ModelRouter::selectModel(
         case TaskType::DEBUGGING: {
             for (const auto& entry : candidates) {
                 const auto& id = entry.second.id;
-                if (id.find("r1") != std::string::npos ||
+                if (entry.first->name() == "OpenCode" ||
+                    entry.first->name() == "ClaudeCode" ||
+                    id.find("opencode") != std::string::npos ||
+                    id.find("r1") != std::string::npos ||
                     id.find("sonnet") != std::string::npos ||
                     id.find("qwen") != std::string::npos ||
                     id.find("llama") != std::string::npos ||
                     id.find("coder") != std::string::npos) {
                     selection.provider = entry.first;
                     selection.model = entry.second;
-                    selection.reason = "Reasoning/debugging model selected for Debugging";
+                    selection.reason = "Reasoning/debugging model (" + entry.first->name() + ") selected for Debugging";
                     return selection;
                 }
             }
