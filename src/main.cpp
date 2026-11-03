@@ -54,10 +54,7 @@ void printUsage() {
       << "  arena duel <task>              Alias for think duel\n"
       << "  arena abilities                Display model ability matrix & "
          "capability scores\n"
-      << "  arena ui [prism|vanguard|pulse] Launch Web UI: Prism Deck, "
-         "Vanguard Studio, or Pulse\n"
-      << "  arena metrics, pulse           Launch ArenaFight Pulse live "
-         "telemetry observatory\n"
+      << "  arena metrics, telemetry       Display live verification & evidence telemetry observatory\n"
       << "  arena providers                Inspect all AI model backends "
          "status\n"
       << "  arena artifacts                List and inspect project artifacts\n"
@@ -97,7 +94,6 @@ void printUsage() {
       << "  --mode <standalone|opencode>   Explicitly specify runtime execution mode\n"
       << "  --security <level>             Set security level (strict, balanced, permissive)\n"
       << "  --strict                       Enable strict security sandbox lockdown\n"
-      << "  --ui [prism|vanguard|pulse]    Launch companion web UI variant\n"
       << "  --model, -m <model_name>       Set primary model for task/session "
          "(any custom/cloud model)\n"
       << "  --base-url, --endpoint <url>   Set custom OpenAI-compatible API "
@@ -180,12 +176,6 @@ int main(int argc, char *argv[]) {
       if (config.isOpenCodeConnected()) {
         config.default_provider = "OpenCode";
       }
-    } else if (arg == "--ui") {
-      std::string uiMode = (i + 1 < argc && argv[i + 1][0] != '-') ? argv[++i] : "simple";
-      ArenaAgent agent(config);
-      ReplEngine repl(agent);
-      repl.handleUI(uiMode);
-      return 0;
     } else if (arg == "--claude") {
       config.default_provider = "ClaudeCode";
     } else if (arg == "--ollama") {
@@ -421,27 +411,12 @@ int main(int argc, char *argv[]) {
   };
   dispatchTable["guide"] = dispatchTable["help-session"];
 
-  dispatchTable["ui"] = [&](const auto &args) {
-    ReplEngine repl(agent);
-    std::string mode = (args.size() > 1) ? args[1] : "simple";
-    repl.handleUI(mode);
-    return 0;
-  };
-
   dispatchTable["metrics"] = [&](const auto &args) {
     ReplEngine repl(agent);
-    std::string mode = (args.size() > 1) ? args[1] : "pulse";
-    repl.handleUI(mode);
+    repl.handleMetrics(joinArgs(args, 1));
     return 0;
   };
-  dispatchTable["pulse"] = dispatchTable["metrics"];
-
-  dispatchTable["web"] = [&](const auto &args) {
-    ReplEngine repl(agent);
-    std::string mode = (args.size() > 1) ? args[1] : "simple";
-    repl.handleUI(mode);
-    return 0;
-  };
+  dispatchTable["telemetry"] = dispatchTable["metrics"];
 
   dispatchTable["artifacts"] = [&](const auto &args) {
     ReplEngine repl(agent);

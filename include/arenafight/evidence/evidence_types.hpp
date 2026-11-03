@@ -16,7 +16,7 @@ enum class EvidenceLevel {
     UNKNOWN
 };
 
-inline std::string evidenceLevelToString(EvidenceLevel level) {
+[[nodiscard]] constexpr std::string_view evidenceLevelToString(EvidenceLevel level) noexcept {
     switch (level) {
         case EvidenceLevel::VERIFIED: return "VERIFIED";
         case EvidenceLevel::STRONGLY_SUPPORTED: return "STRONGLY_SUPPORTED";
@@ -28,7 +28,7 @@ inline std::string evidenceLevelToString(EvidenceLevel level) {
     }
 }
 
-inline EvidenceLevel evidenceLevelFromString(const std::string& str) {
+[[nodiscard]] constexpr EvidenceLevel evidenceLevelFromString(std::string_view str) noexcept {
     if (str == "VERIFIED") return EvidenceLevel::VERIFIED;
     if (str == "STRONGLY_SUPPORTED") return EvidenceLevel::STRONGLY_SUPPORTED;
     if (str == "MODEL_DERIVED") return EvidenceLevel::MODEL_DERIVED;
@@ -46,7 +46,7 @@ enum class KnowledgeType {
     UNKNOWN
 };
 
-inline std::string knowledgeTypeToString(KnowledgeType type) {
+[[nodiscard]] constexpr std::string_view knowledgeTypeToString(KnowledgeType type) noexcept {
     switch (type) {
         case KnowledgeType::FACT: return "FACT";
         case KnowledgeType::HYPOTHESIS: return "HYPOTHESIS";
@@ -57,7 +57,7 @@ inline std::string knowledgeTypeToString(KnowledgeType type) {
     }
 }
 
-inline KnowledgeType knowledgeTypeFromString(const std::string& str) {
+[[nodiscard]] constexpr KnowledgeType knowledgeTypeFromString(std::string_view str) noexcept {
     if (str == "FACT") return KnowledgeType::FACT;
     if (str == "HYPOTHESIS") return KnowledgeType::HYPOTHESIS;
     if (str == "ASSUMPTION") return KnowledgeType::ASSUMPTION;
@@ -71,11 +71,11 @@ enum class ReviewMode {
     ADVERSARIAL
 };
 
-inline std::string reviewModeToString(ReviewMode mode) {
+[[nodiscard]] constexpr std::string_view reviewModeToString(ReviewMode mode) noexcept {
     return (mode == ReviewMode::ADVERSARIAL) ? "ADVERSARIAL" : "NORMAL";
 }
 
-inline ReviewMode reviewModeFromString(const std::string& str) {
+[[nodiscard]] constexpr ReviewMode reviewModeFromString(std::string_view str) noexcept {
     return (str == "ADVERSARIAL") ? ReviewMode::ADVERSARIAL : ReviewMode::NORMAL;
 }
 
@@ -89,7 +89,7 @@ enum class EvidenceHierarchy {
     GUESS_ASSUMPTION = 6    // guess / assumption
 };
 
-inline std::string evidenceHierarchyToString(EvidenceHierarchy h) {
+[[nodiscard]] constexpr std::string_view evidenceHierarchyToString(EvidenceHierarchy h) noexcept {
     switch (h) {
         case EvidenceHierarchy::DIRECT_EXECUTION: return "LEVEL 1 - Direct Execution Evidence";
         case EvidenceHierarchy::DIRECT_ARTIFACT: return "LEVEL 2 - Direct Artifact Evidence";

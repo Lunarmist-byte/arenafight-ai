@@ -161,7 +161,7 @@ std::string HardwareScaffolder::generateConfigHeader(
 std::string HardwareScaffolder::generateQoSFirmware(
     const BoardSpec& board,
     const std::vector<PinAssignment>& assignments,
-    const std::vector<ComponentSpec>& components,
+    [[maybe_unused]] const std::vector<ComponentSpec>& components,
     const std::string& projectName
 ) {
     std::stringstream ss;

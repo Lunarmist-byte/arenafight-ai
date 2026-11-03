@@ -12,6 +12,7 @@
 #include "arenafight/security/security_sandbox.hpp"
 #include "arenafight/system/system_profiler.hpp"
 #include "arenafight/services/service_daemon.hpp"
+#include "arenafight/common/string_utils.hpp"
 #include "arenafight/ui/terminal_ui.hpp"
 #include <algorithm>
 #include <chrono>
@@ -39,12 +40,8 @@ const std::string ANSI_BLUE = "\033[34m";
 const std::string ANSI_MAGENTA = "\033[35m";
 const std::string ANSI_RED = "\033[31m";
 
-std::string trim(const std::string &s) {
-  size_t start = s.find_first_not_of(" \t\r\n");
-  if (start == std::string::npos)
-    return "";
-  size_t end = s.find_last_not_of(" \t\r\n");
-  return s.substr(start, end - start + 1);
+inline std::string trim(const std::string &s) {
+  return string_utils::trimCopy(s);
 }
 
 } // namespace
@@ -145,17 +142,11 @@ void ReplEngine::registerCommands() {
       "/opencode [status|models|run <prompt>|sync]",
       [this](const std::string &args) { handleOpenCode(args); }};
 
-  slashCommands_["/ui"] = {"/ui",
-                           "Launch Web UI: Prism (Command Deck), Vanguard "
-                           "(Studio), or Pulse (Observatory)",
-                           "/ui [prism|vanguard|pulse|metrics|simple|studio]",
-                           [this](const std::string &args) { handleUI(args); }};
-
   slashCommands_["/metrics"] = {
       "/metrics",
-      "Launch ArenaFight Pulse live telemetry & metrics observatory dashboard",
-      "/metrics", [this](const std::string &) { handleUI("pulse"); }};
-  slashCommands_["/pulse"] = slashCommands_["/metrics"];
+      "Display terminal live telemetry observatory & verification metrics",
+      "/metrics", [this](const std::string &args) { handleMetrics(args); }};
+  slashCommands_["/telemetry"] = slashCommands_["/metrics"];
 
   slashCommands_["/boards"] = {
       "/boards", "List all supported microcontroller boards and architectures",
@@ -306,7 +297,6 @@ void ReplEngine::printReplBanner() {
       << (isOc ? (ANSI_GREEN + std::string("OPENCODE CONNECTED") + ANSI_CYAN)
                : (ANSI_YELLOW + std::string("STANDALONE NATIVE") + ANSI_CYAN))
       << "\n"
-      << "   UI Variants: Prism Deck | Vanguard | Pulse       \n"
       << "----------------------------------------------------\n"
       << " Made by: Lunarmist-byte\n"
       << " GitHub:   https://github.com/Lunarmist-byte\n"
@@ -314,7 +304,7 @@ void ReplEngine::printReplBanner() {
       << "====================================================\n"
       << ANSI_RESET << "\n"
       << ANSI_DIM << "Type " << ANSI_YELLOW << "/help" << ANSI_DIM
-      << " for slash commands (/mode, /connect, /goal, /plan, /think, /ui).\n"
+      << " for slash commands (/mode, /connect, /goal, /plan, /think, /metrics).\n"
       << "Use " << ANSI_YELLOW << "@file <path>" << ANSI_DIM << " or "
       << ANSI_YELLOW << "@git" << ANSI_DIM << " to mention context.\n"
       << "Type " << ANSI_YELLOW << "/exit" << ANSI_DIM << " to quit.\n\n"
@@ -1072,46 +1062,8 @@ void ReplEngine::handleOpenCode(const std::string &args) {
             << ANSI_RESET;
 }
 
-void ReplEngine::handleUI(const std::string &args) {
-  std::string targetFile = "simple_ui.html";
-  std::string uiName = "ArenaFight Prism // Streamlined Command Deck";
-  if (args.find("pulse") != std::string::npos ||
-      args.find("metrics") != std::string::npos ||
-      args.find("observatory") != std::string::npos) {
-    targetFile = "metrics.html";
-    uiName = "ArenaFight Pulse // Live Telemetry & Metrics Observatory";
-  } else if (args.find("vanguard") != std::string::npos ||
-             args.find("studio") != std::string::npos ||
-             args.find("advanced") != std::string::npos) {
-    targetFile = "index.html";
-    uiName = "ArenaFight Vanguard // Multi-Pane Autonomous Engineering Studio";
-  }
-
-  std::filesystem::path p = std::filesystem::absolute(targetFile);
-  std::cout
-      << "\n"
-      << ANSI_CYAN << ANSI_BOLD << "[LAUNCHING WEB UI DASHBOARD]" << ANSI_RESET
-      << "\n"
-      << "Name     : " << uiName << "\n"
-      << "Edition  : "
-      << (targetFile == "metrics.html"
-              ? "Pulse (metrics.html)"
-              : (targetFile == "simple_ui.html" ? "Prism (simple_ui.html)"
-                                                : "Vanguard (index.html)"))
-      << "\n"
-      << "File     : " << p.string() << "\n"
-      << "URL      : file:///" << p.generic_string() << "\n"
-      << "Made by  : Lunarmist-byte | https://github.com/Lunarmist-byte\n\n";
-
-  // Launch default browser
-  if (ProcessExecutor::isWindows()) {
-    std::string launchCmd = "start \"\" \"" + p.string() + "\"";
-    ProcessExecutor::executeShell(launchCmd, ".", 2000);
-  } else {
-    std::string launchCmd = "xdg-open \"" + p.string() +
-                            "\" 2>/dev/null || open \"" + p.string() + "\"";
-    ProcessExecutor::executeShell(launchCmd, ".", 2000);
-  }
+void ReplEngine::handleMetrics(const std::string &/*args*/) {
+  TerminalUI::printMetricsDashboard(agent_.getSession(), agent_.getConfig());
 }
 
 void ReplEngine::handleUnsloth(const std::string &args) {

@@ -315,7 +315,7 @@ GateCheckResult Verifier::evaluateGate3_TestsPass(ClaimRegistry& registry) {
 
 GateCheckResult Verifier::evaluateGate4_RequirementsSatisfied(
     const Session& session,
-    const MemoryManager& memory,
+    [[maybe_unused]] const MemoryManager& memory,
     ClaimRegistry& registry
 ) {
     GateCheckResult gate;
@@ -522,7 +522,7 @@ GateCheckResult Verifier::evaluateGate7_HardwareAndQoS(const Session& session, C
 
 double Verifier::calculateEvidenceConfidence(
     const std::vector<GateCheckResult>& gates,
-    const ClaimRegistry& registry,
+    [[maybe_unused]] const ClaimRegistry& registry,
     std::string& outRationale
 ) {
     // Section 15: Calculate confidence from evidence
@@ -580,7 +580,7 @@ double Verifier::calculateEvidenceConfidence(
 double Verifier::calculateCompletionScore(
     const Session& session,
     const std::vector<GateCheckResult>& gates,
-    const ClaimRegistry& registry
+    [[maybe_unused]] const ClaimRegistry& registry
 ) {
     if (gates.empty()) return 0.0;
 
@@ -702,7 +702,7 @@ GroundedFinalAnswer Verifier::performGroundingPass(
     return gfa;
 }
 
-std::string Verifier::collectObjectiveEvidence(const Session& session, const MemoryManager& memory, ClaimRegistry& registry) {
+std::string Verifier::collectObjectiveEvidence(const Session& session, [[maybe_unused]] const MemoryManager& memory, ClaimRegistry& registry) {
     std::stringstream ss;
     std::string buildEv, testEv, fileEv, bId, tId, fId;
     checkBuild(buildEv, bId, &registry);

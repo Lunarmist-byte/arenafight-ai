@@ -31,12 +31,14 @@
 #include "arenafight/hardware/hardware_scaffolder.hpp"
 #include "arenafight/tools/hardware_tools.hpp"
 #include "arenafight/common/fs_utils.hpp"
+#include "arenafight/common/string_utils.hpp"
 #include "arenafight/finetune/unsloth_manager.hpp"
 #include "arenafight/repl/repl_engine.hpp"
 #include "arenafight/benchmark/benchmark_engine.hpp"
 #include "arenafight/security/security_sandbox.hpp"
 #include "arenafight/system/system_profiler.hpp"
 #include "arenafight/services/service_daemon.hpp"
+#include "arenafight/ui/terminal_ui.hpp"
 #include <thread>
 #include <chrono>
 
@@ -1136,39 +1138,48 @@ bool testFastThinkingPhaseTournament() {
 }
 
 bool testDashboardsAndTelemetryMetricsIntegrity() {
-    std::cout << "[TEST] 27. Unique UI Dashboards & Telemetry Metrics Observatory integrity... " << std::flush;
+    std::cout << "[TEST] 27. Pure CLI Terminal Telemetry & Verification Observatory integrity... " << std::flush;
 
-    // Check dashboard files exist
-    TEST_ASSERT(std::filesystem::exists("simple_ui.html"), "Prism dashboard (simple_ui.html) must exist on disk");
-    TEST_ASSERT(std::filesystem::exists("index.html"), "Vanguard dashboard (index.html) must exist on disk");
-    TEST_ASSERT(std::filesystem::exists("metrics.html"), "Pulse observatory dashboard (metrics.html) must exist on disk");
+    // 1. Capture TerminalUI::printMetricsDashboard output
+    Session session;
+    session.id = "cli-test-session";
+    session.originalTask = "Verify pure terminal telemetry dashboard";
+    session.currentState = "VERIFYING";
+    session.iteration = 3;
 
-    std::string prism = FileUtils::readTextFile("simple_ui.html");
-    std::string vanguard = FileUtils::readTextFile("index.html");
-    std::string pulse = FileUtils::readTextFile("metrics.html");
+    Config config;
+    config.setProcessingLevel("perfect_boi");
 
-    // Check branding
-    TEST_ASSERT(prism.find("ArenaFight Prism") != std::string::npos, "Prism dashboard must contain branded title");
-    TEST_ASSERT(vanguard.find("ArenaFight Vanguard") != std::string::npos, "Vanguard dashboard must contain branded title");
-    TEST_ASSERT(pulse.find("ArenaFight Pulse") != std::string::npos, "Pulse dashboard must contain branded title");
+    std::stringstream buffer;
+    std::streambuf* oldCout = std::cout.rdbuf(buffer.rdbuf());
+    TerminalUI::printMetricsDashboard(session, config);
+    TerminalUI::printBanner("STANDALONE");
+    std::cout.rdbuf(oldCout);
 
-    // Check cross-linking
-    TEST_ASSERT(prism.find("metrics.html") != std::string::npos && prism.find("index.html") != std::string::npos, "Prism must link to metrics.html and index.html");
-    TEST_ASSERT(vanguard.find("metrics.html") != std::string::npos && vanguard.find("simple_ui.html") != std::string::npos, "Vanguard must link to metrics.html and simple_ui.html");
-    TEST_ASSERT(pulse.find("simple_ui.html") != std::string::npos && pulse.find("index.html") != std::string::npos, "Pulse must link to simple_ui.html and index.html");
+    std::string output = buffer.str();
 
-    // Check author credits and links
-    for (const auto& [name, content] : {std::make_pair(std::string("Prism"), prism), std::make_pair(std::string("Vanguard"), vanguard), std::make_pair(std::string("Pulse"), pulse)}) {
-        TEST_ASSERT(content.find("Made by Lunarmist-byte") != std::string::npos, name + " must contain 'Made by Lunarmist-byte'");
-        TEST_ASSERT(content.find("https://github.com/Lunarmist-byte") != std::string::npos, name + " must contain GitHub link");
-        TEST_ASSERT(content.find("https://www.linkedin.com/in/amal-s-kumar-ba69a1290/") != std::string::npos, name + " must contain LinkedIn link");
-    }
+    // Verify key telemetry sections
+    TEST_ASSERT(output.find("ARENAFIGHT CLI // TELEMETRY & METRICS OBSERVATORY") != std::string::npos, "Must contain observatory header");
+    TEST_ASSERT(output.find("6 PHYSICAL EVIDENCE VERIFICATION GATES") != std::string::npos, "Must contain 6 physical gates");
+    TEST_ASSERT(output.find("THINKING PHASE TOURNAMENT & TOKEN EFFICIENCY") != std::string::npos, "Must track thinking duel efficiency");
+    TEST_ASSERT(output.find("UNSLOTH AI FINE-TUNING & ADAPTER ACCELERATION") != std::string::npos, "Must track Unsloth fine-tuning metrics");
+    TEST_ASSERT(output.find("ACTIVE SESSION TELEMETRY") != std::string::npos, "Must display active session telemetry");
 
-    // Check Pulse specific observatory metrics
-    TEST_ASSERT(pulse.find("6 Physical Verification Gates") != std::string::npos, "Pulse dashboard must display 6 Physical Evidence Gates");
-    TEST_ASSERT(pulse.find("Thinking Phase Duel Efficiency") != std::string::npos, "Pulse dashboard must track thinking phase duel metrics");
-    TEST_ASSERT(pulse.find("Unsloth AI") != std::string::npos, "Pulse dashboard must track Unsloth fine-tuning metrics");
-    TEST_ASSERT(pulse.find("Live Telemetry") != std::string::npos, "Pulse dashboard must contain live telemetry event stream");
+    // Verify author credits and links
+    TEST_ASSERT(output.find("Made by Lunarmist-byte") != std::string::npos, "Must contain 'Made by Lunarmist-byte'");
+    TEST_ASSERT(output.find("https://github.com/Lunarmist-byte") != std::string::npos, "Must contain GitHub link");
+    TEST_ASSERT(output.find("https://www.linkedin.com/in/amal-s-kumar-ba69a1290/") != std::string::npos, "Must contain LinkedIn link");
+
+    // 2. Verify Modern C++20 string_utils peak performance
+    TEST_ASSERT(string_utils::trim("  hello world  \r\n") == "hello world", "trim must trim whitespace");
+    TEST_ASSERT(string_utils::toLower("ARENAFIGHT") == "arenafight", "toLower must convert to lowercase");
+    TEST_ASSERT(string_utils::startsWith("arena-agent", "arena"), "startsWith must work");
+    TEST_ASSERT(string_utils::endsWith("file.cpp", ".cpp"), "endsWith must work");
+    TEST_ASSERT(string_utils::contains("fast-and-perfect", "perfect"), "contains must work");
+    auto tokens = string_utils::split("apple,banana,cherry", ',');
+    TEST_ASSERT(tokens.size() == 3 && tokens[1] == "banana", "split must correctly tokenize");
+    TEST_ASSERT(string_utils::join(tokens, "::") == "apple::banana::cherry", "join must join with delimiter");
+    TEST_ASSERT(string_utils::replaceAll("foo bar baz", "bar", "qux") == "foo qux baz", "replaceAll must substitute substrings");
 
     std::cout << "PASSED\n";
     return true;
@@ -1383,13 +1394,15 @@ bool testCliStandaloneAndOpenCodeModes() {
     agent.setMode("standalone");
     TEST_ASSERT(agent.getMode() == "standalone", "Agent getMode must reflect standalone");
 
-    // 7. UI Dashboards dual-mode indicators
-    std::string prism = FileUtils::readTextFile("simple_ui.html");
-    std::string vanguard = FileUtils::readTextFile("index.html");
-    std::string pulse = FileUtils::readTextFile("metrics.html");
-    TEST_ASSERT(prism.find("STANDALONE") != std::string::npos, "Prism must have STANDALONE mode toggle");
-    TEST_ASSERT(vanguard.find("STANDALONE") != std::string::npos, "Vanguard must have STANDALONE mode badge");
-    TEST_ASSERT(pulse.find("STANDALONE") != std::string::npos, "Pulse must display STANDALONE mode indicator");
+    // 7. Terminal UI dual-mode indicators
+    std::stringstream buffer;
+    std::streambuf* oldCout = std::cout.rdbuf(buffer.rdbuf());
+    TerminalUI::printBanner("STANDALONE");
+    TerminalUI::printBanner("opencode");
+    std::cout.rdbuf(oldCout);
+    std::string bannerOut = buffer.str();
+    TEST_ASSERT(bannerOut.find("STANDALONE") != std::string::npos, "Terminal banner must show STANDALONE mode");
+    TEST_ASSERT(bannerOut.find("OPENCODE CONNECTED") != std::string::npos, "Terminal banner must show OPENCODE CONNECTED mode");
 
     std::cout << "PASSED\n";
     return true;

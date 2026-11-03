@@ -222,7 +222,7 @@ IndependentInvestigationResult IndependentReviewer::conductIndependentInvestigat
     IndependentInvestigationResult result;
 
     // Section 6: Independent investigation without confirmation bias
-    ModelSelection selA = router_.selectModel(TaskType::DEBUGGING, "", modelB);
+    ModelSelection selA = router_.selectModel(TaskType::DEBUGGING, modelA, modelB);
     ModelSelection selB = router_.selectModel(TaskType::DEBUGGING, "", selA.model.id);
 
     std::string prompt = "Investigate the following issue independently based strictly on verified workspace evidence:\n"

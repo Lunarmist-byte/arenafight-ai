@@ -13,7 +13,7 @@ nlohmann::json AskUserTool::parameters() const {
     };
 }
 
-ToolResult AskUserTool::execute(const nlohmann::json& arguments, const std::string& workingDir) {
+ToolResult AskUserTool::execute(const nlohmann::json& arguments, [[maybe_unused]] const std::string& workingDir) {
     ToolResult res;
     std::string question = arguments.value("question", "");
     if (question.empty()) {

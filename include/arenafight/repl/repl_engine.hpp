@@ -49,7 +49,7 @@ public:
     void handleDisconnect(const std::string& args);
     void handleHelp(const std::string& args);
     void handleOpenCode(const std::string& args);
-    void handleUI(const std::string& args);
+    void handleMetrics(const std::string& args);
     void handleUnsloth(const std::string& args);
     void handleAbilities(const std::string& args);
     void handleTemperature(const std::string& args);

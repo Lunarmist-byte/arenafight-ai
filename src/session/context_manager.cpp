@@ -7,7 +7,7 @@ namespace arenafight {
 ContextManager::ContextManager(const Config& config)
     : config_(config) {}
 
-std::string ContextManager::buildSystemPrompt(const Session& session) const {
+std::string ContextManager::buildSystemPrompt([[maybe_unused]] const Session& session) const {
     std::stringstream ss;
     ss << "You are ArenaFight Agent, an autonomous agentic execution engine.\n"
        << "You operate in an autonomous execution loop: PLAN -> EXECUTE -> OBSERVE -> REMEMBER -> VERIFY -> REPLAN.\n\n"
@@ -145,6 +145,11 @@ AgentRequest ContextManager::buildPlanningContext(
 
     std::stringstream ss;
     ss << "TASK OBJECTIVE: " << session.originalTask << "\n\n";
+
+    std::string memoryCtx = memory.getCompactSummary();
+    if (!memoryCtx.empty()) {
+        ss << "KNOWN FACTS & DISCOVERIES:\n" << memoryCtx << "\n\n";
+    }
 
     if (!session.attachedFileContents.empty()) {
         ss << "ATTACHED FILES FOR PLANNING:\n";

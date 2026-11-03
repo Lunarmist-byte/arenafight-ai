@@ -86,6 +86,10 @@ public:
         bool auditChainValid,
         const std::vector<SecurityAuditRecord>& recentLogs
     );
+    static void printMetricsDashboard(
+        const Session& session,
+        const Config& config
+    );
 };
 
 } // namespace arenafight

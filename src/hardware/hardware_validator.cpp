@@ -240,7 +240,7 @@ HardwareValidationReport HardwareValidator::validateCircuit(
 
 QoSTelemetry HardwareValidator::validateFirmwareQoS(
     const std::string& sourceCode,
-    const std::string& boardId
+    [[maybe_unused]] const std::string& boardId
 ) {
     QoSTelemetry qos;
     qos.overallScore = 100;

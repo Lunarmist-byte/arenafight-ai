@@ -20,7 +20,7 @@ enum class TaskStatus {
     SKIPPED
 };
 
-inline std::string taskStatusToString(TaskStatus status) {
+[[nodiscard]] constexpr std::string_view taskStatusToString(TaskStatus status) noexcept {
     switch (status) {
         case TaskStatus::PENDING: return "PENDING";
         case TaskStatus::RUNNING: return "RUNNING";
@@ -32,7 +32,7 @@ inline std::string taskStatusToString(TaskStatus status) {
     }
 }
 
-inline TaskStatus taskStatusFromString(const std::string& str) {
+[[nodiscard]] constexpr TaskStatus taskStatusFromString(std::string_view str) noexcept {
     if (str == "RUNNING") return TaskStatus::RUNNING;
     if (str == "COMPLETED") return TaskStatus::COMPLETED;
     if (str == "FAILED") return TaskStatus::FAILED;
@@ -52,7 +52,7 @@ enum class TaskType {
     GENERAL
 };
 
-inline std::string taskTypeToString(TaskType type) {
+[[nodiscard]] constexpr std::string_view taskTypeToString(TaskType type) noexcept {
     switch (type) {
         case TaskType::PLANNING: return "PLANNING";
         case TaskType::CODING: return "CODING";
@@ -65,7 +65,7 @@ inline std::string taskTypeToString(TaskType type) {
     }
 }
 
-inline TaskType taskTypeFromString(const std::string& str) {
+[[nodiscard]] constexpr TaskType taskTypeFromString(std::string_view str) noexcept {
     if (str == "PLANNING") return TaskType::PLANNING;
     if (str == "CODING") return TaskType::CODING;
     if (str == "DEBUGGING") return TaskType::DEBUGGING;
