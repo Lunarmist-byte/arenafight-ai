@@ -39,6 +39,7 @@
 #include "arenafight/system/system_profiler.hpp"
 #include "arenafight/services/service_daemon.hpp"
 #include "arenafight/ui/terminal_ui.hpp"
+#include "arenafight/mcp/mcp_server.hpp"
 #include <thread>
 #include <chrono>
 
@@ -1723,6 +1724,111 @@ bool testCudaAndSlowVariantSupport() {
     return true;
 }
 
+bool testMCPServerAndOpenCodeIntegration() {
+    std::cout << "[TEST] 36. Native MCP server (stdio JSON-RPC) & OpenCode workspace integration... " << std::flush;
+
+    std::string testWs = "test_mcp_opencode_ws";
+    safeRemoveAll(testWs);
+    std::filesystem::create_directories(testWs);
+
+    Config cfg;
+    cfg.workspace_dir = testWs;
+    cfg.test_mock_enabled = true;
+
+    ArenaAgent agent(cfg);
+    MCPServer mcp(agent);
+
+    // 1. Initialize
+    std::string initReq = R"({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05"}})";
+    auto initResp = mcp.handleMessage(initReq);
+    TEST_ASSERT(initResp.contains("result"), "Initialize response must contain result");
+    TEST_ASSERT(initResp["result"].contains("serverInfo"), "Must contain serverInfo");
+    TEST_ASSERT(initResp["result"]["serverInfo"]["name"] == "arena", "Server name must be arena");
+
+    // 2. Ping
+    std::string pingReq = R"({"jsonrpc":"2.0","id":2,"method":"ping","params":{}})";
+    auto pingResp = mcp.handleMessage(pingReq);
+    TEST_ASSERT(pingResp.contains("result"), "Ping response must contain result");
+
+    // 3. Tools list
+    std::string toolsReq = R"({"jsonrpc":"2.0","id":3,"method":"tools/list","params":{}})";
+    auto toolsResp = mcp.handleMessage(toolsReq);
+    TEST_ASSERT(toolsResp.contains("result"), "Tools response must contain result");
+    TEST_ASSERT(toolsResp["result"].contains("tools"), "Must contain tools array");
+    const auto& tools = toolsResp["result"]["tools"];
+    TEST_ASSERT(tools.size() >= 9, "Tools list must have at least 9 tools");
+
+    std::vector<std::string> toolNames;
+    for (const auto& t : tools) {
+        toolNames.push_back(t["name"].get<std::string>());
+    }
+    auto hasTool = [&](const std::string& name) {
+        return std::find(toolNames.begin(), toolNames.end(), name) != toolNames.end();
+    };
+    TEST_ASSERT(hasTool("arena_verify"), "Must have arena_verify tool");
+    TEST_ASSERT(hasTool("arena_goal"), "Must have arena_goal tool");
+    TEST_ASSERT(hasTool("arena_plan"), "Must have arena_plan tool");
+    TEST_ASSERT(hasTool("arena_profile"), "Must have arena_profile tool");
+    TEST_ASSERT(hasTool("arena_benchmark"), "Must have arena_benchmark tool");
+    TEST_ASSERT(hasTool("arena_qos"), "Must have arena_qos tool");
+    TEST_ASSERT(hasTool("arena_calculate"), "Must have arena_calculate tool");
+    TEST_ASSERT(hasTool("arena_security"), "Must have arena_security tool");
+    TEST_ASSERT(hasTool("arena_think"), "Must have arena_think tool");
+
+    // 4. Tools call: arena_profile
+    std::string profileCall = R"({"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"arena_profile","arguments":{}}})";
+    auto profResp = mcp.handleMessage(profileCall);
+    TEST_ASSERT(profResp.contains("result"), "Profile call must return result");
+    TEST_ASSERT(profResp["result"].contains("content"), "Profile call must return content");
+
+    // 5. Tools call: arena_calculate
+    std::string calcCall = R"({"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"arena_calculate","arguments":{"calculation":"ohms_law","voltage":5.0,"resistance":220.0}}})";
+    auto calcResp = mcp.handleMessage(calcCall);
+    TEST_ASSERT(calcResp.contains("result"), "Calculate call must return result");
+    TEST_ASSERT(!calcResp["result"].value("isError", false), "Calculate call must not be error");
+    std::string calcContent = calcResp["result"]["content"][0]["text"].get<std::string>();
+    TEST_ASSERT(calcContent.find("Current") != std::string::npos || calcContent.find("22.7") != std::string::npos,
+                "Calculate result must contain Ohm's law calculation");
+
+    // 6. Tools call: arena_plan
+    std::string planCall = R"({"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"arena_plan","arguments":{"task":"Build embedded sensor logger"}}})";
+    auto planResp = mcp.handleMessage(planCall);
+    TEST_ASSERT(planResp.contains("result"), "Plan call must return result");
+    std::string planContent = planResp["result"]["content"][0]["text"].get<std::string>();
+    TEST_ASSERT(planContent.find("Plan Graph") != std::string::npos || planContent.find("Steps") != std::string::npos,
+                "Plan output must contain plan graph");
+
+    // 7. OpenCode workspace exporter check
+    bool syncOk = OpenCodeProvider::exportOpenCodeWorkspace(testWs, "Autonomous test task", "Follow Level 1 Physical Dominance");
+    TEST_ASSERT(syncOk, "OpenCode workspace export must succeed");
+
+    std::filesystem::path rootMcp = std::filesystem::path(testWs) / "opencode.json";
+    std::filesystem::path dotMcp = std::filesystem::path(testWs) / ".opencode" / "opencode.json";
+    std::filesystem::path instructions = std::filesystem::path(testWs) / ".opencode" / "INSTRUCTIONS.md";
+    std::filesystem::path arenaCmd = std::filesystem::path(testWs) / ".opencode" / "commands" / "arena.md";
+    std::filesystem::path verifyCmd = std::filesystem::path(testWs) / ".opencode" / "commands" / "verify.md";
+
+    TEST_ASSERT(std::filesystem::exists(rootMcp), "Root opencode.json must exist");
+    TEST_ASSERT(std::filesystem::exists(dotMcp), ".opencode/opencode.json must exist");
+    TEST_ASSERT(std::filesystem::exists(instructions), ".opencode/INSTRUCTIONS.md must exist");
+    TEST_ASSERT(std::filesystem::exists(arenaCmd), ".opencode/commands/arena.md must exist");
+    TEST_ASSERT(std::filesystem::exists(verifyCmd), ".opencode/commands/verify.md must exist");
+
+    // Inspect content of opencode.json
+    std::string rootMcpContent = FileUtils::readTextFile(rootMcp.string());
+    TEST_ASSERT(rootMcpContent.find("\"arena\"") != std::string::npos, "opencode.json must register arena server");
+    TEST_ASSERT(rootMcpContent.find("\"mcp\"") != std::string::npos, "opencode.json must declare mcp servers block");
+
+    // Inspect instructions
+    std::string instContent = FileUtils::readTextFile(instructions.string());
+    TEST_ASSERT(instContent.find("Level 1 Physical Dominance") != std::string::npos, "INSTRUCTIONS.md must mandate Level 1 rule");
+    TEST_ASSERT(instContent.find("arena_verify") != std::string::npos, "INSTRUCTIONS.md must reference arena_verify");
+
+    safeRemoveAll(testWs);
+    std::cout << "PASSED\n";
+    return true;
+}
+
 int main() {
     std::cout << "\n====================================================\n"
               << "          ARENAFIGHT AGENT TEST SUITE               \n"
@@ -1732,7 +1838,7 @@ int main() {
               << "====================================================\n\n";
 
     int passed = 0;
-    int total = 35;
+    int total = 36;
 
     if (testConfig()) passed++;
     if (testFileTools()) passed++;
@@ -1769,6 +1875,7 @@ int main() {
     if (testTwoProcessingLevelsFastAndPerfectBoi()) passed++;
     if (testAutonomousServiceDetectionAndDaemonStart()) passed++;
     if (testCudaAndSlowVariantSupport()) passed++;
+    if (testMCPServerAndOpenCodeIntegration()) passed++;
 
     std::cout << "\n----------------------------------------------------\n";
     std::cout << "TEST RESULTS: " << passed << "/" << total << " PASSED\n";

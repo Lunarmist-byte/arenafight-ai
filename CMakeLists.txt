@@ -81,6 +81,7 @@ set(CORE_SOURCES
     src/security/security_sandbox.cpp
     src/system/system_profiler.cpp
     src/services/service_daemon.cpp
+    src/mcp/mcp_server.cpp
     src/repl/repl_engine.cpp
     src/agent/arena_agent.cpp
 )

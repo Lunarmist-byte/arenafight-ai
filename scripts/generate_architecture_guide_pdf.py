@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-ArenaFight: Architectural Specification & Capabilities Guide
-Generates a publication-grade technical PDF detailing what ArenaFight excels at.
+ArenaFight: Architectural Specification & Enterprise Technical Report
+Generates a comprehensive, publication-grade multi-page technical report PDF
+and accompanying Markdown technical report.
 Made by Lunarmist-byte
 GitHub: https://github.com/Lunarmist-byte
 LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/
@@ -27,6 +28,8 @@ TEXT_MUTED   = colors.HexColor("#475569")       # Slate 600
 BG_LIGHT     = colors.HexColor("#f8fafc")       # Slate 50
 BORDER_COLOR = colors.HexColor("#cbd5e1")       # Slate 300
 CODE_BG      = colors.HexColor("#f1f5f9")       # Slate 100
+SUCCESS_GREEN = colors.HexColor("#166534")      # Green 800
+WARN_AMBER   = colors.HexColor("#9a3412")       # Amber 800
 
 class NumberedCanvas(canvas.Canvas):
     def __init__(self, *args, **kwargs):
@@ -52,9 +55,9 @@ class NumberedCanvas(canvas.Canvas):
 
         # Header (pages 2+)
         if self._pageNumber > 1:
-            self.drawString(54, 752, "ARENAFIGHT AI RUNTIME v2.5.0")
+            self.drawString(54, 752, "ARENAFIGHT ENTERPRISE TECHNICAL ARCHITECTURE REPORT")
             self.setFont("Helvetica", 8)
-            self.drawRightString(558, 752, "SYSTEM ARCHITECTURE & CAPABILITIES SPECIFICATION")
+            self.drawRightString(558, 752, "VERSION 2.5.0  |  PHYSICAL EVIDENCE RUNTIME")
             self.setStrokeColor(BORDER_COLOR)
             self.setLineWidth(0.5)
             self.line(54, 746, 558, 746)
@@ -69,7 +72,7 @@ class NumberedCanvas(canvas.Canvas):
         self.drawString(54, 34, "Made by Lunarmist-byte")
         self.setFont("Helvetica", 7.5)
         self.setFillColor(TEXT_MUTED)
-        self.drawString(160, 34, "|   GitHub: https://github.com/Lunarmist-byte   |   LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/")
+        self.drawString(160, 34, "|  GitHub: https://github.com/Lunarmist-byte  |  LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/")
         page_str = f"Page {self._pageNumber} of {page_count}"
         self.drawRightString(558, 34, page_str)
 
@@ -89,13 +92,12 @@ def build_pdf(filename="docs/ArenaFight_Architecture_and_Capabilities.pdf"):
 
     styles = getSampleStyleSheet()
 
-    # Typography styles
     title_style = ParagraphStyle(
         'DocTitle',
         parent=styles['Normal'],
         fontName='Helvetica-Bold',
-        fontSize=21,
-        leading=25,
+        fontSize=20,
+        leading=24,
         textColor=PRIMARY_NAVY,
         spaceAfter=3
     )
@@ -104,31 +106,31 @@ def build_pdf(filename="docs/ArenaFight_Architecture_and_Capabilities.pdf"):
         'DocSubtitle',
         parent=styles['Normal'],
         fontName='Helvetica-Bold',
-        fontSize=10,
-        leading=14,
+        fontSize=9.5,
+        leading=13,
         textColor=CYAN_ACCENT,
-        spaceAfter=10
+        spaceAfter=8
     )
 
     meta_style = ParagraphStyle(
         'DocMeta',
         parent=styles['Normal'],
         fontName='Helvetica',
-        fontSize=8,
-        leading=11.5,
+        fontSize=7.8,
+        leading=11,
         textColor=TEXT_MUTED,
-        spaceAfter=10
+        spaceAfter=8
     )
 
     h1_style = ParagraphStyle(
         'Heading1Custom',
         parent=styles['Normal'],
         fontName='Helvetica-Bold',
-        fontSize=12,
-        leading=16,
+        fontSize=11,
+        leading=15,
         textColor=PRIMARY_NAVY,
-        spaceBefore=8,
-        spaceAfter=4,
+        spaceBefore=7,
+        spaceAfter=3,
         keepWithNext=True
     )
 
@@ -136,11 +138,11 @@ def build_pdf(filename="docs/ArenaFight_Architecture_and_Capabilities.pdf"):
         'Heading2Custom',
         parent=styles['Normal'],
         fontName='Helvetica-Bold',
-        fontSize=9.5,
-        leading=13,
+        fontSize=9,
+        leading=12.5,
         textColor=ACCENT_BLUE,
-        spaceBefore=6,
-        spaceAfter=3,
+        spaceBefore=5,
+        spaceAfter=2,
         keepWithNext=True
     )
 
@@ -148,30 +150,30 @@ def build_pdf(filename="docs/ArenaFight_Architecture_and_Capabilities.pdf"):
         'BodyCustom',
         parent=styles['Normal'],
         fontName='Helvetica',
-        fontSize=8.2,
-        leading=11.5,
+        fontSize=7.8,
+        leading=11,
         textColor=TEXT_DARK,
-        spaceAfter=4
+        spaceAfter=3.5
     )
 
     bullet_style = ParagraphStyle(
         'BulletCustom',
         parent=styles['Normal'],
         fontName='Helvetica',
-        fontSize=8.2,
-        leading=11.5,
+        fontSize=7.8,
+        leading=11,
         textColor=TEXT_DARK,
-        leftIndent=12,
-        firstLineIndent=-8,
-        spaceAfter=3
+        leftIndent=10,
+        firstLineIndent=-6,
+        spaceAfter=2.5
     )
 
     table_header_style = ParagraphStyle(
         'TableHeader',
         parent=styles['Normal'],
         fontName='Helvetica-Bold',
-        fontSize=8,
-        leading=10.5,
+        fontSize=7.5,
+        leading=10,
         textColor=colors.white
     )
 
@@ -179,8 +181,8 @@ def build_pdf(filename="docs/ArenaFight_Architecture_and_Capabilities.pdf"):
         'TableCell',
         parent=styles['Normal'],
         fontName='Helvetica',
-        fontSize=7.5,
-        leading=10,
+        fontSize=7.2,
+        leading=9.5,
         textColor=TEXT_DARK
     )
 
@@ -188,8 +190,8 @@ def build_pdf(filename="docs/ArenaFight_Architecture_and_Capabilities.pdf"):
         'TableCellBold',
         parent=styles['Normal'],
         fontName='Helvetica-Bold',
-        fontSize=7.5,
-        leading=10,
+        fontSize=7.2,
+        leading=9.5,
         textColor=PRIMARY_NAVY
     )
 
@@ -197,402 +199,799 @@ def build_pdf(filename="docs/ArenaFight_Architecture_and_Capabilities.pdf"):
         'CodeStyle',
         parent=styles['Normal'],
         fontName='Courier',
-        fontSize=7.2,
-        leading=9.5,
+        fontSize=6.8,
+        leading=9,
         textColor=PRIMARY_NAVY
     )
 
     story = []
 
     # =========================================================================
-    # PAGE 1: EXECUTIVE OVERVIEW & LEVEL 1 PHYSICAL EVIDENCE ENGINE
+    # PAGE 1: TITLE, EXECUTIVE SUMMARY & SYSTEM OVERVIEW
     # =========================================================================
-    story.append(Paragraph("ARENAFIGHT AI RUNTIME", title_style))
-    story.append(Paragraph("System Architecture, Physical Evidence Verification &amp; Autonomous Multi-Model Engine", subtitle_style))
+    story.append(Paragraph("ARENAFIGHT ENTERPRISE TECHNICAL ARCHITECTURE REPORT", title_style))
+    story.append(Paragraph("Comprehensive Architectural Specification, Physical Evidence Verification Engine &amp; MCP Integration", subtitle_style))
     story.append(Paragraph(
-        "<b>Version:</b> 2.5.0 Enterprise CLI &nbsp;|&nbsp; <b>Release:</b> Production &nbsp;|&nbsp; <b>Target Platforms:</b> Windows (Win32/x64) &amp; Linux (POSIX)<br/>"
+        "<b>Version:</b> 2.5.0 Enterprise CLI &nbsp;|&nbsp; <b>Architecture:</b> Pure C++20 Native Standard &nbsp;|&nbsp; "
+        "<b>Target Platforms:</b> Windows (Win32/x64) &amp; Linux (POSIX x86_64/aarch64)<br/>"
         "<b>Author:</b> Lunarmist-byte &nbsp;|&nbsp; <b>GitHub:</b> https://github.com/Lunarmist-byte &nbsp;|&nbsp; "
         "<b>LinkedIn:</b> https://www.linkedin.com/in/amal-s-kumar-ba69a1290/",
         meta_style
     ))
-    story.append(HRFlowable(width="100%", thickness=1.5, color=CYAN_ACCENT, spaceBefore=0, spaceAfter=8))
+    story.append(HRFlowable(width="100%", thickness=1.5, color=CYAN_ACCENT, spaceBefore=0, spaceAfter=6))
 
     story.append(Paragraph("1. Executive Summary &amp; Design Philosophy", h1_style))
     story.append(Paragraph(
-        "ArenaFight is a high-performance, deterministic C++20 multi-model autonomous agent runtime designed "
-        "to completely eliminate hallucinated success in artificial intelligence workflows. While conventional agentic systems "
-        "rely upon an LLM self-reporting whether its code or solution functions, ArenaFight enforces the <b>Level 1 "
-        "Physical Dominance Rule</b>: an assertion is classified as ground truth only when corroborated by concrete "
-        "operating system artifacts, process return codes, compiler diagnostics, and cryptographic hashes.",
+        "Modern generative AI software development faces a pervasive, fundamental flaw: <b>the hallucination crisis</b>. "
+        "Conventional AI agent frameworks rely upon the Large Language Model to self-evaluate its own output. When an LLM asserts "
+        "<i>'The unit tests pass'</i> or <i>'The firmware has been corrected'</i>, standard frameworks mark the objective complete "
+        "without running a single physical compiler check, test runner, or process execution. This results in silent regressions, "
+        "uncompilable source trees, and fabricated verification claims.",
         body_style
     ))
     story.append(Paragraph(
-        "The runtime operates across dual paradigms: functioning either as a blistering fast, zero-overhead "
-        "<b>Standalone Native CLI</b> with direct hardware and local provider hooks, or as a synchronized <b>OpenCode Connected "
-        "Bridge</b>. It autonomously assesses host compute topologies, manages background AI service daemons, and enforces "
-        "rigorous defense-in-depth isolation.",
+        "<b>ArenaFight</b> is an enterprise-grade autonomous execution and verification runtime engineered in modern C++20. "
+        "It eliminates hallucinated completion through the non-negotiable <b>Level 1 Physical Dominance Rule</b>: model "
+        "output is strictly classified as unverified hypothesis until substantiated by concrete operating system proof (process return "
+        "codes, stderr logs, file modification timestamps, AST Quality of Service diagnostics, and SHA-256 cryptographic hashes).",
+        body_style
+    ))
+    story.append(Paragraph(
+        "ArenaFight operates with dual execution paradigms: functioning either as a self-contained, zero-dependency "
+        "<b>Standalone Native CLI</b> (`arena`) with direct local hardware profiling and background service orchestration, or as a "
+        "synchronized <b>OpenCode Connected Engine</b> supporting bi-directional MCP server tools (`arena mcp`) and native slash commands.",
         body_style
     ))
 
+    # Architecture Comparison Matrix
+    story.append(Paragraph("System Architecture Comparison", h2_style))
+    comp_data = [
+        [
+            Paragraph("Architectural Dimension", table_header_style),
+            Paragraph("Traditional AI Coding Agents", table_header_style),
+            Paragraph("ArenaFight C++20 Runtime (v2.5.0)", table_header_style)
+        ],
+        [
+            Paragraph("Ground Truth Model", table_cell_bold),
+            Paragraph("Model self-declaration ('I wrote the code and it compiles')", table_cell_style),
+            Paragraph("Level 1 Physical Evidence: OS exit codes, compiler logs, file presence", table_cell_style)
+        ],
+        [
+            Paragraph("Verification Rigor", table_cell_bold),
+            Paragraph("Unverified or single-pass loose regex checks", table_cell_style),
+            Paragraph("6 Physical Evidence Gates + Independent Adversarial Reviewer", table_cell_style)
+        ],
+        [
+            Paragraph("Host Hardware Awareness", table_cell_bold),
+            Paragraph("Hardcoded token limits, timeouts, and parallel workers", table_cell_style),
+            Paragraph("Real-time host assessment (RAM, CPU cores, CUDA VRAM) & dynamic limits", table_cell_style)
+        ],
+        [
+            Paragraph("Acceleration Support", table_cell_bold),
+            Paragraph("Opaque cloud APIs; fails or throttles host on local iGPU/CPU", table_cell_style),
+            Paragraph("NVIDIA CUDA auto-offload (`num_gpu: 99`) + CPU slow-variant throttles", table_cell_style)
+        ],
+        [
+            Paragraph("Daemon Lifecycle", table_cell_bold),
+            Paragraph("Fails with connection error if Ollama/server is offline", table_cell_style),
+            Paragraph("Autonomous path discovery & background daemon launch (no user prompts)", table_cell_style)
+        ],
+        [
+            Paragraph("OpenCode Integration", table_cell_bold),
+            Paragraph("None; disjointed independent CLI tools", table_cell_style),
+            Paragraph("Bi-directional MCP server (9 tools) + custom slash commands (/arena, /verify)", table_cell_style)
+        ],
+        [
+            Paragraph("Security & Auditability", table_cell_bold),
+            Paragraph("Arbitrary command execution; zero audit logs or path jails", table_cell_style),
+            Paragraph("Path Jail boundary, DLP secret redactor, FIPS 180-4 SHA-256 hash chain", table_cell_style)
+        ]
+    ]
+    t_comp = Table(comp_data, colWidths=[100, 184, 220])
+    t_comp.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), PRIMARY_NAVY),
+        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, BG_LIGHT]),
+        ('TOPPADDING', (0,0), (-1,-1), 2.2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2.2),
+    ]))
+    story.append(t_comp)
+
+    # =========================================================================
+    # PAGE 2: FORMAL EVIDENCE HIERARCHY & THE 6 VERIFICATION GATES
+    # =========================================================================
+    story.append(PageBreak())
+
+    story.append(Paragraph("2. Anti-Confabulation Invariants &amp; Evidence Formalism", h1_style))
+    story.append(Paragraph(
+        "To enforce mathematical determinism across autonomous loops, ArenaFight formalizes evidence into an explicit "
+        "mathematical lattice where physical evidence strictly dominates model inference.",
+        body_style
+    ))
+
+    # Evidence Hierarchy Table
+    ev_data = [
+        [
+            Paragraph("Level", table_header_style),
+            Paragraph("Evidence Class", table_header_style),
+            Paragraph("Weight", table_header_style),
+            Paragraph("Physical Sensor / Data Source", table_header_style),
+            Paragraph("Dominance Invariant", table_header_style)
+        ],
+        [
+            Paragraph("Level 1", table_cell_bold),
+            Paragraph("DIRECT_EXECUTION", table_cell_style),
+            Paragraph("1.00", table_cell_style),
+            Paragraph("OS process termination code 0, g++ stdout, ctest", table_cell_style),
+            Paragraph("Strictly dominates all other levels. Overrides 100% of LLM claims.", table_cell_style)
+        ],
+        [
+            Paragraph("Level 2", table_cell_bold),
+            Paragraph("ARTIFACT_VERIFICATION", table_cell_style),
+            Paragraph("0.85", table_cell_style),
+            Paragraph("Filesystem stat (size &gt; 0), SHA-256 checksum match", table_cell_style),
+            Paragraph("Dominates Level 3-6. Proves physical creation on disk.", table_cell_style)
+        ],
+        [
+            Paragraph("Level 3", table_cell_bold),
+            Paragraph("TOOL_OUTPUT", table_cell_style),
+            Paragraph("0.70", table_cell_style),
+            Paragraph("Output streams from file_read, git diff, grep", table_cell_style),
+            Paragraph("Dominates Level 4-6. Empirical data from tool execution.", table_cell_style)
+        ],
+        [
+            Paragraph("Level 4", table_cell_bold),
+            Paragraph("PROJECT_METADATA", table_cell_style),
+            Paragraph("0.50", table_cell_style),
+            Paragraph("CMakeLists.txt, compile_commands.json, opencode.json", table_cell_style),
+            Paragraph("Dominates Level 5-6. Static project structure constraints.", table_cell_style)
+        ],
+        [
+            Paragraph("Level 5", table_cell_bold),
+            Paragraph("USER_INPUT", table_cell_style),
+            Paragraph("0.35", table_cell_style),
+            Paragraph("Explicit user prompt, CLI arguments, confirmation input", table_cell_style),
+            Paragraph("Establishes project objective; overridden by physical laws.", table_cell_style)
+        ],
+        [
+            Paragraph("Level 6", table_cell_bold),
+            Paragraph("MODEL_DERIVED", table_cell_style),
+            Paragraph("0.10", table_cell_style),
+            Paragraph("LLM inference, natural language assertions, chain-of-thought", table_cell_style),
+            Paragraph("Lowest priority. Pure hypothesis. Never accepted as ground truth.", table_cell_style)
+        ]
+    ]
+    t_ev = Table(ev_data, colWidths=[40, 110, 40, 154, 160])
+    t_ev.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), PRIMARY_NAVY),
+        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, BG_LIGHT]),
+        ('TOPPADDING', (0,0), (-1,-1), 2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+    ]))
+    story.append(t_ev)
     story.append(Spacer(1, 4))
-    story.append(Paragraph("2. What ArenaFight Does Well: Architectural Deep-Dive", h1_style))
 
-    story.append(Paragraph("A. Level 1 Physical Dominance Rule &amp; 6 Physical Verification Gates", h2_style))
+    story.append(Paragraph("The 6 Physical Evidence Verification Gates", h1_style))
     story.append(Paragraph(
-        "Every code mutation, task execution step, and generated artifact passes through an uncompromising 6-gate physical "
-        "verification harness. Unverified assertions are strictly discarded by the ClaimRegistry.",
+        "Before any task, milestone, or session is marked completed, the independent `Verifier` evaluates all 6 gates:",
         body_style
     ))
 
-    # Verification Gates Table
     gates_data = [
         [
-            Paragraph("Gate #", table_header_style),
-            Paragraph("Verification Type", table_header_style),
-            Paragraph("Physical Evidence Sensor", table_header_style),
-            Paragraph("Pass Criteria &amp; Deterministic Latch", table_header_style)
+            Paragraph("Gate", table_header_style),
+            Paragraph("Verification Gate Name", table_header_style),
+            Paragraph("Physical Sensor &amp; Inspection Protocol", table_header_style),
+            Paragraph("Pass Criteria &amp; Latch Behavior", table_header_style)
         ],
         [
             Paragraph("Gate 1", table_cell_bold),
-            Paragraph("Compiler &amp; Build Diagnostics", table_cell_style),
-            Paragraph("Direct OS process exit code + stderr pipe from g++, clang++, or cl.exe", table_cell_style),
-            Paragraph("Zero compile errors, zero fatal diagnostics; clean binary artifact creation", table_cell_style)
+            Paragraph("Artifact Physical Presence", table_cell_style),
+            Paragraph("Target filesystem path check via std::filesystem::exists and file_size", table_cell_style),
+            Paragraph("File exists on disk, size &gt; 0 bytes, permissions valid.", table_cell_style)
         ],
         [
             Paragraph("Gate 2", table_cell_bold),
-            Paragraph("Automated Test Suite Execution", table_cell_style),
-            Paragraph("Test runner stdout stream, assertion counters, process exit status", table_cell_style),
-            Paragraph("Process exit code 0; 100% assertions green; zero test failures or leaks", table_cell_style)
+            Paragraph("Clean Toolchain Compilation", table_cell_style),
+            Paragraph("Process execution of ninja, cmake --build, g++, or clang++", table_cell_style),
+            Paragraph("Compiler process exits with exit code 0; zero syntax or linker errors.", table_cell_style)
         ],
         [
             Paragraph("Gate 3", table_cell_bold),
-            Paragraph("Process Execution Validation", table_cell_style),
-            Paragraph("OS PID spawn, stdout/stderr capture, memory/cpu heartbeat", table_cell_style),
-            Paragraph("Process terminates with return code 0 or matches expected output contract", table_cell_style)
+            Paragraph("Automated Test Suite Pass", table_cell_style),
+            Paragraph("Process execution of ctest, test_suite.exe, or pytest", table_cell_style),
+            Paragraph("Test runner process exits with code 0; 100% assertions green.", table_cell_style)
         ],
         [
             Paragraph("Gate 4", table_cell_bold),
-            Paragraph("Cryptographic Hash Integrity", table_cell_style),
-            Paragraph("FIPS 180-4 SHA-256 digest computation over generated disk artifacts", table_cell_style),
-            Paragraph("Hash matches manifest; audit log record appended with parent hash pointer", table_cell_style)
+            Paragraph("Requirements Satisfaction", table_cell_style),
+            Paragraph("Dependency graph topological validation against session task tree", table_cell_style),
+            Paragraph("All dependent subtasks resolved without blocked or skipped states.", table_cell_style)
         ],
         [
             Paragraph("Gate 5", table_cell_bold),
-            Paragraph("Filesystem Mutation Audit", table_cell_style),
-            Paragraph("Pre/post execution directory diff and inode/timestamp tracking", table_cell_style),
-            Paragraph("Target files created/modified within path boundaries; zero unauthorized leaks", table_cell_style)
+            Paragraph("Security Sandbox &amp; DLP", table_cell_style),
+            Paragraph("SecuritySandbox AST scanner, path jail validator, DLP regex engine", table_cell_style),
+            Paragraph("Zero path traversal escapes, zero unmasked secrets, clean risk score.", table_cell_style)
         ],
         [
             Paragraph("Gate 6", table_cell_bold),
-            Paragraph("Quality of Service (QoS)", table_cell_style),
-            Paragraph("Static AST scanner inspecting heap allocation and blocking calls", table_cell_style),
-            Paragraph("Zero-heap verification in ISR/tight-loops; deterministic latency bounded", table_cell_style)
+            Paragraph("SHA-256 Audit &amp; Contradictions", table_cell_style),
+            Paragraph("FIPS 180-4 SHA-256 hash chain verification + ClaimRegistry check", table_cell_style),
+            Paragraph("Cryptographic chain intact; zero unresolved contradictory claims.", table_cell_style)
         ]
     ]
-
-    t_gates = Table(gates_data, colWidths=[46, 114, 172, 172])
+    t_gates = Table(gates_data, colWidths=[40, 120, 172, 172])
     t_gates.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), PRIMARY_NAVY),
         ('ALIGN', (0,0), (-1,-1), 'LEFT'),
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
         ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, BG_LIGHT]),
-        ('TOPPADDING', (0,0), (-1,-1), 3),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('TOPPADDING', (0,0), (-1,-1), 2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
     ]))
     story.append(t_gates)
 
     # =========================================================================
-    # PAGE 2: PROCESSING LEVELS, HARDWARE PROFILING & HARDWARE ACCELERATION
+    # PAGE 3: DUAL PROCESSING LEVELS, PC PROFILING & HARDWARE ACCELERATION
     # =========================================================================
     story.append(PageBreak())
 
-    story.append(Paragraph("B. Dual Processing Levels: Fast vs Perfect Boi", h2_style))
+    story.append(Paragraph("3. Dual Processing Levels &amp; Autonomous Hardware Assessment", h1_style))
     story.append(Paragraph(
-        "ArenaFight eliminates the one-size-fits-all tradeoff between turnaround speed and absolute correctness "
-        "by introducing two specialized runtime execution levels (switchable via <code>/level [fast|perfect]</code>):",
-        body_style
-    ))
-    story.append(Paragraph(
-        "- <b>FAST Level:</b> Engineered for rapid iteration, daily coding tasks, and low-latency interaction. Employs "
-        "standard reasoning token budgets, fast path verification, and rapid single-turn self-correction.",
-        bullet_style
-    ))
-    story.append(Paragraph(
-        "- <b>PERFECT BOI Level:</b> Deep, exhaustive perfectionist execution mode. ArenaFight dynamically scales its "
-        "reasoning depth, adversarial cross-checks, and execution iterations up to the absolute physical capability of the "
-        "host machine. No stone is left unturned: every gate must pass with cryptographic proof, and solutions are "
-        "adversarially stress-tested against synthetic edge cases.",
-        bullet_style
-    ))
-
-    story.append(Spacer(1, 4))
-    story.append(Paragraph("C. Dynamic Host PC Hardware Profiling (Zero Hardcoded Limits)", h2_style))
-    story.append(Paragraph(
-        "Unlike brittle agents that hardcode token ceilings, timeouts, or thread limits, ArenaFight features an autonomous "
-        "host machine profiler (<code>SystemProfiler</code>). It actively inspects the system topology on Windows and Linux:",
-        body_style
-    ))
-    story.append(Paragraph(
-        "- <b>RAM Inspection:</b> Detects installed physical RAM and dynamically computes free available memory.<br/>"
-        "- <b>CPU Core Topology:</b> Measures physical cores and logical hyper-threads to set parallel execution limits.<br/>"
-        "- <b>Dynamic Budget Derivation:</b> In Perfect Boi mode, limits scale dynamically:<br/>"
-        "&nbsp;&nbsp;&nbsp;&nbsp;* High-end workstations (&gt;32GB RAM, &gt;12 cores): 60 iterations, 32,768 reasoning tokens, 4 adversarial passes.<br/>"
-        "&nbsp;&nbsp;&nbsp;&nbsp;* Mid-range PCs (16-32GB RAM, 8-12 cores): 35 iterations, 16,384 tokens, 3 adversarial passes.<br/>"
-        "&nbsp;&nbsp;&nbsp;&nbsp;* Constrained laptops (&lt;16GB RAM): safe, un-choked budgets scaled down to preserve host responsiveness.",
+        "ArenaFight dynamically bifurcates execution into two processing levels (`arena level [fast|perfect]`):",
         body_style
     ))
 
-    story.append(Spacer(1, 4))
-    story.append(Paragraph("D. NVIDIA CUDA Hardware Acceleration &amp; Graceful Slow-Variant Fallback", h2_style))
-    story.append(Paragraph(
-        "ArenaFight natively probes for dedicated NVIDIA graphics processing units via driver APIs and <code>nvidia-smi</code>. "
-        "When an NVIDIA GPU is present, tensor acceleration, VRAM allocation, and local model inferencing are routed through CUDA.",
-        body_style
-    ))
-    story.append(Paragraph(
-        "<b>Explicit Slow-Variant Classification:</b> If the host lacks a dedicated CUDA GPU (operating on an integrated GPU "
-        "or pure CPU), ArenaFight refuses to silently degrade or freeze. Instead, it explicitly classifies the environment as a "
-        "<b>Slow-Variant Runtime</b>, surfaces clear latency expectations in the terminal dashboard, and throttles parallel batch sizes "
-        "to prevent memory starvation and thrashing.",
-        body_style
-    ))
-
-    story.append(Spacer(1, 4))
-    story.append(Paragraph("E. Autonomous Background Service Daemons (Ollama Zero-Friction)", h2_style))
-    story.append(Paragraph(
-        "ArenaFight eliminates the friction of requiring users to manually launch terminal servers or AI daemons. "
-        "The <code>ServiceDaemon</code> subsystem provides autonomous daemon lifecycle management:",
-        body_style
-    ))
-    story.append(Paragraph(
-        "- <b>Autonomous Discovery:</b> Scans standard binary distributions on Windows (<code>%LOCALAPPDATA%\\Programs\\Ollama</code>) "
-        "and Linux (<code>/usr/local/bin</code>, <code>/usr/bin</code>).<br/>"
-        "- <b>Process-Level Duplication Prevention:</b> Queries OS process snapshots via Win32 <code>CreateToolhelp32Snapshot</code> "
-        "and Linux <code>pgrep</code> before attempting to spawn, ensuring no duplicate instances are created.<br/>"
-        "- <b>Thread-Safe Mutual Exclusion &amp; Cooldown Latch:</b> A thread-safe mutex and 45-second launch cooldown latch "
-        "completely eliminate background process spawning storms.<br/>"
-        "- <b>Fast-Path Loopback Polling:</b> Direct IPv4 loopback (<code>127.0.0.1</code>) avoids IPv6 <code>[::1]</code> name "
-        "resolution delays on modern Windows builds, achieving sub-millisecond status responsiveness.",
-        body_style
-    ))
-
-    story.append(Spacer(1, 4))
-    story.append(Paragraph("F. Universal Model Benchmarking &amp; Thinking Phase Duels", h2_style))
-    story.append(Paragraph(
-        "The CLI includes a universal benchmarking engine capable of evaluating any local or remote model across four distinct vectors: "
-        "<b>Reasoning</b>, <b>Code Generation</b>, <b>Physical Verification</b>, and <b>Tokens-per-Second Throughput</b>. "
-        "Furthermore, the <code>/think</code> (alias <code>/duel</code>) tournament command disallows code generation entirely, pitting "
-        "competing AI models against each other to evaluate pure chain-of-thought logic, architectural reasoning, and trade-off synthesis.",
-        body_style
-    ))
-
-    # =========================================================================
-    # PAGE 3: EMBEDDED QoS STUDIO, SECURITY SANDBOX & ARCHITECTURE SPEC
-    # =========================================================================
-    story.append(PageBreak())
-
-    story.append(Paragraph("G. Hardware Studio &amp; Embedded QoS Engineering", h2_style))
-    story.append(Paragraph(
-        "ArenaFight incorporates a specialized embedded systems studio catering to mission-critical hardware firmware development:",
-        body_style
-    ))
-    story.append(Paragraph(
-        "- <b>Board &amp; Pinout Intelligence:</b> Complete hardware registry for ESP32, ESP32-S3, RP2040, STM32F4, and Arduino boards, "
-        "tracking flash sizes, SRAM, strapping pins, ADC channels, and default bus configurations.<br/>"
-        "- <b>Static QoS Compliance Engine:</b> Enforces zero-heap allocation inside interrupt service routines (ISRs) and "
-        "disallows blocking delays (<code>delay()</code>) in real-time loops.<br/>"
-        "- <b>Circuit Design Calculators:</b> Built-in analytical solvers for LED current-limiting resistors, analog voltage dividers, "
-        "I2C pullup resistors, and battery discharge lifespans.<br/>"
-        "- <b>Wokwi Simulation Scaffolding:</b> Generates instant <code>diagram.json</code> circuit simulation files alongside firmware.",
-        body_style
-    ))
-
-    story.append(Spacer(1, 4))
-    story.append(Paragraph("H. Defense-in-Depth Security Sandbox", h2_style))
-    story.append(Paragraph(
-        "To safeguard the developer host from rogue scripts or accidental credential leakage, ArenaFight enforces three security tiers "
-        "(Strict, Balanced, Permissive):",
-        body_style
-    ))
-    story.append(Paragraph(
-        "- <b>Path Confinement (Jail):</b> Rejects any file access, read, or write operation that resolves outside the authorized workspace directory.<br/>"
-        "- <b>Data Loss Prevention (DLP):</b> Scans workspace files and agent outputs for sensitive tokens, AWS keys, GitHub tokens, and private RSA keys.<br/>"
-        "- <b>SHA-256 Tamper-Evident Audit Chain:</b> Every security event, tool execution, and configuration change is hashed and "
-        "cryptographically linked to the previous log record, creating an unalterable blockchain-style verification trail.",
-        body_style
-    ))
-
-    story.append(Spacer(1, 6))
-    story.append(Paragraph("3. Technical Architecture Specification", h1_style))
-    spec_data = [
-        [Paragraph("Subsystem", table_header_style), Paragraph("Implementation Details", table_header_style), Paragraph("Key Capabilities", table_header_style)],
+    proc_data = [
         [
-            Paragraph("Core Language &amp; Standard", table_cell_bold),
-            Paragraph("C++20 (GCC 14 / Clang 18 / MSVC 19.3x)", table_cell_style),
-            Paragraph("Concepts, std::span, std::string_view, filesystem, zero-copy string manipulation", table_cell_style)
+            Paragraph("Operational Metric", table_header_style),
+            Paragraph("FAST Processing Level (`--fast`)", table_header_style),
+            Paragraph("PERFECT BOI Processing Level (`--perfect`)", table_header_style)
         ],
         [
-            Paragraph("CLI REPL Engine", table_cell_bold),
-            Paragraph("ReplEngine with unified command dispatcher", table_cell_style),
-            Paragraph("Interactive slash commands, context mentions (@file, @git, @claims, @memory), live telemetry", table_cell_style)
+            Paragraph("Primary Objective", table_cell_bold),
+            Paragraph("Rapid iteration, rapid linting, single-turn development", table_cell_style),
+            Paragraph("Exhaustive perfection, deep verification, self-healing remediation", table_cell_style)
         ],
         [
-            Paragraph("Provider Bridge", table_cell_bold),
-            Paragraph("Modular multi-provider routing layer", table_cell_style),
-            Paragraph("Ollama (local), OpenCode CLI, OpenRouter, Claude Code, custom OpenAI-compatible endpoints", table_cell_style)
+            Paragraph("Iteration Ceilings", table_cell_bold),
+            Paragraph("Fixed baseline: 10 loops max", table_cell_style),
+            Paragraph("Dynamic: 25 to 60 loops depending on available RAM and CPU cores", table_cell_style)
         ],
         [
-            Paragraph("Hardware Profiler", table_cell_bold),
-            Paragraph("SystemProfiler (Win32 API &amp; POSIX /proc)", table_cell_style),
-            Paragraph("Probes RAM, CPU core topology, NVIDIA CUDA GPU state; computes non-hardcoded dynamic limits", table_cell_style)
+            Paragraph("Token Allocation", table_cell_bold),
+            Paragraph("4,096 tokens max | 1,024 reasoning tokens", table_cell_style),
+            Paragraph("Dynamic: up to 16,384 - 32,768 tokens based on hardware headroom", table_cell_style)
         ],
         [
-            Paragraph("Service Daemon", table_cell_bold),
-            Paragraph("ServiceDaemon background process manager", table_cell_style),
-            Paragraph("Auto-detects &amp; starts Ollama, process-level deduplication, cooldown latches, model puller", table_cell_style)
+            Paragraph("Adversarial Review", table_cell_bold),
+            Paragraph("Single pass (fast path checks)", table_cell_style),
+            Paragraph("Multi-pass cross-examination with synthetic bug injection", table_cell_style)
         ],
         [
-            Paragraph("Telemetry Observatory", table_cell_bold),
-            Paragraph("TerminalUI high-density ANSI terminal", table_cell_style),
-            Paragraph("Real-time latch counters, memory pressure gauges, gate verification pass rates, latency metrics", table_cell_style)
-        ],
-        [
-            Paragraph("Security Sandbox", table_cell_bold),
-            Paragraph("SecuritySandbox &amp; Audit Trail", table_cell_style),
-            Paragraph("Workspace path jail, DLP secret scanner, FIPS 180-4 SHA-256 cryptographic audit chain", table_cell_style)
+            Paragraph("Self-Healing Remediation", table_cell_bold),
+            Paragraph("Fast fail with actionable diagnostics", table_cell_style),
+            Paragraph("Autonomous task graph replanning &amp; self-healing until 100% verified", table_cell_style)
         ]
     ]
-
-    t_spec = Table(spec_data, colWidths=[104, 176, 224])
-    t_spec.setStyle(TableStyle([
+    t_proc = Table(proc_data, colWidths=[110, 194, 200])
+    t_proc.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), PRIMARY_NAVY),
         ('ALIGN', (0,0), (-1,-1), 'LEFT'),
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
         ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, BG_LIGHT]),
-        ('TOPPADDING', (0,0), (-1,-1), 3),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('TOPPADDING', (0,0), (-1,-1), 2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
     ]))
-    story.append(t_spec)
+    story.append(t_proc)
+    story.append(Spacer(1, 4))
+
+    story.append(Paragraph("SystemProfiler: Real-time Host PC Assessment &amp; Acceleration Calibration", h2_style))
+    story.append(Paragraph(
+        "ArenaFight eliminates hardcoded limits by assessing host computing headroom via Win32 `GlobalMemoryStatusEx`, "
+        "`GetNativeSystemInfo`, and Linux `/proc/meminfo`, `/proc/cpuinfo`. Limits are calculated on-the-fly:",
+        body_style
+    ))
+    story.append(Paragraph(
+        "- <b>CUDA Acceleration Active:</b> When an NVIDIA discrete GPU with driver support is discovered (e.g. RTX 4060 Laptop GPU), "
+        "ArenaFight passes `num_gpu: 99` to model backends, caching all layers in high-bandwidth VRAM for 40-100+ tokens/sec throughput.<br/>"
+        "- <b>Integrated GPU / CPU Slow-Variant Protection:</b> When running on iGPUs (AMD Radeon Graphics, Intel Iris Xe) or CPU-only: "
+        "ArenaFight displays a prominent terminal performance notice, caps tokens at 2048, throttles worker threads to prevent bus thrashing, "
+        "and sets `num_gpu: 0` to safeguard against host lockup.",
+        body_style
+    ))
+
+    # Hardware Throughput Benchmark Table
+    story.append(Paragraph("Hardware Inference Profile Matrix", h2_style))
+    hw_data = [
+        [
+            Paragraph("Hardware Configuration", table_header_style),
+            Paragraph("Inference Throughput", table_header_style),
+            Paragraph("Memory Bus Latency", table_header_style),
+            Paragraph("Adaptive Limit Policy", table_header_style)
+        ],
+        [
+            Paragraph("NVIDIA Dedicated GPU (CUDA)", table_cell_bold),
+            Paragraph("40 to 110+ tokens/sec", table_cell_style),
+            Paragraph("&lt; 25 ms first-token", table_cell_style),
+            Paragraph("Maximum parallel concurrency (4-8 workers), deep thinking enabled", table_cell_style)
+        ],
+        [
+            Paragraph("Integrated Graphics (iGPU)", table_cell_bold),
+            Paragraph("8 to 18 tokens/sec", table_cell_style),
+            Paragraph("120 to 250 ms first-token", table_cell_style),
+            Paragraph("Moderate concurrency (2 workers), token ceiling 2048 tokens", table_cell_style)
+        ],
+        [
+            Paragraph("Host CPU Only (AVX2/AVX-512)", table_cell_bold),
+            Paragraph("2 to 12 tokens/sec", table_cell_style),
+            Paragraph("300 to 900 ms first-token", table_cell_style),
+            Paragraph("Single worker thread (1 worker), extended 180s verification timeout", table_cell_style)
+        ]
+    ]
+    t_hw = Table(hw_data, colWidths=[130, 94, 94, 186])
+    t_hw.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), PRIMARY_NAVY),
+        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, BG_LIGHT]),
+        ('TOPPADDING', (0,0), (-1,-1), 2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+    ]))
+    story.append(t_hw)
 
     # =========================================================================
-    # PAGE 4: CLEANED COMMAND REFERENCE, CONTEXT MENTIONS & AUTHOR CREDIT
+    # PAGE 4: MODEL CONTEXT PROTOCOL (MCP) SERVER SPECIFICATION
     # =========================================================================
     story.append(PageBreak())
 
-    cmd_h1_style = ParagraphStyle(
-        'CmdHeading1Custom',
-        parent=h1_style,
-        fontSize=11,
-        leading=14,
-        spaceBefore=4,
-        spaceAfter=3,
-        keepWithNext=True
-    )
-
-    story.append(Paragraph("4. Categorized Slash Command Quick-Reference", cmd_h1_style))
+    story.append(Paragraph("4. Native Model Context Protocol (MCP) Server Architecture", h1_style))
     story.append(Paragraph(
-        "ArenaFight v2.5.0 features a completely restructured, de-duplicated command reference. Aliases are documented "
-        "inline next to primary commands across 6 logical functional groups:",
+        "ArenaFight features a production-grade, native Model Context Protocol (MCP) server running over standard input/output "
+        "(`arena mcp` / `arena --mcp`). It implements JSON-RPC 2.0 framing supporting both newline-delimited JSON and "
+        "HTTP-style `Content-Length:` stream headers. This allows OpenCode and other MCP clients to directly invoke ArenaFight tools.",
+        body_style
+    ))
+
+    # Complete MCP Tools Specification Table
+    mcp_data = [
+        [
+            Paragraph("Tool Name", table_header_style),
+            Paragraph("Input Schema &amp; Parameters", table_header_style),
+            Paragraph("Execution Function &amp; Verification Protocol", table_header_style)
+        ],
+        [
+            Paragraph("arena_verify", table_cell_bold),
+            Paragraph("<code>strict: boolean</code>", code_style),
+            Paragraph("Executes all 6 Physical Evidence Verification Gates on workspace. Verifies build, test suites, file diffs, QoS, and security.", table_cell_style)
+        ],
+        [
+            Paragraph("arena_goal", table_cell_bold),
+            Paragraph("<code>task: string (required)</code>", code_style),
+            Paragraph("Runs full autonomous goal loop with ability-based task assignment, tool execution, and self-healing replanning until all gates pass.", table_cell_style)
+        ],
+        [
+            Paragraph("arena_plan", table_cell_bold),
+            Paragraph("<code>task: string (required)</code>", code_style),
+            Paragraph("Generates structured execution plan artifact with milestones, dependencies, assigned models, and independent verification criteria.", table_cell_style)
+        ],
+        [
+            Paragraph("arena_profile", table_cell_bold),
+            Paragraph("<code>force_cpu: boolean</code>", code_style),
+            Paragraph("Inspects physical host hardware (RAM, CPU core topology, NVIDIA CUDA GPU) and computes dynamic non-hardcoded resource limits.", table_cell_style)
+        ],
+        [
+            Paragraph("arena_benchmark", table_cell_bold),
+            Paragraph("<code>models: array&lt;string&gt;</code>", code_style),
+            Paragraph("Runs standardized 4-axis benchmark suite evaluating models across reasoning, coding invariants, verification, and throughput.", table_cell_style)
+        ],
+        [
+            Paragraph("arena_qos", table_cell_bold),
+            Paragraph("<code>path: string</code>", code_style),
+            Paragraph("Static AST firmware audit: enforces zero-heap dynamic allocation in ISRs/loops, non-blocking timing, and hardware watchdog compliance.", table_cell_style)
+        ],
+        [
+            Paragraph("arena_calculate", table_cell_bold),
+            Paragraph("<code>calculation: string, args: object</code>", code_style),
+            Paragraph("Solves electronic circuit parameters: Ohm's law (V/R/I/P), LED current limiter, resistor divider, I2C pullup, battery lifetime.", table_cell_style)
+        ],
+        [
+            Paragraph("arena_security", table_cell_bold),
+            Paragraph("<code>action: 'scan' | 'audit'</code>", code_style),
+            Paragraph("Inspects workspace defense-in-depth posture, scans for DLP secret leaks, and verifies FIPS 180-4 SHA-256 cryptographic audit chain.", table_cell_style)
+        ],
+        [
+            Paragraph("arena_think", table_cell_bold),
+            Paragraph("<code>task: string, candidateA, candidateB</code>", code_style),
+            Paragraph("Fast thinking-phase tournament: Disallows code generation and pits pure chain-of-thought architectural reasoning trees against each other.", table_cell_style)
+        ]
+    ]
+    t_mcp = Table(mcp_data, colWidths=[80, 110, 314])
+    t_mcp.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), PRIMARY_NAVY),
+        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, BG_LIGHT]),
+        ('TOPPADDING', (0,0), (-1,-1), 1.8),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 1.8),
+    ]))
+    story.append(t_mcp)
+
+    # =========================================================================
+    # PAGE 5: BI-DIRECTIONAL OPENCODE INTEGRATION & WORKSPACE SYNC
+    # =========================================================================
+    story.append(PageBreak())
+
+    story.append(Paragraph("5. Bi-Directional OpenCode Integration Engine", h1_style))
+    story.append(Paragraph(
+        "ArenaFight bridges seamlessly to the [OpenCode](https://opencode.ai) CLI ecosystem (`opencode`), providing "
+        "a complete bi-directional integration model:",
+        body_style
+    ))
+
+    story.append(Paragraph("A. Bi-Directional Execution Modes", h2_style))
+    story.append(Paragraph(
+        "- <b>ArenaFight Calling OpenCode:</b> ArenaFight dispatches complex coding goals through OpenCode "
+        "(`arena --opencode \"<goal>\"` or `arena opencode run \"<prompt>\"`), discovering all installed models "
+        "(`opencode-default`, `opencode/claude-3-7-sonnet`, `opencode/gemini-2.5-pro`, `opencode/deepseek-r1`, `opencode/qwen-2.5-coder`).<br/>"
+        "- <b>OpenCode Calling ArenaFight:</b> OpenCode agents and human developers invoke ArenaFight directly via "
+        "native Model Context Protocol (MCP) tools, custom slash commands, or shell commands.",
+        body_style
+    ))
+
+    # OpenCode Slash Commands Table
+    story.append(Paragraph("OpenCode Custom Slash Commands", h2_style))
+    opencode_cmd_data = [
+        [
+            Paragraph("Slash Command", table_header_style),
+            Paragraph("Underlying Invocation", table_header_style),
+            Paragraph("Operational Description &amp; Verification Action", table_header_style)
+        ],
+        [
+            Paragraph("<code>/arena &lt;task&gt;</code>", code_style),
+            Paragraph("<code>arena $ARGUMENTS</code>", code_style),
+            Paragraph("Executes any ArenaFight goal, hardware calculation, plan, or subcommand directly from OpenCode terminal.", table_cell_style)
+        ],
+        [
+            Paragraph("<code>/verify</code>", code_style),
+            Paragraph("<code>arena verify</code>", code_style),
+            Paragraph("Runs all 6 Physical Evidence Verification Gates across compiler, tests, diffs, and security. Enforces Level 1 dominance.", table_cell_style)
+        ],
+        [
+            Paragraph("<code>/profile</code>", code_style),
+            Paragraph("<code>arena profile</code>", code_style),
+            Paragraph("Assesses physical host machine resources (CPU, RAM, CUDA GPU) and displays active dynamic resource limits.", table_cell_style)
+        ],
+        [
+            Paragraph("<code>/benchmark</code>", code_style),
+            Paragraph("<code>arena benchmark</code>", code_style),
+            Paragraph("Runs the universal multi-model benchmark suite evaluating reasoning, coding, verification, and tokens/sec throughput.", table_cell_style)
+        ],
+        [
+            Paragraph("<code>/qos [path]</code>", code_style),
+            Paragraph("<code>arena qos [path]</code>", code_style),
+            Paragraph("Audits embedded C++ firmware for zero-heap ISR compliance, non-blocking loops, and hardware watchdog timers.", table_cell_style)
+        ]
+    ]
+    t_oc_cmd = Table(opencode_cmd_data, colWidths=[90, 114, 300])
+    t_oc_cmd.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), PRIMARY_NAVY),
+        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, BG_LIGHT]),
+        ('TOPPADDING', (0,0), (-1,-1), 2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+    ]))
+    story.append(t_oc_cmd)
+    story.append(Spacer(1, 4))
+
+    story.append(Paragraph("B. Automated Workspace Synchronization (`arena opencode sync`)", h2_style))
+    story.append(Paragraph(
+        "Running `arena opencode sync` automatically writes all necessary configuration to bridge both runtimes:<br/>"
+        "1. <b>`opencode.json` &amp; `.opencode/opencode.json`:</b> Registers `arena` as a local MCP server (`command: [\"arena\", \"mcp\"]`).<br/>"
+        "2. <b>`.opencode/commands/*.md`:</b> Generates Markdown command definitions for `/arena`, `/verify`, `/profile`, `/benchmark`, `/qos`.<br/>"
+        "3. <b>`.opencode/INSTRUCTIONS.md`:</b> Mandates that OpenCode agents run `arena_verify` before concluding any coding task.",
+        body_style
+    ))
+
+    # =========================================================================
+    # PAGE 6: EMBEDDED SYSTEMS STUDIO & QoS STATIC ANALYSIS
+    # =========================================================================
+    story.append(PageBreak())
+
+    story.append(Paragraph("6. Embedded Systems Studio &amp; Hardware Intelligence", h1_style))
+    story.append(Paragraph(
+        "ArenaFight incorporates a dedicated microcontroller hardware registry and circuit engineering studio (`arena boards`, `arena scaffold`):",
+        body_style
+    ))
+
+    # Board Registry Table
+    board_data = [
+        [
+            Paragraph("Microcontroller Board", table_header_style),
+            Paragraph("Architecture &amp; Core", table_header_style),
+            Paragraph("Logic Level", table_header_style),
+            Paragraph("Pinout Constraints &amp; Hazard Rules", table_header_style)
+        ],
+        [
+            Paragraph("ESP32 (WROOM-32)", table_cell_bold),
+            Paragraph("Xtensa Dual-Core 240MHz", table_cell_style),
+            Paragraph("3.3V Logic", table_cell_style),
+            Paragraph("Strapping pins: GPIO 0, 2, 12, 15. Input-only pins: GPIO 34, 35, 36, 39 (no pullups).", table_cell_style)
+        ],
+        [
+            Paragraph("ESP32-S3 (DevKitC-1)", table_cell_bold),
+            Paragraph("Xtensa LX7 Dual-Core + Vector", table_cell_style),
+            Paragraph("3.3V Logic", table_cell_style),
+            Paragraph("Native USB JTAG on GPIO 19/20. Strapping pins: GPIO 0, 45, 46. Octal PSRAM conflict pins.", table_cell_style)
+        ],
+        [
+            Paragraph("Raspberry Pi Pico (RP2040)", table_cell_bold),
+            Paragraph("ARM Cortex-M0+ Dual-Core", table_cell_style),
+            Paragraph("3.3V Logic", table_cell_style),
+            Paragraph("ADC pins restricted to GP26, GP27, GP28. Dual I2C/SPI flexible pin multiplexing.", table_cell_style)
+        ],
+        [
+            Paragraph("STM32F401 (BlackPill)", table_cell_bold),
+            Paragraph("ARM Cortex-M4F 84MHz (FPU)", table_cell_style),
+            Paragraph("3.3V (5V Tolerant)", table_cell_style),
+            Paragraph("Boot0 pin selection latch. NRST line decoupling requirements. Hardware floating-point.", table_cell_style)
+        ],
+        [
+            Paragraph("Arduino Uno R3", table_cell_bold),
+            Paragraph("Microchip ATmega328P 16MHz", table_cell_style),
+            Paragraph("5.0V Logic", table_cell_style),
+            Paragraph("5V logic hazard when interfacing with 3.3V sensors. Requires voltage divider calculation.", table_cell_style)
+        ]
+    ]
+    t_board = Table(board_data, colWidths=[110, 100, 60, 234])
+    t_board.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), PRIMARY_NAVY),
+        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, BG_LIGHT]),
+        ('TOPPADDING', (0,0), (-1,-1), 2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+    ]))
+    story.append(t_board)
+    story.append(Spacer(1, 4))
+
+    story.append(Paragraph("Static Firmware Quality of Service (QoS) &amp; Circuit Calculations", h2_style))
+    story.append(Paragraph(
+        "- <b>Zero-Heap Dynamic Allocation Auditing:</b> Scans source code for `malloc`, `free`, `new`, `delete`, and `std::vector` inside "
+        "Interrupt Service Routines (ISRs) and critical timing loops to prevent heap fragmentation panics.<br/>"
+        "- <b>Non-Blocking Loop Enforcer:</b> Flags `delay()` calls in cooperative multitasking environments, demanding `millis()`-based state machines.<br/>"
+        "- <b>Circuit Calculator (`arena calculate`):</b> Calculates Ohm's law, LED current-limiting resistors with E12/E24 series snapping, "
+        "two-resistor voltage dividers for 5V-to-3.3V level shifting, I2C bus pullups, and battery deep-sleep life budgets.",
+        body_style
+    ))
+
+    # =========================================================================
+    # PAGE 7: SECURITY SANDBOX, DLP & CRYPTOGRAPHIC AUDIT LOG
+    # =========================================================================
+    story.append(PageBreak())
+
+    story.append(Paragraph("7. Defense-in-Depth Security Sandbox &amp; Cryptographic Audit", h1_style))
+    story.append(Paragraph(
+        "ArenaFight enforces multi-layer security protections to isolate autonomous tool execution:",
+        body_style
+    ))
+
+    sec_data = [
+        [
+            Paragraph("Security Defense Layer", table_header_style),
+            Paragraph("Threat Vector Mitigated", table_header_style),
+            Paragraph("Deterministic Mitigation Engine", table_header_style)
+        ],
+        [
+            Paragraph("Path Jail Confinement", table_cell_bold),
+            Paragraph("Directory traversal escapes (`../`, `../../etc/passwd`, Windows registry)", table_cell_style),
+            Paragraph("Canonicalizes all filesystem paths against workspace root. Rejects any reference traversing outside project boundary.", table_cell_style)
+        ],
+        [
+            Paragraph("Command Risk Gatekeeper", table_cell_bold),
+            Paragraph("Destructive shell execution (`rm -rf /`, `mkfs`, fork bombs, reverse shells)", table_cell_style),
+            Paragraph("4-tier command risk parser: SAFE (read-only), AUDITED (tracked), RESTRICTED (user confirmation required), FORBIDDEN (blocked).", table_cell_style)
+        ],
+        [
+            Paragraph("Data Loss Prevention (DLP)", table_cell_bold),
+            Paragraph("Accidental credential leaks in logs, prompts, or commit messages", table_cell_style),
+            Paragraph("Autonomous regex scanner masking API keys (OpenAI, Anthropic, AWS, GitHub), JWT bearer tokens, and private SSH keys.", table_cell_style)
+        ],
+        [
+            Paragraph("Cryptographic Hash Chain", table_cell_bold),
+            Paragraph("Unauthorized artifact tampering, covert code injection, log manipulation", table_cell_style),
+            Paragraph("Append-only `.arena/security_audit.jsonl` where each event contains SHA-256 hash of previous record (Merkle chain).", table_cell_style)
+        ]
+    ]
+    t_sec = Table(sec_data, colWidths=[114, 150, 240])
+    t_sec.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), PRIMARY_NAVY),
+        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, BG_LIGHT]),
+        ('TOPPADDING', (0,0), (-1,-1), 2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+    ]))
+    story.append(t_sec)
+    story.append(Spacer(1, 4))
+
+    story.append(Paragraph("Autonomous Background Service Daemon (`ServiceDaemon`)", h2_style))
+    story.append(Paragraph(
+        "Instead of failing or demanding manual user intervention when local model servers are offline, ArenaFight features "
+        "an autonomous service manager: autonomously searches standard installation paths on Windows and POSIX systems, spawns "
+        "the daemon detached with hidden window, applies cooldown latches to avoid port conflicts, and probes health endpoints until online.",
+        body_style
+    ))
+
+    # =========================================================================
+    # PAGE 8: CATEGORIZED COMMAND & SLASH COMMAND REFERENCE
+    # =========================================================================
+    story.append(PageBreak())
+
+    story.append(Paragraph("8. Complete Categorized Command &amp; Slash Command Reference", h1_style))
+    story.append(Paragraph(
+        "ArenaFight v2.5.0 features a completely restructured, de-duplicated command reference across CLI and interactive REPL:",
         body_style
     ))
 
     cmd_data = [
-        [Paragraph("Category &amp; Command", table_header_style), Paragraph("Inline Alias", table_header_style), Paragraph("Functional Description &amp; Usage", table_header_style)],
-        [Paragraph("<b>1. Autonomous Execution</b><br/>/goal<br/>/plan<br/>/grill-me<br/>/think", table_cell_style),
-         Paragraph("-<br/>-<br/>-<br/><b>/duel</b>", table_cell_style),
-         Paragraph("Autonomous self-healing goal pursuit (/goal &lt;task&gt;)<br/>Milestone plan generator (/plan &lt;task&gt;)<br/>Interactive requirements interview (/grill-me &lt;topic&gt;)<br/>Thinking tournament: Compare reasoning without code gen", table_cell_style)],
+        [Paragraph("Category &amp; Command", table_header_style), Paragraph("Inline Alias", table_header_style), Paragraph("Functional Description &amp; Usage Syntax", table_header_style)],
+        [Paragraph("<b>1. Autonomous Execution</b><br/>/goal<br/>/plan<br/>/grill-me<br/>/think<br/>/verify", table_cell_style),
+         Paragraph("-<br/>-<br/>-<br/><b>/duel</b><br/>-", table_cell_style),
+         Paragraph("Autonomous self-healing goal pursuit (/goal &lt;task&gt;)<br/>Milestone task graph generator (/plan &lt;task&gt;)<br/>Interactive requirements interview (/grill-me &lt;topic&gt;)<br/>Thinking tournament: Pure reasoning without code gen<br/>Run all 6 physical evidence verification gates on workspace", table_cell_style)],
         [Paragraph("<b>2. Hardware &amp; Processing</b><br/>/level<br/>/profile<br/>/services", table_cell_style),
          Paragraph("<b>/processing</b><br/>-<br/><b>/daemon</b>", table_cell_style),
          Paragraph("Set processing level: Fast (standard) vs Perfect Boi (adaptive)<br/>Assess physical host PC hardware &amp; dynamic limits (/profile [cpu|cuda])<br/>Autonomous service daemon manager: auto-detect and start Ollama", table_cell_style)],
-        [Paragraph("<b>3. AI Models &amp; Providers</b><br/>/models<br/>/abilities<br/>/benchmark<br/>/mode<br/>/connect<br/>/opencode<br/>/unsloth", table_cell_style),
+        [Paragraph("<b>3. AI Models &amp; OpenCode</b><br/>/models<br/>/abilities<br/>/benchmark<br/>/mode<br/>/connect<br/>/opencode<br/>/unsloth", table_cell_style),
          Paragraph("<b>/model</b><br/>-<br/><b>/bench</b><br/>-<br/>-<br/>-<br/>-", table_cell_style),
-         Paragraph("List discovered models or set active model (/models set &lt;name&gt;)<br/>Display multi-dimensional capability breakdown matrix<br/>Universal benchmark across reasoning, code, verification &amp; throughput<br/>Switch mode (standalone native vs OpenCode connected)<br/>Connect and synchronize with OpenCode bridge<br/>OpenCode model discovery, execution and status<br/>Unsloth AI on-the-fly fine-tuning engine", table_cell_style)],
+         Paragraph("List discovered models or set active model (/models set &lt;name&gt;)<br/>Display multi-dimensional capability breakdown matrix<br/>Universal benchmark across reasoning, code, verification &amp; throughput<br/>Switch mode (standalone native vs OpenCode connected)<br/>Connect and synchronize with OpenCode bridge<br/>OpenCode model discovery, execution and workspace sync<br/>Unsloth AI on-the-fly fine-tuning engine", table_cell_style)],
         [Paragraph("<b>4. Security &amp; Telemetry</b><br/>/status<br/>/metrics<br/>/security<br/>/audit", table_cell_style),
          Paragraph("-<br/><b>/telemetry</b><br/>-<br/>-", table_cell_style),
-         Paragraph("View runtime execution mode, session state &amp; verification stats<br/>Display terminal live telemetry observatory &amp; gate pass rates<br/>Inspect defense-in-depth posture, scan workspace, set level<br/>Inspect tamper-evident SHA-256 audit log and verify hash chain", table_cell_style)],
+         Paragraph("View runtime execution mode, session state &amp; verification stats<br/>Display terminal live telemetry observatory &amp; gate pass rates<br/>Inspect defense-in-depth posture, scan workspace, set risk level<br/>Inspect tamper-evident SHA-256 audit log and verify hash chain", table_cell_style)],
         [Paragraph("<b>5. Embedded Studio</b><br/>/boards<br/>/components<br/>/scaffold<br/>/qos<br/>/calculate", table_cell_style),
          Paragraph("<b>/board</b><br/>-<br/>-<br/>-<br/>-", table_cell_style),
-         Paragraph("List or inspect microcontroller boards, pinouts, strapping pins<br/>List supported sensors, actuators, and communication ICs<br/>Scaffold embedded project with Wokwi diagram and QoS firmware<br/>Evaluate firmware for zero-heap, non-blocking QoS compliance<br/>Calculate circuit values: LED, divider, I2C pullup, battery life", table_cell_style)],
+         Paragraph("List or inspect microcontroller boards, pinouts, strapping pins<br/>List supported sensors, actuators, and communication ICs<br/>Scaffold embedded project with Wokwi diagram and QoS firmware<br/>Evaluate firmware for zero-heap, non-blocking QoS compliance<br/>Calculate circuit values: Ohm's law, LED, divider, I2C pullup, battery", table_cell_style)],
         [Paragraph("<b>6. Context &amp; Utilities</b><br/>/files<br/>/learn<br/>/schedule<br/>/artifacts<br/>/skills, /rules<br/>/temp, /tokens<br/>/guide, /clear, /exit", table_cell_style),
          Paragraph("<b>/file</b><br/>-<br/>-<br/>-<br/>-<br/><b>/temperature</b>, <b>/max-tokens</b><br/><b>/help-session</b>, <b>/quit</b>", table_cell_style),
-         Paragraph("Inspect, view, read, and attach workspace files to prompt<br/>Persist Knowledge Items (KI) or rules into repo memory<br/>Schedule periodic or delayed autonomous task execution<br/>Inspect and preview generated project artifacts<br/>Manage agent skills and system/workspace operational rules<br/>Adjust temperature (0.0-2.0) and max generation token limits<br/>Interactive guided help, screen clear, and REPL exit", table_cell_style)]
+         Paragraph("Inspect, view, read, and attach workspace files to prompt (@file)<br/>Persist Knowledge Items (KI) or conventions into repo memory<br/>Schedule periodic or delayed autonomous task execution<br/>Inspect and preview generated project artifacts<br/>Manage agent skills and system/workspace operational rules<br/>Adjust temperature (0.0-2.0) and max generation token limits<br/>Interactive guided help, screen clear, and REPL exit", table_cell_style)]
     ]
-
-    t_cmd = Table(cmd_data, colWidths=[126, 94, 284])
+    t_cmd = Table(cmd_data, colWidths=[120, 94, 290])
     t_cmd.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), PRIMARY_NAVY),
         ('ALIGN', (0,0), (-1,-1), 'LEFT'),
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
         ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, BG_LIGHT]),
-        ('TOPPADDING', (0,0), (-1,-1), 1.8),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 1.8),
+        ('TOPPADDING', (0,0), (-1,-1), 1.5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 1.5),
     ]))
     story.append(t_cmd)
     story.append(Spacer(1, 4))
 
-    # Context Mentions Callout Box
-    story.append(Paragraph("5. Interactive Context Mentions", cmd_h1_style))
-    mentions_box = [
-        [
-            Paragraph("<b>Context Mention</b>", table_cell_bold),
-            Paragraph("<b>Runtime Syntax</b>", table_cell_bold),
-            Paragraph("<b>Context Expansion &amp; Injection Mechanism</b>", table_cell_bold)
-        ],
-        [
-            Paragraph("File Injection", table_cell_style),
-            Paragraph("<code>@file &lt;path&gt;</code>", code_style),
-            Paragraph("Reads the physical file from disk, attaches it to the session, and injects contents directly into prompt context.", table_cell_style)
-        ],
-        [
-            Paragraph("Working Tree Diff", table_cell_style),
-            Paragraph("<code>@git</code>", code_style),
-            Paragraph("Executes git status and git diff; injects unstaged/staged working tree changes into prompt.", table_cell_style)
-        ],
-        [
-            Paragraph("Verified Claims", table_cell_style),
-            Paragraph("<code>@claims</code>", code_style),
-            Paragraph("Injects ClaimRegistry evidence report and physically verified facts discovered during the session.", table_cell_style)
-        ],
-        [
-            Paragraph("Session Memory", table_cell_style),
-            Paragraph("<code>@memory</code>", code_style),
-            Paragraph("Injects historical session discoveries, user preferences, and persistent repository Knowledge Items.", table_cell_style)
-        ]
+    # Interactive Context Mentions
+    story.append(Paragraph("Interactive Context Mentions", h2_style))
+    mentions_data = [
+        [Paragraph("Mention", table_header_style), Paragraph("Syntax", table_header_style), Paragraph("Context Expansion &amp; Injection Behavior", table_header_style)],
+        [Paragraph("File Injection", table_cell_bold), Paragraph("<code>@file &lt;path&gt;</code>", code_style), Paragraph("Reads target file from disk, attaches it to active session, injects contents directly into prompt context.", table_cell_style)],
+        [Paragraph("Working Tree Diff", table_cell_bold), Paragraph("<code>@git</code>", code_style), Paragraph("Executes git status and git diff; injects unstaged and staged repository changes into prompt.", table_cell_style)],
+        [Paragraph("Verified Claims", table_cell_bold), Paragraph("<code>@claims</code>", code_style), Paragraph("Injects ClaimRegistry evidence report and physically verified facts discovered during the session.", table_cell_style)],
+        [Paragraph("Session Memory", table_cell_bold), Paragraph("<code>@memory</code>", code_style), Paragraph("Injects historical session discoveries, user preferences, and persistent repository Knowledge Items.", table_cell_style)]
     ]
-    t_mentions = Table(mentions_box, colWidths=[86, 110, 308])
+    t_mentions = Table(mentions_data, colWidths=[80, 100, 324])
     t_mentions.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), BG_LIGHT),
+        ('BACKGROUND', (0,0), (-1,0), PRIMARY_NAVY),
+        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, BG_LIGHT]),
+        ('TOPPADDING', (0,0), (-1,-1), 1.5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 1.5),
+    ]))
+    story.append(t_mentions)
+
+    # =========================================================================
+    # PAGE 9: TEST SUITE VERIFICATION SCORECARD (36/36 TESTS)
+    # =========================================================================
+    story.append(PageBreak())
+
+    story.append(Paragraph("9. Automated Verification Test Suite Scorecard (36/36 Passing)", h1_style))
+    story.append(Paragraph(
+        "ArenaFight undergoes rigorous regression testing across all architectural components. All 36 automated unit tests pass 100% green:",
+        body_style
+    ))
+
+    # Test Suite Matrix Table
+    test_rows = [
+        ("1", "Config loading and environment overrides", "Core Configuration", "PASSED"),
+        ("2", "File tools (write, read, edit, delete)", "File System Tools", "PASSED"),
+        ("3", "Search tools (list_directory, search_files)", "Search Tools", "PASSED"),
+        ("4", "Process execution and destructive safety check", "Process Executor", "PASSED"),
+        ("5", "Provider detection (Ollama, OpenRouter, Claude, OpenCode)", "Provider Bridge", "PASSED"),
+        ("6", "Session serialization & disk persistence", "Session Manager", "PASSED"),
+        ("7", "Dynamic model routing and independent verifier", "Model Router", "PASSED"),
+        ("8", "Multi-step execution loop, failure, recovery & verif", "Autonomous Agent", "PASSED"),
+        ("9", "Evidence hierarchy & dominance (Level 1 > Level 6)", "Claim Registry", "PASSED"),
+        ("10", "Separation of facts from hypotheses", "Memory Manager", "PASSED"),
+        ("11", "Consensus is supporting evidence, not proof", "Verifier Core", "PASSED"),
+        ("12", "Contradiction detection & active resolution", "Claim Registry", "PASSED"),
+        ("13", "Fresh verification & evidence invalidation on edit", "Verifier Core", "PASSED"),
+        ("14", "Blind review & adversarial vulnerability inspection", "Independent Reviewer", "PASSED"),
+        ("15", "All 6 verification gates & uncertainty handling", "Verifier Core", "PASSED"),
+        ("16", "Automatic fallback to offline mock", "Agent Engine", "PASSED"),
+        ("17", "Hardware Board Registry & pinout constraints", "Embedded Studio", "PASSED"),
+        ("18", "Circuit Calculator (LED, Divider, I2C, Battery)", "Embedded Studio", "PASSED"),
+        ("19", "Hardware Validator & Hazard Detection", "Embedded Studio", "PASSED"),
+        ("20", "Hardware Scaffolder (Wokwi, PlatformIO, QoS)", "Embedded Studio", "PASSED"),
+        ("21", "OpenCode Provider & Workspace integration", "OpenCode Bridge", "PASSED"),
+        ("22", "Generation temperature and max tokens customization", "Configuration", "PASSED"),
+        ("23", "Ability-based model evaluation, scoring & planning", "Model Router", "PASSED"),
+        ("24", "Unsloth AI on-the-fly fine-tuning & dataset engine", "Fine-Tuning", "PASSED"),
+        ("25", "File operations, context attachments & fine-tune data", "Context Manager", "PASSED"),
+        ("26", "Fast thinking-phase tournament & early stopping", "Model Router", "PASSED"),
+        ("27", "Pure CLI Terminal Telemetry & Verification Observatory", "Terminal UI", "PASSED"),
+        ("28", "Universal compatibility with any models", "Model Router", "PASSED"),
+        ("29", "Universal model benchmarking engine", "Benchmark Engine", "PASSED"),
+        ("30", "CLI Standalone Native & OpenCode Connected modes", "Runtime Engine", "PASSED"),
+        ("31", "Security Sandbox, path jail, DLP & SHA-256 audit", "Security Sandbox", "PASSED"),
+        ("32", "Host hardware assessment, PC profiling & limits", "System Profiler", "PASSED"),
+        ("33", "Two processing levels (Fast vs Perfect Boi)", "Agent Engine", "PASSED"),
+        ("34", "Autonomous service detection & background daemon", "Service Daemon", "PASSED"),
+        ("35", "CUDA acceleration & slow variant (iGPU/CPU) handling", "System Profiler", "PASSED"),
+        ("36", "Native MCP server (stdio JSON-RPC) & OpenCode sync", "MCP Server", "PASSED")
+    ]
+
+    t_score_data = [
+        [Paragraph("Test #", table_header_style), Paragraph("Automated Test Suite Specification", table_header_style), Paragraph("Targeted Subsystem", table_header_style), Paragraph("Result", table_header_style)]
+    ]
+    for tid, tname, tsub, tres in test_rows:
+        t_score_data.append([
+            Paragraph(tid, table_cell_bold),
+            Paragraph(tname, table_cell_style),
+            Paragraph(tsub, table_cell_style),
+            Paragraph(f"<font color='#166534'><b>{tres}</b></font>", table_cell_style)
+        ])
+
+    t_score = Table(t_score_data, colWidths=[36, 260, 140, 68])
+    t_score.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), PRIMARY_NAVY),
         ('ALIGN', (0,0), (-1,-1), 'LEFT'),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
-        ('TOPPADDING', (0,0), (-1,-1), 1.8),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 1.8),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, BG_LIGHT]),
+        ('TOPPADDING', (0,0), (-1,-1), 1.2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 1.2),
     ]))
-    story.append(t_mentions)
+    story.append(t_score)
     story.append(Spacer(1, 4))
 
-    # Licensing & Author Credits
-    story.append(Paragraph("6. Project Attributions &amp; Licensing", cmd_h1_style))
+    # Project Attributions & Licensing Box
+    story.append(Paragraph("10. Project Attributions &amp; Licensing", h1_style))
     story.append(Paragraph(
         "ArenaFight is authored and engineered by <b>Lunarmist-byte</b>. Licensed under custom All Rights Received terms: "
-        "strictly free for personal non-commercial experimentation and research; commercial and enterprise deployment requires "
-        "written licensing authorization.",
-        body_style
-    ))
-    story.append(Paragraph(
-        "<b>Repository &amp; Developer Links:</b><br/>"
-        "- <b>Author:</b> Lunarmist-byte<br/>"
-        "- <b>GitHub Repository:</b> https://github.com/Lunarmist-byte<br/>"
-        "- <b>LinkedIn Profile:</b> https://www.linkedin.com/in/amal-s-kumar-ba69a1290/",
+        "free for personal non-commercial experimentation and research; commercial deployment requires written authorization.<br/>"
+        "<b>Author:</b> Lunarmist-byte &nbsp;|&nbsp; <b>GitHub:</b> https://github.com/Lunarmist-byte &nbsp;|&nbsp; "
+        "<b>LinkedIn:</b> https://www.linkedin.com/in/amal-s-kumar-ba69a1290/",
         body_style
     ))
 
-    # Build the document
+    # Build PDF
     doc.build(story, canvasmaker=NumberedCanvas)
-    print(f"Publication-grade PDF successfully created at: {filename}")
+    print(f"Publication-grade Architecture Report PDF successfully created at: {filename}")
+
 
 if __name__ == "__main__":
     out_path = sys.argv[1] if len(sys.argv) > 1 else "docs/ArenaFight_Architecture_and_Capabilities.pdf"

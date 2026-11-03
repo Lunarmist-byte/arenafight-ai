@@ -54,8 +54,8 @@ public:
     // OpenCode Workspace integration helpers
     static bool exportOpenCodeWorkspace(
         const std::string& workspaceDir,
-        const std::string& taskObjective,
-        const std::string& instructions
+        const std::string& taskObjective = "",
+        const std::string& instructions = ""
     );
 
     static std::string generateOpenCodeConfig(

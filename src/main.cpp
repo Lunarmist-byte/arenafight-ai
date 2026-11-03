@@ -1,6 +1,7 @@
 #include "arenafight/agent/arena_agent.hpp"
 #include "arenafight/common/config.hpp"
 #include "arenafight/common/logger.hpp"
+#include "arenafight/mcp/mcp_server.hpp"
 #include "arenafight/providers/opencode_provider.hpp"
 #include "arenafight/repl/repl_engine.hpp"
 #include "arenafight/ui/terminal_ui.hpp"
@@ -81,9 +82,12 @@ void printUsage() {
       << "  arena config                   Display current configuration\n"
       << "  arena help-session, guide      Launch interactive guided help "
          "session\n"
+      << "  arena mcp                      Launch Model Context Protocol (MCP) server for OpenCode\n"
+      << "  arena verify                   Execute Level 1 physical evidence verification gates\n"
       << "  arena test                     Run built-in automated "
          "self-tests\n\n"
       << "Options:\n"
+      << "  --mcp                          Run as stdio Model Context Protocol (MCP) server\n"
       << "  --cuda                         Enable dedicated NVIDIA CUDA GPU acceleration (default if present)\n"
       << "  --cpu, --no-cuda               Run in CPU-only / slow variant mode (for non-GPU or testing)\n"
       << "  --fast                         Fast processing level: standard turnaround & loops\n"
@@ -225,6 +229,8 @@ int main(int argc, char *argv[]) {
       }
       printUsage();
       return 0;
+    } else if (arg == "--mcp") {
+      rawArgs.push_back("mcp");
     } else {
       rawArgs.push_back(arg);
     }
@@ -524,6 +530,32 @@ int main(int argc, char *argv[]) {
     }
     bool success = agent.run();
     return success ? 0 : 1;
+  };
+
+  dispatchTable["mcp"] = [&](const auto &) {
+    MCPServer mcp(agent);
+    mcp.run();
+    return 0;
+  };
+  dispatchTable["--mcp"] = dispatchTable["mcp"];
+
+  dispatchTable["verify"] = [&](const auto &) {
+    MCPServer mcp(agent);
+    auto res = mcp.handleRequest({
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"method", "tools/call"},
+      {"params", {
+        {"name", "arena_verify"},
+        {"arguments", nlohmann::json::object()}
+      }}
+    });
+    if (res.contains("result") && res["result"].contains("content")) {
+      for (const auto& item : res["result"]["content"]) {
+        std::cout << item.value("text", "") << "\n";
+      }
+    }
+    return 0;
   };
 
   dispatchTable["test"] = [&](const auto &) {
