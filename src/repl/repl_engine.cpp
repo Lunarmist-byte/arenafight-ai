@@ -1065,7 +1065,8 @@ void ReplEngine::handleConnect(const std::string &args) {
 
     // Refresh model catalog to discover OpenCode models
     agent_.getRouter().refreshModels();
-    auto ocProvider = agent_.getRouter().getProviderByName("OpenCode");
+    auto providerPtr = agent_.getRouter().getProviderByName("OpenCode");
+    auto ocProvider = std::dynamic_pointer_cast<OpenCodeProvider>(providerPtr);
     bool isAvail = ocProvider && ocProvider->available();
 
     std::cout
@@ -1073,9 +1074,32 @@ void ReplEngine::handleConnect(const std::string &args) {
         << (isAvail ? (ANSI_GREEN + std::string("CONNECTED & ONLINE") + ANSI_RESET)
                     : (ANSI_YELLOW + std::string("CONNECTED (DAEMON/AUTH PENDING)") + ANSI_RESET))
         << "\n"
+        << "Details        : " << (ocProvider ? ocProvider->getStatusMessage() : "OpenCode bridge active") << "\n"
         << "Workspace Sync : " << (synced ? "SUCCESS (.opencode/opencode.json, INSTRUCTIONS.md)" : "SKIPPED") << "\n"
         << "Default Provider: OpenCode CLI Provider\n"
-        << "Verification   : 6 Physical Evidence Gates active (Model Output != Truth)\n"
+        << "Verification   : 6 Physical Evidence Gates active (Model Output != Truth)\n";
+
+    if (!isAvail && ocProvider) {
+      std::cout << "\n"
+                << ANSI_BOLD << "Action Required to Complete OpenCode Bridge Connection:" << ANSI_RESET << "\n";
+      if (ocProvider->isInstalled()) {
+        std::cout
+            << "  * OpenCode CLI detected (" << ocProvider->getDetectedVersion() << "), but awaiting authentication.\n"
+            << "  * Option 1: Run '" << ANSI_CYAN << "opencode auth login" << ANSI_RESET << "' in terminal to authenticate.\n"
+            << "  * Option 2: Export your API key in environment:\n"
+            << "              $env:OPENAI_API_KEY = \"sk-...\"  (PowerShell)\n"
+            << "              export OPENAI_API_KEY=\"sk-...\" (Linux/bash)\n";
+      } else {
+        std::cout
+            << "  * OpenCode CLI is not installed or not in system PATH.\n"
+            << "  * Install via: " << ANSI_CYAN << "npm install -g @opencode/cli" << ANSI_RESET << "\n";
+      }
+      std::cout
+          << "  * Option 3 (Recommended if using native models): Revert to Standalone Native mode:\n"
+          << "              Type '" << ANSI_YELLOW << "/disconnect" << ANSI_RESET << "' or '" << ANSI_YELLOW << "/mode standalone" << ANSI_RESET << "'\n\n";
+    }
+
+    std::cout
         << "Made by Lunarmist-byte | https://github.com/Lunarmist-byte | https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n\n";
   } else {
     std::cout << ANSI_YELLOW << "Unsupported connection target: " << target
