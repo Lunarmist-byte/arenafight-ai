@@ -29,22 +29,18 @@ bool OllamaProvider::supportsTools(const std::string& modelId) const {
 }
 
 bool OllamaProvider::tryAutoStartOllama() {
-    return ServiceDaemon::ensureOllamaRunning(baseUrl_, 10);
+    return ServiceDaemon::ensureOllamaRunning(baseUrl_, 6);
 }
 
 bool OllamaProvider::available() {
-    if (ServiceDaemon::isOllamaResponding(baseUrl_)) {
-        return true;
-    }
-    // Autonomously detect and start Ollama in background on Linux or Windows
-    if (tryAutoStartOllama()) {
-        return ServiceDaemon::isOllamaResponding(baseUrl_);
-    }
-    return false;
+    return ServiceDaemon::isOllamaResponding(baseUrl_);
 }
 
 std::vector<ModelInfo> OllamaProvider::discoverModels() {
     std::vector<ModelInfo> models;
+    if (!ServiceDaemon::isOllamaResponding(baseUrl_)) {
+        tryAutoStartOllama();
+    }
     try {
         HttpResponse resp = HttpClient::instance().get(baseUrl_ + "/api/tags", {}, 5);
         if (!resp.success && baseUrl_.find("localhost") != std::string::npos) {
@@ -130,6 +126,10 @@ std::vector<ModelInfo> OllamaProvider::discoverModels() {
 AgentResponse OllamaProvider::generate(const AgentRequest& request) {
     // Hardware awareness: Sequential local model execution to protect GPU VRAM
     std::lock_guard<std::mutex> lock(getLocalGpuMutex());
+
+    if (!ServiceDaemon::isOllamaResponding(baseUrl_)) {
+        tryAutoStartOllama();
+    }
 
     AgentResponse response;
     try {

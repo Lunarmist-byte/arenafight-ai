@@ -23,7 +23,7 @@ void printUsage() {
   TerminalUI::printBanner();
   std::cout
       << "Usage:\n"
-      << "  arena                          Launch Antigravity Interactive "
+      << "  arena                          Launch Interactive "
          "REPL\n"
       << "  arena \"<task>\"                  Execute a task autonomously "
          "(/goal)\n"
@@ -236,7 +236,7 @@ int main(int argc, char *argv[]) {
   }
 
   if (rawArgs.empty()) {
-    // Launch Antigravity Interactive REPL
+    // Launch Interactive REPL
     ReplEngine repl(agent);
     repl.run();
     return 0;
@@ -363,7 +363,8 @@ int main(int argc, char *argv[]) {
     printStatus("Offline Mock", mock);
     std::cout
         << "----------------------------------------------------\n"
-        << " Made by Lunarmist-byte | https://github.com/Lunarmist-byte\n\n";
+        << " Made by Lunarmist-byte | https://github.com/Lunarmist-byte\n"
+        << " LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n\n";
     return 0;
   };
 

@@ -113,6 +113,7 @@ void TerminalUI::printStatusDashboard(
 void TerminalUI::printFooter() {
     std::cout << "\n----------------------------------------------------\n"
               << " Made by Lunarmist-byte | https://github.com/Lunarmist-byte\n"
+              << " LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n"
               << "====================================================\n";
 }
 
@@ -644,7 +645,7 @@ void TerminalUI::printQoSTelemetryReport(const QoSTelemetry& qos) {
               << "========================================================================\n"
               << "Overall QoS Score:  \033[36m" << qos.overallScore << " / 100\033[0m\n"
               << "Reliability Tier:   " << qos.qosTier << "\n"
-              << "Made by:            Lunarmist-byte (https://github.com/Lunarmist-byte)\n\n"
+              << "Made by:            Lunarmist-byte (https://github.com/Lunarmist-byte | https://www.linkedin.com/in/amal-s-kumar-ba69a1290/)\n\n"
               << "Architectural Guarantees Verified:\n";
 
     for (const auto& g : qos.passedGuarantees) {

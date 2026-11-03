@@ -50,7 +50,7 @@ std::string HardwareScaffolder::generateWokwiDiagram(
 ) {
     nlohmann::json diag;
     diag["version"] = 1;
-    diag["author"] = "Lunarmist-byte (https://github.com/Lunarmist-byte)";
+    diag["author"] = "Lunarmist-byte (https://github.com/Lunarmist-byte | https://www.linkedin.com/in/amal-s-kumar-ba69a1290/)";
     diag["editor"] = "wokwi";
 
     nlohmann::json parts = nlohmann::json::array();
@@ -234,8 +234,9 @@ std::string HardwareScaffolder::generateQoSFirmware(
        << "    while (!Serial && (millis() - startWait < 2000)) {}\n\n"
        << "    Serial.println(F(\"====================================================\"));\n"
        << "    Serial.println(F(\"   " << projectName << " Firmware Starting...\"));\n"
-       << "    Serial.println(F(\"   Made by: Lunarmist-byte\"));\n"
-       << "    Serial.println(F(\"   GitHub:  https://github.com/Lunarmist-byte\"));\n"
+       << "    Serial.println(F(\"   Made by:  Lunarmist-byte\"));\n"
+       << "    Serial.println(F(\"   GitHub:   https://github.com/Lunarmist-byte\"));\n"
+       << "    Serial.println(F(\"   LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\"));\n"
        << "    Serial.println(F(\"====================================================\"));\n\n"
        << "    // Initialize Watchdog\n"
        << "    initWatchdog();\n\n"
@@ -310,7 +311,7 @@ ScaffoldResult HardwareScaffolder::scaffoldProject(
         // 3. PlatformIO Config (platformio.ini)
         std::stringstream pio;
         pio << "; PlatformIO Project Configuration\n"
-            << "; Made by Lunarmist-byte (https://github.com/Lunarmist-byte)\n\n"
+            << "; Made by Lunarmist-byte (https://github.com/Lunarmist-byte | https://www.linkedin.com/in/amal-s-kumar-ba69a1290/)\n\n"
             << "[env:" << board.platformioBoardId << "]\n"
             << "platform = " << (board.id == "esp32" ? "espressif32" : (board.id == "pico" ? "raspberrypi" : (board.id == "arduino_uno" ? "atmelavr" : "ststm32"))) << "\n"
             << "board = " << board.platformioBoardId << "\n"
@@ -352,6 +353,8 @@ ScaffoldResult HardwareScaffolder::scaffoldProject(
         std::stringstream testCode;
         testCode << "// Hardware Unit Test Suite\n"
                  << "// Made by Lunarmist-byte\n"
+                 << "// GitHub: https://github.com/Lunarmist-byte\n"
+                 << "// LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n"
                  << "#include <unity.h>\n"
                  << "#include \"hardware_config.h\"\n\n"
                  << "void setUp(void) {}\n"

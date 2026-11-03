@@ -413,7 +413,7 @@ std::string UnslothManager::scaffoldTrainingScript(const UnslothTrainConfig& tra
            << "print(f'[UNSLOTH] GGUF exported successfully: {export_gguf_name}-" << trainCfg.ggufQuantization << ".gguf')\n";
     }
 
-    ss << "print('[UNSLOTH] Done! Made by Lunarmist-byte | https://github.com/Lunarmist-byte')\n";
+    ss << "print('[UNSLOTH] Done! Made by Lunarmist-byte | https://github.com/Lunarmist-byte | https://www.linkedin.com/in/amal-s-kumar-ba69a1290/')\n";
     return ss.str();
 }
 
@@ -425,7 +425,7 @@ std::string UnslothManager::scaffoldModelfile(const std::string& ggufPath, const
     (void)modelName;
     std::stringstream ss;
     ss << "# Modelfile for Ollama integration of Unsloth fine-tuned model\n"
-       << "# Made by Lunarmist-byte | https://github.com/Lunarmist-byte\n"
+       << "# Made by Lunarmist-byte | https://github.com/Lunarmist-byte | https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n"
        << "FROM " << ggufPath << "\n\n"
        << "TEMPLATE \"\"\"{{ if .System }}<|im_start|>system\n"
        << "{{ .System }}<|im_end|>\n"

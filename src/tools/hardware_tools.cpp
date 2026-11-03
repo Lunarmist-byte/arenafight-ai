@@ -303,7 +303,7 @@ ToolResult HardwareScaffoldTool::execute(const nlohmann::json& arguments, const 
         ss << res.message << "\n\nFiles Created:\n";
         for (const auto& f : res.filesCreated) ss << "  - " << f << "\n";
         ss << "\nWokwi Simulation Diagram: " << res.wokwiDiagramPath << "\n\n"
-           << "Made by Lunarmist-byte (https://github.com/Lunarmist-byte)\n";
+           << "Made by Lunarmist-byte (https://github.com/Lunarmist-byte | https://www.linkedin.com/in/amal-s-kumar-ba69a1290/)\n";
         r.output = ss.str();
     } else {
         r.error = res.message;
@@ -337,7 +337,8 @@ ToolResult HardwareVerifyQoSTool::execute(const nlohmann::json& arguments, const
        << "Overall QoS Score:   " << qos.overallScore << " / 100\n"
        << "QoS Rating Tier:     " << qos.qosTier << "\n"
        << "Made by:             Lunarmist-byte\n"
-       << "GitHub:              https://github.com/Lunarmist-byte\n\n"
+       << "GitHub:              https://github.com/Lunarmist-byte\n"
+       << "LinkedIn:            https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n\n"
        << "Quality Guarantees Verified:\n";
     for (const auto& g : qos.passedGuarantees) ss << "  [PASS] " << g << "\n";
 

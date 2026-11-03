@@ -99,7 +99,7 @@ struct Artifact {
 
     static Artifact fromJson(const nlohmann::json& j);
 
-    // Render formatted markdown with Antigravity YAML frontmatter
+    // Render formatted markdown with structured YAML frontmatter
     std::string toMarkdownWithFrontmatter() const;
 };
 
@@ -137,7 +137,7 @@ public:
     // Load from disk directory
     void reloadFromDisk();
 
-    // Helper builders for standard Antigravity artifacts
+    // Helper builders for standard project artifacts
     Artifact createPlanArtifact(
         const std::string& task,
         const std::string& planMarkdown,

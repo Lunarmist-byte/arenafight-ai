@@ -8,11 +8,13 @@
 #include <thread>
 #include <filesystem>
 #include <cstdlib>
+#include <mutex>
 #include <nlohmann/json.hpp>
 
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <tlhelp32.h>
 #else
 #include <unistd.h>
 #include <fcntl.h>
@@ -43,22 +45,51 @@ std::wstring s2ws(const std::string& str) {
 }
 #endif
 
+bool isOllamaProcessRunning() {
+#if defined(_WIN32)
+    HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (hSnap == INVALID_HANDLE_VALUE) return false;
+    PROCESSENTRY32W pe;
+    pe.dwSize = sizeof(PROCESSENTRY32W);
+    bool found = false;
+    if (Process32FirstW(hSnap, &pe)) {
+        do {
+            std::wstring exeName = pe.szExeFile;
+            std::string lowerName;
+            lowerName.reserve(exeName.size());
+            for (wchar_t wc : exeName) {
+                lowerName.push_back(static_cast<char>(std::tolower(wc)));
+            }
+            if (lowerName.find("ollama") != std::string::npos) {
+                found = true;
+                break;
+            }
+        } while (Process32NextW(hSnap, &pe));
+    }
+    CloseHandle(hSnap);
+    return found;
+#else
+    ProcessResult p = ProcessExecutor::executeShell("pgrep -x ollama 2>/dev/null", ".", 1000);
+    return p.exitCode == 0 && !p.stdOut.empty();
+#endif
+}
+
 } // namespace
 
 bool ServiceDaemon::isOllamaResponding(const std::string& baseUrl) {
     std::string url = normalizeUrl(baseUrl);
     try {
-        HttpResponse resp = HttpClient::instance().get(url + "/api/tags", {}, 2);
-        if (resp.success) return true;
-
-        // Try loopback alternate if localhost was used
+        // Fast-path: On Windows, prefer direct IPv4 127.0.0.1 to avoid IPv6 [::1] timeout delays
         if (url.find("localhost") != std::string::npos) {
             std::string alt = url;
             size_t pos = alt.find("localhost");
             alt.replace(pos, 9, "127.0.0.1");
-            HttpResponse resp2 = HttpClient::instance().get(alt + "/api/tags", {}, 2);
-            if (resp2.success) return true;
+            HttpResponse respFast = HttpClient::instance().get(alt + "/api/tags", {}, 1);
+            if (respFast.success) return true;
         }
+
+        HttpResponse resp = HttpClient::instance().get(url + "/api/tags", {}, 1);
+        if (resp.success) return true;
     } catch (...) {}
     return false;
 }
@@ -223,7 +254,35 @@ bool ServiceDaemon::ensureOllamaRunning(const std::string& baseUrl, int timeoutS
         return true;
     }
 
-    // 2. Locate Ollama executable
+    // 2. Thread-safe rate limiting: at most 1 launch attempt every 45 seconds
+    static std::mutex s_launchMutex;
+    std::lock_guard<std::mutex> lock(s_launchMutex);
+
+    // Re-check response under lock in case another thread just started it
+    if (isOllamaResponding(url)) {
+        return true;
+    }
+
+    static auto s_lastAttempt = std::chrono::steady_clock::time_point::min();
+    auto now = std::chrono::steady_clock::now();
+    auto elapsedSec = std::chrono::duration_cast<std::chrono::seconds>(now - s_lastAttempt).count();
+    if (elapsedSec < 45) {
+        // Cooldown active - do not spam new launch attempts
+        return false;
+    }
+    s_lastAttempt = now;
+
+    // 3. Check if an Ollama process is already running on the OS
+    if (isOllamaProcessRunning()) {
+        Logger::instance().info("[SERVICE] Ollama process already active on system; waiting for port readiness...");
+        for (int i = 0; i < 6; ++i) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            if (isOllamaResponding(url)) return true;
+        }
+        return isOllamaResponding(url);
+    }
+
+    // 4. Locate Ollama executable
     std::string exe = findOllamaExecutable();
     if (exe.empty()) {
         Logger::instance().debug("[SERVICE] Ollama binary not found on system. Auto-start bypassed.");
@@ -232,14 +291,14 @@ bool ServiceDaemon::ensureOllamaRunning(const std::string& baseUrl, int timeoutS
 
     Logger::instance().info("[SERVICE] Ollama server is offline. Autonomously launching daemon from: " + exe);
 
-    // 3. Launch daemon
+    // 5. Launch daemon
     if (!launchOllamaBackground(exe)) {
         Logger::instance().warn("[SERVICE] Failed to launch Ollama background process.");
         return false;
     }
 
-    // 4. Actively poll for readiness
-    int maxAttempts = (timeoutSeconds <= 0 ? 12 : timeoutSeconds) * 2; // Check every 500ms
+    // 6. Actively poll for readiness
+    int maxAttempts = (timeoutSeconds <= 0 ? 6 : timeoutSeconds) * 2; // Check every 500ms
     for (int i = 0; i < maxAttempts; ++i) {
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
         if (isOllamaResponding(url)) {

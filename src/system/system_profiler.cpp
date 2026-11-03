@@ -485,6 +485,7 @@ std::string SystemProfiler::formatAssessmentDashboard(
         << "Summary: " << limits.assessmentSummary << "\n"
         << "====================================================\n"
         << " Made by Lunarmist-byte | https://github.com/Lunarmist-byte\n"
+        << " LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n"
         << "====================================================\n\n";
 
     return oss.str();

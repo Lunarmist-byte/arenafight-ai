@@ -1,3 +1,7 @@
+# Made by Lunarmist-byte
+# GitHub: https://github.com/Lunarmist-byte
+# LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/
+
 cmake_minimum_required(VERSION 3.20)
 project(ArenaFightAgent VERSION 2.5.0 LANGUAGES CXX)
 

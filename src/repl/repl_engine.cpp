@@ -55,7 +55,7 @@ ReplEngine::ReplEngine(ArenaAgent &agent)
 
 void ReplEngine::registerCommands() {
   slashCommands_["/help"] = {
-      "/help", "Display command reference and Antigravity workflow guide",
+      "/help", "Display command reference and workflow guide",
       "/help [command]", [this](const std::string &args) { handleHelp(args); }};
 
   slashCommands_["/goal"] = {
@@ -312,27 +312,180 @@ void ReplEngine::printReplBanner() {
 }
 
 void ReplEngine::printHelpTable() {
+  struct CommandHelpItem {
+    std::string primary;
+    std::string alias;
+    std::string description;
+    std::string usage;
+  };
+
+  struct CommandGroup {
+    std::string title;
+    std::vector<CommandHelpItem> items;
+  };
+
+  const std::vector<CommandGroup> groups = {
+      {"1. Autonomous Execution & Reasoning",
+       {{"/goal", "",
+         "Autonomous goal pursuit with self-healing until all 6 gates pass",
+         "/goal <task description>"},
+        {"/plan", "",
+         "Break down task into structured plan artifact with milestones",
+         "/plan <task description>"},
+        {"/grill-me", "",
+         "Interactive requirements interview to resolve edge cases & decisions",
+         "/grill-me <project or feature idea>"},
+        {"/think", "/duel",
+         "Fast thinking-phase tournament: Compare reasoning without code gen",
+         "/think <task objective> [candidateA] [candidateB]"}}},
+
+      {"2. PC Hardware Profiling & Processing Levels",
+       {{"/level", "/processing",
+         "Set or view processing level: fast (standard) vs perfect_boi (adaptive)",
+         "/level [fast|perfect|perfect_boi]"},
+        {"/profile", "",
+         "Assess host hardware (CPU, RAM, GPU) and display dynamic limits",
+         "/profile [cpu|cuda]"},
+        {"/services", "/daemon",
+         "Autonomous service manager: detect & auto-start Ollama on Win/Linux",
+         "/services [start|status|pull <model>]"}}},
+
+      {"3. AI Models, Abilities & Providers",
+       {{"/models", "/model",
+         "List discovered models across providers or switch active model",
+         "/models [set <model_name>]"},
+        {"/abilities", "",
+         "Display multidimensional model capability matrix and scores",
+         "/abilities"},
+        {"/benchmark", "/bench",
+         "Benchmark models across reasoning, code, verification, & throughput",
+         "/benchmark [all|<model1> <model2>...]"},
+        {"/mode", "",
+         "View or switch runtime mode (standalone native vs OpenCode connected)",
+         "/mode [standalone|opencode]"},
+        {"/connect", "",
+         "Connect to OpenCode CLI bridge and synchronize workspace",
+         "/connect [opencode|standalone]"},
+        {"/disconnect", "",
+         "Disconnect from OpenCode bridge and revert to standalone mode",
+         "/disconnect"},
+        {"/opencode", "",
+         "OpenCode CLI integration status, model discovery, and prompt sync",
+         "/opencode [status|models|run <prompt>|sync]"},
+        {"/unsloth", "",
+         "Unsloth AI on-the-fly fine-tuning engine",
+         "/unsloth [status|train|dataset|scaffold]"}}},
+
+      {"4. Security, Evidence & Telemetry",
+       {{"/status", "",
+         "View CLI runtime mode, session state, and verification telemetry",
+         "/status"},
+        {"/metrics", "/telemetry",
+         "Display terminal live telemetry observatory & verification metrics",
+         "/metrics"},
+        {"/security", "",
+         "Inspect defense-in-depth security posture, path confinement, & scan",
+         "/security [scan|audit|level <strict|balanced|permissive>]"},
+        {"/audit", "",
+         "Inspect tamper-evident SHA-256 audit log and verify hash chain",
+         "/audit"}}},
+
+      {"5. Embedded & Hardware Engineering Studio",
+       {{"/boards", "/board",
+         "List or inspect microcontroller boards, architectures, and pinouts",
+         "/boards [filter] or /board <board-id>"},
+        {"/components", "",
+         "List supported sensors, actuators, and communication ICs",
+         "/components [filter]"},
+        {"/scaffold", "",
+         "Scaffold embedded project with Wokwi diagram and QoS firmware",
+         "/scaffold <board> <project_name>"},
+        {"/qos", "",
+         "Evaluate embedded C++ firmware for zero-heap, non-blocking QoS",
+         "/qos [path]"},
+        {"/calculate", "",
+         "Calculate circuit values: LED, divider, I2C pullup, battery life",
+         "/calculate <led|divider|i2c|battery> <args>"}}},
+
+      {"6. Workspace Context, Knowledge & Session Utilities",
+       {{"/files", "/file",
+         "Inspect, view, read, and attach workspace files to the session",
+         "/files [list|cat <path>|read <path>|attach <path>|attached|clear]"},
+        {"/learn", "",
+         "Persist a Knowledge Item (KI) or rule into repository memory",
+         "/learn <insight or rule description>"},
+        {"/schedule", "",
+         "Schedule a task to run after a delay or periodically",
+         "/schedule <delay_sec> <task description>"},
+        {"/artifacts", "",
+         "List, inspect, and preview generated project artifacts",
+         "/artifacts [artifact-id]"},
+        {"/skills", "",
+         "List available skills and view skill instructions",
+         "/skills [skill-name]"},
+        {"/rules", "",
+         "Display active workspace and system rules",
+         "/rules"},
+        {"/temp", "/temperature",
+         "Set or view model generation temperature (0.0 to 2.0)",
+         "/temp [float_value]"},
+        {"/tokens", "/max-tokens",
+         "Set or view max generation token limit",
+         "/tokens [int_value]"},
+        {"/guide", "/help-session",
+         "Launch interactive help session & runtime diagnostics",
+         "/guide"},
+        {"/clear", "",
+         "Clear console screen",
+         "/clear"},
+        {"/exit", "/quit",
+         "Exit interactive REPL session",
+         "/exit"}}}};
+
   std::cout << "\n"
-            << ANSI_BOLD << "Available Slash Commands:" << ANSI_RESET << "\n";
-  std::cout << "---------------------------------------------------------------"
-               "-----------------\n";
-  for (const auto &[cmd, info] : slashCommands_) {
-    std::cout << "  " << ANSI_CYAN << std::left;
-    std::cout.width(14);
-    std::cout << info.name << ANSI_RESET << " " << info.description << "\n";
-    std::cout << "  " << ANSI_DIM << "Usage: " << info.usage << ANSI_RESET
-              << "\n\n";
+            << ANSI_CYAN << ANSI_BOLD
+            << "================================================================================\n"
+            << "                       ARENAFIGHT SLASH COMMAND REFERENCE                       \n"
+            << "================================================================================\n"
+            << ANSI_RESET;
+
+  for (const auto &group : groups) {
+    std::cout << "\n"
+              << ANSI_BOLD << ANSI_YELLOW << group.title << ANSI_RESET << "\n"
+              << ANSI_DIM
+              << "--------------------------------------------------------------------------------\n"
+              << ANSI_RESET;
+    for (const auto &item : group.items) {
+      std::string cmdDisplay = item.primary;
+      if (!item.alias.empty()) {
+        cmdDisplay += " (alias: " + item.alias + ")";
+      }
+      std::cout << "  " << ANSI_CYAN << ANSI_BOLD << std::left;
+      std::cout.width(28);
+      std::cout << cmdDisplay << ANSI_RESET << " " << item.description << "\n";
+      std::cout << "  " << ANSI_DIM << "Usage: " << item.usage << ANSI_RESET
+                << "\n";
+    }
   }
-  std::cout << ANSI_BOLD << "Context Mentions:" << ANSI_RESET << "\n";
-  std::cout << "  " << ANSI_YELLOW << "@file <path>" << ANSI_RESET
-            << " : Attach file contents directly to your prompt\n";
-  std::cout << "  " << ANSI_YELLOW << "@git" << ANSI_RESET
-            << "        : Attach working tree status and git diff\n";
-  std::cout
-      << "  " << ANSI_YELLOW << "@claims" << ANSI_RESET
-      << "     : Attach current evidence & verified facts from ClaimRegistry\n";
-  std::cout << "  " << ANSI_YELLOW << "@memory" << ANSI_RESET
-            << "     : Attach discoveries and past session decisions\n\n";
+
+  std::cout << "\n"
+            << ANSI_BOLD << ANSI_YELLOW << "Context Mentions:" << ANSI_RESET << "\n"
+            << ANSI_DIM
+            << "--------------------------------------------------------------------------------\n"
+            << ANSI_RESET
+            << "  " << ANSI_YELLOW << "@file <path>" << ANSI_RESET
+            << " : Attach file contents directly to your prompt\n"
+            << "  " << ANSI_YELLOW << "@git" << ANSI_RESET
+            << "        : Attach working tree status and git diff\n"
+            << "  " << ANSI_YELLOW << "@claims" << ANSI_RESET
+            << "     : Attach current evidence & verified facts from ClaimRegistry\n"
+            << "  " << ANSI_YELLOW << "@memory" << ANSI_RESET
+            << "     : Attach discoveries and past session decisions\n\n"
+            << ANSI_DIM
+            << "Made by Lunarmist-byte | https://github.com/Lunarmist-byte\n"
+            << "LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n"
+            << "================================================================================\n\n"
+            << ANSI_RESET;
 }
 
 std::string ReplEngine::askUserInteractive(const std::string &prompt) {
@@ -443,7 +596,7 @@ void ReplEngine::handleGoal(const std::string &task) {
   }
 
   std::cout << "\n"
-            << ANSI_CYAN << ANSI_BOLD << "[ANTIGRAVITY GOAL MODE ACTIVE]"
+            << ANSI_CYAN << ANSI_BOLD << "[ARENA GOAL MODE ACTIVE]"
             << ANSI_RESET << "\n"
             << "Pursuing objective autonomously until all 6 verification gates "
                "pass:\n"
@@ -474,7 +627,7 @@ void ReplEngine::handlePlan(const std::string &task) {
   }
 
   std::cout << "\n"
-            << ANSI_CYAN << "[ANTIGRAVITY PLANNER]" << ANSI_RESET
+            << ANSI_CYAN << "[ARENA PLANNER]" << ANSI_RESET
             << " Formulating structured execution plan...\n";
 
   displayThinking(
@@ -553,7 +706,7 @@ void ReplEngine::handleGrillMe(const std::string &topic) {
   }
 
   std::cout << "\n"
-            << ANSI_MAGENTA << ANSI_BOLD << "[ANTIGRAVITY /GRILL-ME INTERVIEW]"
+            << ANSI_MAGENTA << ANSI_BOLD << "[ARENA /GRILL-ME INTERVIEW]"
             << ANSI_RESET << "\n"
             << "Probing edge cases, architectural trade-offs, and failure "
                "modes for:\n"
@@ -923,7 +1076,7 @@ void ReplEngine::handleConnect(const std::string &args) {
         << "Workspace Sync : " << (synced ? "SUCCESS (.opencode/opencode.json, INSTRUCTIONS.md)" : "SKIPPED") << "\n"
         << "Default Provider: OpenCode CLI Provider\n"
         << "Verification   : 6 Physical Evidence Gates active (Model Output != Truth)\n"
-        << "Made by Lunarmist-byte | https://github.com/Lunarmist-byte\n\n";
+        << "Made by Lunarmist-byte | https://github.com/Lunarmist-byte | https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n\n";
   } else {
     std::cout << ANSI_YELLOW << "Unsupported connection target: " << target
               << ". Supported: 'opencode'.\n" << ANSI_RESET;
@@ -941,7 +1094,7 @@ void ReplEngine::handleDisconnect(const std::string &) {
             << "Mode           : STANDALONE (Self-Contained Native)\n"
             << "Execution      : Built-in C++20 engine with native file and process tools\n"
             << "Default Provider: auto (Ollama, local endpoints, OpenRouter, or TestMock)\n"
-            << "Made by Lunarmist-byte | https://github.com/Lunarmist-byte\n\n";
+            << "Made by Lunarmist-byte | https://github.com/Lunarmist-byte | https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n\n";
 }
 
 void ReplEngine::handleOpenCode(const std::string &args) {
@@ -986,7 +1139,8 @@ void ReplEngine::handleOpenCode(const std::string &args) {
     }
     std::cout
         << "----------------------------------------------------\n"
-        << " Made by Lunarmist-byte | https://github.com/Lunarmist-byte\n\n";
+        << " Made by Lunarmist-byte | https://github.com/Lunarmist-byte\n"
+        << " LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n\n";
     return;
   }
 
@@ -1107,7 +1261,8 @@ void ReplEngine::handleUnsloth(const std::string &args) {
         << "  /unsloth train              Trigger on-the-fly QLoRA fine-tuning "
            "and export GGUF\n"
         << "----------------------------------------------------\n"
-        << " Made by Lunarmist-byte | https://github.com/Lunarmist-byte\n\n";
+        << " Made by Lunarmist-byte | https://github.com/Lunarmist-byte\n"
+        << " LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n\n";
     return;
   }
 
@@ -1344,7 +1499,8 @@ void ReplEngine::handleFiles(const std::string &args) {
         << "  /files attached             List currently attached files\n"
         << "  /files clear                Clear all attached files\n"
         << "----------------------------------------------------\n"
-        << " Made by Lunarmist-byte | https://github.com/Lunarmist-byte\n\n";
+        << " Made by Lunarmist-byte | https://github.com/Lunarmist-byte\n"
+        << " LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n\n";
     return;
   }
 
@@ -1822,7 +1978,7 @@ void ReplEngine::processInput(const std::string &rawInput) {
             << "  - Type " << ANSI_YELLOW << "/grill-me " << line << ANSI_RESET
             << " to clarify requirements before implementation.\n\n"
             << ANSI_DIM
-            << "Made by Lunarmist-byte | https://github.com/Lunarmist-byte"
+            << "Made by Lunarmist-byte | https://github.com/Lunarmist-byte | https://www.linkedin.com/in/amal-s-kumar-ba69a1290/"
             << ANSI_RESET << "\n\n";
 }
 
@@ -2024,7 +2180,7 @@ void ReplEngine::run() {
     processInput(input);
   }
 
-  std::cout << "\nExiting ArenaFight Antigravity REPL. Goodbye!\n";
+  std::cout << "\nExiting ArenaFight REPL. Goodbye!\n";
 }
 
 } // namespace arenafight

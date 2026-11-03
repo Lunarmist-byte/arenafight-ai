@@ -6,7 +6,7 @@
 
 An autonomous, local-first multi-model AI agent orchestration runtime and execution system built in **C++20**.
 
-ArenaFight is primarily a **developer-first, high-performance CLI tool** (`arena` / `arena.exe`) designed for fast terminal workflows, autonomous coding, research, embedded systems engineering, and physical debugging (akin to **Google Antigravity** and **Claude Code** execution). It moves beyond standard chatbot question-and-answer patterns by operating an autonomous, self-evaluating execution loop: understanding tasks, generating structured task graphs with explicit dependencies, evaluating model abilities to plan optimal assignments, invoking tools, updating persistent memory, independently verifying physical evidence, debugging failures, and replanning until the objective is genuinely achieved.
+ArenaFight is primarily a **developer-first, high-performance CLI tool** (`arena` / `arena.exe`) designed for fast terminal workflows, autonomous coding, research, embedded systems engineering, and physical debugging (akin to advanced autonomous agent execution). It moves beyond standard chatbot question-and-answer patterns by operating an autonomous, self-evaluating execution loop: understanding tasks, generating structured task graphs with explicit dependencies, evaluating model abilities to plan optimal assignments, invoking tools, updating persistent memory, independently verifying physical evidence, debugging failures, and replanning until the objective is genuinely achieved.
 
 It operates with a dual-mode runtime architecture:
 * **Standalone Mode (Default):** Runs completely self-contained with zero external dependencies, native C++ tool executors, local model providers (Ollama, local vLLM, custom OpenAI endpoints, OpenRouter, or TestMock), 6 physical verification gates, fast thinking-phase tournaments, Unsloth fine-tuning, and the universal benchmarking engine.
@@ -366,7 +366,7 @@ The C++ codebase is refactored according to modern C++20 best practices:
 
 ```text
 Usage:
-  arena                          Launch Antigravity Interactive REPL
+  arena                          Launch Interactive REPL
   arena "<task>"                  Execute a task autonomously (/goal)
   arena goal "<task>"             Autonomous goal pursuit with verification
   arena plan "<task>"             Generate structured plan artifact with milestones

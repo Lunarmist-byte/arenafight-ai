@@ -280,9 +280,9 @@ test_*_ws/
 test_*_dir/
 test_security_*/
 mock_output.txt
-docs/
-DEV_TUTORIAL.md
-docs/DEV_TUTORIAL.md
+!docs/
+!docs/*.md
+!docs/*.pdf
 *.bak
 *.tmp
 *.swp
