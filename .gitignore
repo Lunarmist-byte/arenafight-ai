@@ -237,6 +237,8 @@ out/
 *.pdb
 *.ilk
 *.exp
+*.old
+*.exe.old
 
 # CMake Build System
 CMakeCache.txt
@@ -250,10 +252,20 @@ _deps/
 CMakeUserPresets.json
 
 # ArenaFight Runtime Sessions, Memory & Audit Trails
-.arena/
+# (Preserve .arena/skills/, .arena/rules/, .arena/knowledge/, .arena/artifacts/)
+.arena/sessions/
+.arena/logs/
+.arena/*.log
+.arena/*.tmp
+.arena/security_audit.jsonl
+.arena/*.pid
 sessions/
 logs/
 *.log
+
+# Temporary Scratch & Agent Workspaces
+scratch/
+.gemini/
 
 # Benchmarking Outputs
 benchmark_results.json
