@@ -1,4 +1,5 @@
 #include "arenafight/common/logger.hpp"
+#include "arenafight/security/security_sandbox.hpp"
 #include <iostream>
 #include <chrono>
 #include <iomanip>
@@ -58,15 +59,7 @@ void Logger::close() {
 }
 
 std::string Logger::sanitize(const std::string& text) {
-    // Redact sk-or-v1-..., Bearer tokens, and explicit api keys
-    static const std::regex bearerRegex("Bearer\\s+([A-Za-z0-9_\\-\\.]+)", std::regex::icase);
-    static const std::regex openrouterRegex("sk-or-v1-[A-Za-z0-9]{32,}", std::regex::icase);
-    static const std::regex genericKeyRegex("api[_-]?key[\"']?\\s*[:=]\\s*[\"']?([A-Za-z0-9_\\-]{16,})[\"']?", std::regex::icase);
-
-    std::string result = std::regex_replace(text, bearerRegex, "Bearer [REDACTED]");
-    result = std::regex_replace(result, openrouterRegex, "[REDACTED_API_KEY]");
-    result = std::regex_replace(result, genericKeyRegex, "api_key=[REDACTED]");
-    return result;
+    return SecuritySandbox::redactSecrets(text);
 }
 
 void Logger::log(LogLevel level, const std::string& message) {

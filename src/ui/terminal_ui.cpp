@@ -1,4 +1,7 @@
 #include "arenafight/ui/terminal_ui.hpp"
+#include "arenafight/benchmark/benchmark_engine.hpp"
+#include "arenafight/security/security_sandbox.hpp"
+#include "arenafight/system/system_profiler.hpp"
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -28,14 +31,81 @@ std::string formatNumber(int num) {
 
 } // namespace
 
-void TerminalUI::printBanner() {
+void TerminalUI::printBanner(const std::string& mode) {
+    std::string modeTag = (mode == "opencode" || mode == "OPENCODE CONNECTED")
+        ? "OPENCODE CONNECTED (Bridge Active)"
+        : "STANDALONE (Self-Contained Native)";
+
     std::cout << "\n"
               << "====================================================\n"
-              << "                 ARENAFIGHT AGENT                   \n"
+              << "                 ARENAFIGHT CLI                     \n"
               << "   Autonomous Multi-Model Execution Runtime (C++20) \n"
+              << "   Runtime Mode: " << modeTag << "\n"
+              << "   UI Variants: Prism Deck | Vanguard | Pulse       \n"
               << "----------------------------------------------------\n"
               << " Made by: Lunarmist-byte\n"
               << " GitHub:   https://github.com/Lunarmist-byte\n"
+              << " LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n"
+              << "====================================================\n\n";
+}
+
+void TerminalUI::printStatusDashboard(
+    const Config& config,
+    const std::string& activeModel,
+    const std::vector<std::pair<std::string, bool>>& providerStatuses,
+    const Session& session
+) {
+    bool isOc = config.isOpenCodeConnected();
+    std::cout << "\n====================================================\n"
+              << "             ARENAFIGHT CLI STATUS DASHBOARD         \n"
+              << "====================================================\n"
+              << "Runtime Architecture : Standalone C++20 CLI Tool\n"
+              << "Connected Bridge     : "
+              << (isOc ? "\033[32m[CONNECTED: OPENCODE]\033[0m" : "\033[36m[STANDALONE: NATIVE]\033[0m") << "\n"
+              << "Processing Level     : "
+              << (config.isPerfectBoi() ? "\033[35m[PERFECT BOI: Deep Adaptive Proof]\033[0m" : "\033[36m[FAST: Standard Turnaround]\033[0m") << "\n";
+
+    HardwareSpec hw = SystemProfiler::profileHostMachine(config.force_cpu);
+    std::cout << "Hardware Acceleration: ";
+    if (hw.isCuda()) {
+        std::cout << "\033[32m[CUDA ACCELERATED: " << hw.gpuName << " (" << hw.cudaVersion << ")]\033[0m\n";
+    } else if (hw.isIntegratedGpu()) {
+        std::cout << "\033[33m[iGPU / INTEGRATED: " << hw.igpuName << " - NOTICEABLY SLOWER]\033[0m\n";
+    } else {
+        std::cout << "\033[33m[CPU ONLY: NO GPU - NOTICEABLY SLOWER]\033[0m\n";
+    }
+
+    std::cout << "Active Model         : " << (activeModel.empty() ? "(Auto Routed)" : activeModel) << "\n"
+              << "Default Provider     : " << config.default_provider << "\n"
+              << "Workspace Path       : " << config.workspace_dir << "\n"
+              << "Security Posture     : \033[32m[" << config.security_level << " : Path Jail ON • DLP Redactor ON • Audit Chain ON]\033[0m\n"
+              << "Default Temperature  : " << config.default_temperature << "\n"
+              << "Max Generation Tokens: " << config.default_max_tokens << "\n"
+              << "----------------------------------------------------\n"
+              << "AI MODEL BACKENDS STATUS:\n";
+
+    for (const auto& [name, ok] : providerStatuses) {
+        std::cout << "  * " << std::left;
+        std::cout.width(18);
+        std::cout << name << ": "
+                  << (ok ? "\033[32mONLINE\033[0m" : "\033[33mOFFLINE\033[0m")
+                  << "\n";
+    }
+
+    std::cout << "----------------------------------------------------\n"
+              << "ACTIVE SESSION TELEMETRY:\n"
+              << "  * Session ID       : " << (session.id.empty() ? "(No active session)" : session.id) << "\n"
+              << "  * State            : " << session.currentState << "\n"
+              << "  * Iterations       : " << session.iteration << "\n"
+              << "  * Verified Claims  : " << session.getClaimRegistry().getVerifiedClaims().size() << "\n"
+              << "  * Contradictions   : " << session.getClaimRegistry().getContradictions().size() << "\n"
+              << "----------------------------------------------------\n"
+              << "AVAILABLE UI VARIANTS (Run: arena ui [name]):\n"
+              << "  1. Prism Command Deck  -> simple_ui.html (Streamlined)\n"
+              << "  2. Vanguard Studio     -> index.html     (Autonomous IDE)\n"
+              << "  3. Pulse Observatory   -> metrics.html   (Live Telemetry)\n"
+              << "----------------------------------------------------\n"
+              << " Made by Lunarmist-byte | https://github.com/Lunarmist-byte\n"
               << " LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n"
               << "====================================================\n\n";
 }
@@ -68,7 +138,11 @@ void TerminalUI::printPlanStatus(const Session& session) {
             default:                    statusTag = "\033[90mPENDING\033[0m"; break;
         }
 
-        std::cout << ss.str() << " " << statusTag << "\n";
+        std::cout << ss.str() << " " << statusTag;
+        if (!t.plannedModel.empty()) {
+            std::cout << " -> " << t.plannedModel;
+        }
+        std::cout << "\n";
     }
     std::cout << "\n";
 }
@@ -203,20 +277,61 @@ void TerminalUI::printModelsList(const std::vector<ModelInfo>& models) {
 
     std::cout << std::left
               << std::setw(14) << "PROVIDER"
-              << std::setw(36) << "MODEL ID"
-              << std::setw(10) << "LOCAL"
+              << std::setw(32) << "MODEL ID"
+              << std::setw(8)  << "LOCAL"
               << std::setw(10) << "CONTEXT"
+              << std::setw(18) << "STRENGTH"
               << "SCORE"
               << "\n";
-    std::cout << std::string(75, '-') << "\n";
+    std::cout << std::string(90, '-') << "\n";
 
     for (const auto& m : models) {
         std::cout << std::left
                   << std::setw(14) << m.provider
-                  << std::setw(36) << (m.id.size() > 34 ? m.id.substr(0, 32) + ".." : m.id)
-                  << std::setw(10) << (m.isLocal ? "YES" : "NO")
+                  << std::setw(32) << (m.id.size() > 30 ? m.id.substr(0, 28) + ".." : m.id)
+                  << std::setw(8)  << (m.isLocal ? "YES" : "NO")
                   << std::setw(10) << m.contextWindow
+                  << std::setw(18) << m.abilities.primaryStrength()
                   << std::fixed << std::setprecision(1) << m.capabilityScore
+                  << "\n";
+    }
+    printFooter();
+}
+
+void TerminalUI::printAbilityMatrix(const std::vector<std::pair<ModelInfo, ModelAbilities>>& matrix) {
+    printBanner();
+    std::cout << "Model Ability Matrix & Capability Breakdown:\n\n";
+    if (matrix.empty()) {
+        std::cout << "No model abilities registered.\n";
+        printFooter();
+        return;
+    }
+
+    std::cout << std::left
+              << std::setw(28) << "MODEL ID"
+              << std::setw(12) << "PROVIDER"
+              << std::setw(8)  << "CODE"
+              << std::setw(8)  << "REASON"
+              << std::setw(8)  << "PLAN"
+              << std::setw(8)  << "VERIF"
+              << std::setw(8)  << "HW"
+              << std::setw(8)  << "SPEED"
+              << "STRENGTH"
+              << "\n";
+    std::cout << std::string(98, '-') << "\n";
+
+    for (const auto& [m, a] : matrix) {
+        std::cout << std::left
+                  << std::setw(28) << (m.id.size() > 26 ? m.id.substr(0, 24) + ".." : m.id)
+                  << std::setw(12) << m.provider
+                  << std::fixed << std::setprecision(2)
+                  << std::setw(8)  << a.coding
+                  << std::setw(8)  << a.reasoning
+                  << std::setw(8)  << a.planning
+                  << std::setw(8)  << a.verification
+                  << std::setw(8)  << a.hardware
+                  << std::setw(8)  << a.speed
+                  << a.primaryStrength()
                   << "\n";
     }
     printFooter();
@@ -226,6 +341,161 @@ void TerminalUI::printConfigView(const nlohmann::json& configJson) {
     printBanner();
     std::cout << "Current Configuration (config.json):\n\n"
               << configJson.dump(4) << "\n";
+    printFooter();
+}
+
+void TerminalUI::printThinkingDuel(const ThinkingDuelResult& res) {
+    printBanner();
+    std::cout << "FAST THINKING-PHASE TOURNAMENT RESULT:\n"
+              << "Objective: " << res.taskObjective << "\n"
+              << "Status:    Early termination enforced (Full code generation DISALLOWED)\n\n"
+              << std::string(98, '=') << "\n"
+              << std::left
+              << std::setw(28) << "METRIC"
+              << std::setw(35) << ("CANDIDATE A: " + res.candidateA.model)
+              << ("CANDIDATE B: " + res.candidateB.model) << "\n"
+              << std::string(98, '-') << "\n";
+
+    auto printRow = [](const std::string& name, const std::string& valA, const std::string& valB) {
+        std::cout << std::left << std::setw(28) << name
+                  << std::setw(35) << valA
+                  << valB << "\n";
+    };
+
+    auto fmtFloat = [](float val) {
+        std::stringstream ss;
+        ss << std::fixed << std::setprecision(2) << val;
+        return ss.str();
+    };
+
+    printRow("Thinking Tokens", std::to_string(res.candidateA.thinkingTokens) + " tokens", std::to_string(res.candidateB.thinkingTokens) + " tokens");
+    printRow("Thinking Latency", std::to_string(res.candidateA.latencyMs) + " ms", std::to_string(res.candidateB.latencyMs) + " ms");
+    printRow("Edge-Case Score", fmtFloat(res.candidateA.edgeCaseScore), fmtFloat(res.candidateB.edgeCaseScore));
+    printRow("Invariant Soundness", fmtFloat(res.candidateA.invariantScore), fmtFloat(res.candidateB.invariantScore));
+    printRow("Algorithmic Efficiency", fmtFloat(res.candidateA.efficiencyScore), fmtFloat(res.candidateB.efficiencyScore));
+    printRow("Code Discipline Score", fmtFloat(res.candidateA.codeDisciplineScore), fmtFloat(res.candidateB.codeDisciplineScore));
+    printRow("Composite Thinking Score", fmtFloat(res.candidateA.compositeScore), fmtFloat(res.candidateB.compositeScore));
+    printRow("Edge Cases Identified", std::to_string(res.candidateA.edgeCasesIdentified.size()) + " anticipated", std::to_string(res.candidateB.edgeCasesIdentified.size()) + " anticipated");
+
+    std::cout << std::string(98, '-') << "\n";
+    std::cout << "WINNER: " << res.winningModel << "\n"
+              << "RATIONALE: " << res.winningRationale << "\n\n"
+              << "EFFICIENCY SAVINGS (Code Generation Disallowed):\n"
+              << "  * Compute Tokens Saved:  ~" << res.tokensSaved << " tokens (avoided generation waste)\n"
+              << "  * Execution Latency Saved: ~" << (res.estimatedMsSaved / 1000.0f) << " seconds faster\n\n";
+
+    if (!res.candidateA.edgeCasesIdentified.empty()) {
+        std::cout << "[" << res.candidateA.model << " Edge Cases]:\n";
+        for (const auto& ec : res.candidateA.edgeCasesIdentified) {
+            std::cout << "  - " << ec << "\n";
+        }
+    }
+    if (!res.candidateB.edgeCasesIdentified.empty()) {
+        std::cout << "[" << res.candidateB.model << " Edge Cases]:\n";
+        for (const auto& ec : res.candidateB.edgeCasesIdentified) {
+            std::cout << "  - " << ec << "\n";
+        }
+    }
+
+    printFooter();
+}
+
+void TerminalUI::printHelpSession(const Config& config, const std::vector<std::pair<std::string, bool>>& providerStatuses) {
+    std::cout << "\n"
+              << "================================================================================\n"
+              << "                 ARENAFIGHT AGENT -- INTERACTIVE HELP SESSION                   \n"
+              << "          Autonomous Multi-Model Execution Runtime & Physical Verifier          \n"
+              << "--------------------------------------------------------------------------------\n"
+              << " Made by: Lunarmist-byte\n"
+              << " GitHub:   https://github.com/Lunarmist-byte\n"
+              << " LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n"
+              << "================================================================================\n\n";
+
+    std::cout << "1. RUNTIME DIAGNOSTICS & SYSTEM STATUS:\n"
+              << "--------------------------------------------------------------------------------\n"
+              << "  * Workspace Directory:     " << config.workspace_dir << "\n"
+              << "  * Default Temperature:     " << config.default_temperature << " (range: 0.0 - 2.0)\n"
+              << "  * Default Max Tokens:      " << config.default_max_tokens << " tokens\n"
+              << "  * Max Loop Iterations:     " << config.max_iterations << " iterations\n"
+              << "  * Max Task Retries:        " << config.max_retries << " attempts\n"
+              << "  * Providers Status:\n";
+
+    for (const auto& [name, online] : providerStatuses) {
+        std::cout << "    - " << std::left << std::setw(20) << name << ": "
+                  << (online ? "\033[32mONLINE\033[0m" : "\033[33mOFFLINE / STANDBY\033[0m") << "\n";
+    }
+
+    std::cout << "\n2. FAST THINKING-PHASE TOURNAMENT (/think, /duel):\n"
+              << "--------------------------------------------------------------------------------\n"
+              << "  Standard tournaments let both LLMs generate thousands of tokens over 30-45s,\n"
+              << "  wasting compute on the losing model. ArenaFight accelerates this by:\n"
+              << "  - Enforcing early stopping: CODE GENERATION IS STRICTLY DISALLOWED.\n"
+              << "  - Directly evaluating internal reasoning, edge-case anticipation, and safety invariants.\n"
+              << "  - Token bounds: Strictly limited to ~384 tokens (~85% latency & compute saved).\n"
+              << "  Usage:\n"
+              << "    arena think \"<objective>\" [modelA] [modelB]\n"
+              << "    /think <objective> [modelA] [modelB]\n"
+              << "  Example:\n"
+              << "    arena think \"Design lock-free ring buffer with zero-heap guarantees\"\n\n";
+
+    std::cout << "3. FILE OPERATIONS & CONTEXT ATTACHMENTS (/files, @file):\n"
+              << "--------------------------------------------------------------------------------\n"
+              << "  Attach local files, headers, or specs directly into session memory:\n"
+              << "  - CLI options:     arena --file <path> \"<objective>\"\n"
+              << "                     arena --files p1,p2 \"<objective>\"\n"
+              << "  - REPL commands:   /files list             (explore workspace files)\n"
+              << "                     /files cat <path>       (preview file contents)\n"
+              << "                     /files attach <path>    (attach file to active session)\n"
+              << "                     /files attached         (view all currently attached files)\n"
+              << "  - Context mentions: Inject @file <path> directly in any chat prompt.\n\n";
+
+    std::cout << "4. UNSLOTH AI ON-THE-FLY FINE-TUNING (/unsloth):\n"
+              << "--------------------------------------------------------------------------------\n"
+              << "  Fine-tune local LLMs directly from verified trajectories and workspace files:\n"
+              << "  - /unsloth status:   Inspect PyTorch & Unsloth GPU readiness (4-bit QLoRA).\n"
+              << "  - /unsloth dataset:  Extract high-quality reasoning datasets from session history.\n"
+              << "  - /unsloth scaffold: Generate standalone training script (unsloth_train.py).\n"
+              << "  - /unsloth train:    Execute fine-tuning on the fly and auto-export GGUF.\n\n";
+
+    std::cout << "5. HARDWARE & EMBEDDED STUDIO (/boards, /scaffold, /qos):\n"
+              << "--------------------------------------------------------------------------------\n"
+              << "  Design and verify real-time embedded systems without hardware damage:\n"
+              << "  - /boards:           List 15+ microcontrollers (ESP32, Pico, STM32, Arduino).\n"
+              << "  - /board <id>:       Inspect strapping pins, voltage domains, and input-only GPIOs.\n"
+              << "  - /calculate <type>: Compute circuit values (LED resistor, voltage divider, I2C pullup).\n"
+              << "  - /scaffold <board>: Scaffold firmware with Wokwi simulation diagram (diagram.json).\n"
+              << "  - /qos [path]:       Verify zero-heap allocations, non-blocking loops, and watchdogs.\n\n";
+
+    std::cout << "6. PHYSICAL EVIDENCE VERIFICATION (6 GATES):\n"
+              << "--------------------------------------------------------------------------------\n"
+              << "  ArenaFight enforces the Level 1 Dominance Rule: Physical execution always\n"
+              << "  overrules model consensus and speculative claims:\n"
+              << "  * Gate 1: Artifacts present on disk.\n"
+              << "  * Gate 2: Code compiles (exit code 0).\n"
+              << "  * Gate 3: Automated tests pass.\n"
+              << "  * Gate 4: All plan requirements fulfilled.\n"
+              << "  * Gate 5: Independent adversarial security review.\n"
+              << "  * Gate 6: Zero unresolved contradictions in ClaimRegistry.\n\n";
+
+    std::cout << "7. WEB UI DASHBOARDS:\n"
+              << "--------------------------------------------------------------------------------\n"
+              << "  - arena ui prism:    ArenaFight Prism (Streamlined Command Deck, simple_ui.html)\n"
+              << "  - arena ui vanguard: ArenaFight Vanguard Studio (Multi-Pane Autonomous IDE, index.html)\n"
+              << "  - arena ui pulse:    ArenaFight Pulse (Live Telemetry & Metrics Observatory, metrics.html)\n\n";
+
+    std::cout << "8. QUICK-START CHEAT SHEET:\n"
+              << "--------------------------------------------------------------------------------\n"
+              << "  * /goal <task>       Pursue goal autonomously to completion\n"
+              << "  * /plan <task>       Generate interactive plan artifact\n"
+              << "  * /grill-me <idea>   Interactive requirements interview before writing code\n"
+              << "  * /think <task>      Fast thinking duel (code gen disallowed)\n"
+              << "  * /metrics, /pulse   Launch live telemetry & metrics observatory\n"
+              << "  * /temp [float]      Adjust generation temperature (0.0 - 2.0)\n"
+              << "  * /tokens [int]      Adjust max output token limit\n"
+              << "  * /abilities         Display multi-dimensional model ability matrix\n"
+              << "  * /status            View session telemetry and claim confidence\n"
+              << "  * /exit              Exit REPL\n";
+
     printFooter();
 }
 
@@ -387,6 +657,70 @@ void TerminalUI::printQoSTelemetryReport(const QoSTelemetry& qos) {
     }
     std::cout << "\n";
     printFooter();
+}
+
+void TerminalUI::printBenchmarkReport(const BenchmarkSuiteResult& suite) {
+    std::cout << "\n" << BenchmarkEngine::formatLeaderboardReport(suite) << "\n";
+}
+
+void TerminalUI::printSecurityDashboard(
+    const Config& config,
+    const SecurityScanReport& report,
+    bool auditChainValid,
+    const std::vector<SecurityAuditRecord>& recentLogs
+) {
+    std::cout << "\n========================================================================\n"
+              << "             ARENAFIGHT DEFENSE-IN-DEPTH SECURITY POSTURE               \n"
+              << "========================================================================\n"
+              << "Security Level       : \033[36m[" << config.security_level << "]\033[0m\n"
+              << "Path Confinement     : \033[32m[ACTIVE JAIL: " << config.workspace_dir << "]\033[0m\n"
+              << "Secret DLP Redactor  : \033[32m[ACTIVE: OpenAI, Anthropic, OpenRouter, GitHub, AWS, Keys]\033[0m\n"
+              << "Prompt Injection     : \033[32m[ACTIVE: Trojan Source BiDi & Jailbreak Filter]\033[0m\n"
+              << "Audit Log Integrity  : " << (auditChainValid ? "\033[32m[VERIFIED SHA-256 HASH CHAIN]\033[0m" : "\033[31m[TAMPER DETECTED]\033[0m") << "\n"
+              << "Workspace Score      : \033[36m" << report.score << " / 100\033[0m\n"
+              << "Files Scanned        : " << report.filesScanned << "\n"
+              << "Secret Leaks Found   : " << report.secretLeaksFound << "\n"
+              << "Insecure Scripts     : " << report.insecureScriptsFound << "\n"
+              << "Protected Files      : " << report.sensitiveFilesExposed << "\n"
+              << "------------------------------------------------------------------------\n";
+
+    if (!report.findings.empty()) {
+        std::cout << "SECURITY FINDINGS:\n";
+        for (const auto& f : report.findings) {
+            std::cout << "  * \033[33m" << f << "\033[0m\n";
+        }
+        std::cout << "------------------------------------------------------------------------\n";
+    }
+
+    if (!report.recommendations.empty()) {
+        std::cout << "RECOMMENDATIONS:\n";
+        for (const auto& r : report.recommendations) {
+            std::cout << "  * \033[32m" << r << "\033[0m\n";
+        }
+        std::cout << "------------------------------------------------------------------------\n";
+    }
+
+    if (!recentLogs.empty()) {
+        std::cout << "RECENT SECURITY AUDIT EVENTS (.arena/security_audit.jsonl):\n";
+        size_t start = recentLogs.size() > 5 ? recentLogs.size() - 5 : 0;
+        for (size_t i = start; i < recentLogs.size(); ++i) {
+            const auto& l = recentLogs[i];
+            std::string timeSub = l.timestamp.length() >= 19 ? l.timestamp.substr(11, 8) : l.timestamp;
+            std::cout << "  [" << timeSub << "] "
+                      << std::left;
+            std::cout.width(10);
+            std::cout << l.severity << " "
+                      << std::left;
+            std::cout.width(26);
+            std::cout << l.event << " "
+                      << l.details.substr(0, 50) << "\n";
+        }
+        std::cout << "------------------------------------------------------------------------\n";
+    }
+
+    std::cout << " Made by Lunarmist-byte | https://github.com/Lunarmist-byte\n"
+              << " LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n"
+              << "========================================================================\n\n";
 }
 
 } // namespace arenafight

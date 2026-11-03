@@ -108,6 +108,17 @@ std::vector<Task> Planner::createInitialPlan(
         tasks = generateHeuristicPlan(session.originalTask);
     }
 
+    // Plan which model to use for each task based on capability profile & abilities
+    for (auto& t : tasks) {
+        ModelSelection planned = router_.selectModelForTask(t);
+        if (planned.provider) {
+            t.plannedModel = planned.model.id;
+            t.assignedModel = planned.model.id;
+            t.abilityReason = planned.reason;
+            Logger::instance().debug("Planned task [" + t.id + "] -> Model: " + t.plannedModel + " (" + t.abilityReason + ")");
+        }
+    }
+
     session.tasks = tasks;
     memory.addDecision("Initial execution plan created with " + std::to_string(tasks.size()) + " subtasks");
     return tasks;
@@ -146,6 +157,13 @@ std::vector<Task> Planner::replan(
             debugTask.status = TaskStatus::PENDING;
             debugTask.dependencies = {}; // Ready immediately
 
+            ModelSelection planned = router_.selectModelForTask(debugTask);
+            if (planned.provider) {
+                debugTask.plannedModel = planned.model.id;
+                debugTask.assignedModel = planned.model.id;
+                debugTask.abilityReason = planned.reason;
+            }
+
             // Update downstream tasks that depended on failedTask to depend on debugTask instead
             for (auto& t : session.tasks) {
                 for (auto& dep : t.dependencies) {
@@ -167,6 +185,14 @@ std::vector<Task> Planner::replan(
         fixTask.type = TaskType::CODING;
         fixTask.status = TaskStatus::PENDING;
         fixTask.dependencies = session.completedTasks;
+
+        ModelSelection planned = router_.selectModelForTask(fixTask);
+        if (planned.provider) {
+            fixTask.plannedModel = planned.model.id;
+            fixTask.assignedModel = planned.model.id;
+            fixTask.abilityReason = planned.reason;
+        }
+
         session.tasks.push_back(fixTask);
         Logger::instance().info("Created corrective task: " + fixId);
     }

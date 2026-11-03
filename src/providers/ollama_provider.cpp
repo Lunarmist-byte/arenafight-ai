@@ -1,4 +1,6 @@
 #include "arenafight/providers/ollama_provider.hpp"
+#include "arenafight/services/service_daemon.hpp"
+#include "arenafight/system/system_profiler.hpp"
 #include "arenafight/common/http_client.hpp"
 #include "arenafight/common/logger.hpp"
 #include "arenafight/common/process.hpp"
@@ -27,54 +29,17 @@ bool OllamaProvider::supportsTools(const std::string& modelId) const {
 }
 
 bool OllamaProvider::tryAutoStartOllama() {
-    ProcessResult chk = ProcessExecutor::executeShell("Get-Command ollama -ErrorAction SilentlyContinue", ".", 3000);
-    if (chk.exitCode != 0 || chk.stdOut.empty()) {
-        return false;
-    }
-
-    Logger::instance().info("Ollama is not responding. Attempting to start Ollama server in background...");
-
-    if (ProcessExecutor::isWindows()) {
-        ProcessExecutor::executeShell("Start-Process -FilePath 'ollama' -ArgumentList 'serve' -WindowStyle Hidden", ".", 3000);
-    } else {
-        ProcessExecutor::executeShell("nohup ollama serve > /dev/null 2>&1 &", ".", 3000);
-    }
-
-    for (int i = 0; i < 8; ++i) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(400));
-        HttpResponse checkResp = HttpClient::instance().get(baseUrl_ + "/api/tags", {}, 1);
-        if (checkResp.success) {
-            Logger::instance().info("Ollama server successfully connected at " + baseUrl_);
-            return true;
-        }
-    }
-    return false;
+    return ServiceDaemon::ensureOllamaRunning(baseUrl_, 10);
 }
 
 bool OllamaProvider::available() {
-    try {
-        HttpResponse resp = HttpClient::instance().get(baseUrl_ + "/api/tags", {}, 2);
-        if (resp.success) return true;
-
-        if (baseUrl_.find("localhost") != std::string::npos) {
-            std::string altUrl = baseUrl_;
-            size_t pos = altUrl.find("localhost");
-            altUrl.replace(pos, 9, "127.0.0.1");
-            HttpResponse resp2 = HttpClient::instance().get(altUrl + "/api/tags", {}, 2);
-            if (resp2.success) {
-                baseUrl_ = altUrl;
-                return true;
-            }
-        }
-    } catch (...) {}
-
-    if (tryAutoStartOllama()) {
-        try {
-            HttpResponse resp = HttpClient::instance().get(baseUrl_ + "/api/tags", {}, 2);
-            return resp.success;
-        } catch (...) {}
+    if (ServiceDaemon::isOllamaResponding(baseUrl_)) {
+        return true;
     }
-
+    // Autonomously detect and start Ollama in background on Linux or Windows
+    if (tryAutoStartOllama()) {
+        return ServiceDaemon::isOllamaResponding(baseUrl_);
+    }
     return false;
 }
 
@@ -171,10 +136,20 @@ AgentResponse OllamaProvider::generate(const AgentRequest& request) {
         nlohmann::json payload;
         payload["model"] = request.model;
         payload["stream"] = false;
+        HardwareSpec hostHw = SystemProfiler::profileHostMachine();
+        int numGpuLayers = hostHw.isCuda() ? 99 : 0;
+
         payload["options"] = {
             {"temperature", request.temperature},
-            {"num_predict", request.maxTokens}
+            {"num_predict", request.maxTokens},
+            {"num_gpu", numGpuLayers}
         };
+
+        if (hostHw.isSlowVariant()) {
+            Logger::instance().info("[OLLAMA] Slow variant active (" + accelerationTypeToString(hostHw.acceleration) + "). Running inference on CPU.");
+        } else if (hostHw.isCuda()) {
+            Logger::instance().debug("[OLLAMA] Offloading model layers to dedicated CUDA GPU (num_gpu=" + std::to_string(numGpuLayers) + ").");
+        }
 
         nlohmann::json messagesArray = nlohmann::json::array();
         if (!request.systemPrompt.empty()) {
@@ -256,6 +231,18 @@ AgentResponse OllamaProvider::generate(const AgentRequest& request) {
         if (respJson.contains("message")) {
             auto msg = respJson["message"];
             response.content = msg.value("content", "");
+
+            // Extract thinking / reasoning if returned by Ollama (e.g. DeepSeek-R1, QwQ)
+            if (msg.contains("thinking")) {
+                response.thinking = msg.value("thinking", "");
+            }
+            if (response.thinking.empty() && !response.content.empty()) {
+                size_t ts = response.content.find("<think>");
+                size_t te = response.content.find("</think>");
+                if (ts != std::string::npos && te != std::string::npos && te > ts) {
+                    response.thinking = response.content.substr(ts + 7, te - (ts + 7));
+                }
+            }
 
             // Native tool calls
             if (msg.contains("tool_calls") && msg["tool_calls"].is_array()) {

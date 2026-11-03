@@ -1,5 +1,6 @@
 #include "arenafight/executor/executor.hpp"
 #include "arenafight/common/logger.hpp"
+#include "arenafight/security/security_sandbox.hpp"
 #include <iostream>
 #include <filesystem>
 #include <fstream>
@@ -53,9 +54,12 @@ TaskExecutionResult Executor::executeTask(
     TaskExecutionResult res;
     task.status = TaskStatus::RUNNING;
 
-    // Model selection with dynamic failure avoidance
-    std::string previousFailedModel = (task.attempts > 0) ? task.assignedModel : "";
-    ModelSelection selection = router_.selectModel(task.type, previousFailedModel);
+    // Model selection with ability matching and dynamic failure avoidance
+    std::string previousFailedModel = (task.attempts > 1) ? task.assignedModel : "";
+    ModelSelection selection = router_.selectModelForTask(task, previousFailedModel);
+    if (!selection.provider) {
+        selection = router_.selectModel(task.type, previousFailedModel);
+    }
 
     if (!selection.provider) {
         res.success = false;
@@ -109,6 +113,12 @@ TaskExecutionResult Executor::executeTask(
                 res.summary = "Model generation failed: " + response.errorMessage;
                 return res;
             }
+        }
+
+        std::string injectionPattern;
+        if (SecuritySandbox::detectPromptInjection(response.content, &injectionPattern)) {
+            Logger::instance().warn("[SECURITY] Suspected prompt injection detected in model response: " + injectionPattern);
+            SecuritySandbox::logAuditEvent("PROMPT_INJECTION_FLAGGED", "WARN", "Executor", "Pattern: " + injectionPattern, workingDir);
         }
 
         // If no tool calls, model considers task finished

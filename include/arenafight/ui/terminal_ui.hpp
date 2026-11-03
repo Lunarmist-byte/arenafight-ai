@@ -4,6 +4,7 @@
 #include <vector>
 #include <chrono>
 #include "arenafight/common/types.hpp"
+#include "arenafight/common/config.hpp"
 #include "arenafight/session/session.hpp"
 #include "arenafight/hardware/hardware_types.hpp"
 
@@ -13,10 +14,20 @@
 
 namespace arenafight {
 
+struct BenchmarkSuiteResult;
+struct SecurityScanReport;
+struct SecurityAuditRecord;
+
 class TerminalUI {
 public:
-    static void printBanner();
+    static void printBanner(const std::string& mode = "STANDALONE");
     static void printFooter();
+    static void printStatusDashboard(
+        const Config& config,
+        const std::string& activeModel,
+        const std::vector<std::pair<std::string, bool>>& providerStatuses,
+        const Session& session
+    );
 
     static void printSessionHeader(
         const std::string& task,
@@ -56,7 +67,10 @@ public:
 
     static void printSessionsList(const std::vector<SessionInfo>& sessions);
     static void printModelsList(const std::vector<ModelInfo>& models);
+    static void printAbilityMatrix(const std::vector<std::pair<ModelInfo, ModelAbilities>>& matrix);
     static void printConfigView(const nlohmann::json& configJson);
+    static void printThinkingDuel(const ThinkingDuelResult& res);
+    static void printHelpSession(const Config& config, const std::vector<std::pair<std::string, bool>>& providerStatuses);
 
     // Hardware Studio UI
     static void printHardwareStudioBanner();
@@ -65,6 +79,13 @@ public:
     static void printComponentsTable(const std::vector<ComponentSpec>& components);
     static void printHardwareValidation(const HardwareValidationReport& report);
     static void printQoSTelemetryReport(const QoSTelemetry& qos);
+    static void printBenchmarkReport(const BenchmarkSuiteResult& suite);
+    static void printSecurityDashboard(
+        const Config& config,
+        const SecurityScanReport& report,
+        bool auditChainValid,
+        const std::vector<SecurityAuditRecord>& recentLogs
+    );
 };
 
 } // namespace arenafight

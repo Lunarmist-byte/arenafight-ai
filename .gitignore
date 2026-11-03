@@ -217,24 +217,95 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# ArenaFight Agent
+# ==============================================================================
+# ArenaFight Agent Runtime, Tooling & Build Artifacts
+# ==============================================================================
+
+# Compiled Binaries & Build Folders
 build/
+build_*/
 bin/
-sessions/
-logs/
+out/
 *.exe
+*.dll
+*.so
+*.dylib
 *.a
 *.lib
 *.obj
 *.o
-*.bak
-*.tmp
+*.pdb
+*.ilk
+*.exp
+
+# CMake Build System
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+CMakeUserPresets.json
+
+# ArenaFight Runtime Sessions, Memory & Audit Trails
+.arena/
+sessions/
+logs/
+*.log
+
+# Benchmarking Outputs
+benchmark_results.json
+benchmark_results_*.json
+benchmark_*.json
+
+# On-The-Fly Fine-Tuning & Unsloth AI Engine
+unsloth_train.py
+unsloth_output/
+unsloth_dataset.jsonl
+test_unsloth_dataset.jsonl
+*.dataset.jsonl
+*.gguf
+checkpoint-*/
+adapter_config.json
+adapter_model.safetensors
+adapter_model.bin
+
+# Test Sandboxes & Temporary Workspaces
 sandbox_test/
-test_workspace_sandbox/
-test_search_sandbox/
-test_sessions_sandbox/
-test_agent_exec_ws/
+sandbox_opencode_ws/
+test_*_sandbox/
+test_*_ws/
+test_*_dir/
+test_security_*/
 mock_output.txt
 docs/
 DEV_TUTORIAL.md
 docs/DEV_TUTORIAL.md
+*.bak
+*.tmp
+*.swp
+*~
+
+# Credentials & Sensitive Secrets
+.env
+.env.*
+!.env.example
+credentials.json
+id_rsa
+id_ed25519
+*.pem
+*.key
+
+# IDEs & Editor Configurations
+.vscode/
+.idea/
+.vs/
+*.sln
+*.vcxproj*
+
+# OS-Specific Artifacts
+.DS_Store
+Thumbs.db
+desktop.ini

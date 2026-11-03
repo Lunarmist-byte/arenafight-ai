@@ -2,9 +2,13 @@
 #include "arenafight/providers/provider_factory.hpp"
 #include "arenafight/providers/opencode_provider.hpp"
 #include "arenafight/providers/test_mock_provider.hpp"
+#include "arenafight/system/system_profiler.hpp"
+#include "arenafight/services/service_daemon.hpp"
+#include "arenafight/verifier/independent_reviewer.hpp"
 #include "arenafight/ui/terminal_ui.hpp"
 #include "arenafight/common/logger.hpp"
 #include <iostream>
+#include <fstream>
 #include <chrono>
 #include <random>
 #include <sstream>
@@ -80,7 +84,7 @@ std::string ArenaAgent::inspectWorkspaceSummary() {
     return ss.str();
 }
 
-bool ArenaAgent::startNewSession(const std::string& userTask) {
+bool ArenaAgent::startNewSession(const std::string& userTask, const std::vector<std::string>& attachedFiles) {
     session_ = Session();
     session_.id = generateSessionId();
     session_.originalTask = userTask;
@@ -91,9 +95,16 @@ bool ArenaAgent::startNewSession(const std::string& userTask) {
     session_.iteration = 0;
     session_.completed = false;
 
+    for (const auto& f : attachedFiles) {
+        session_.attachFile(f);
+    }
+
     Logger::instance().init(session_.id);
     Logger::instance().info("New session started: " + session_.id);
     Logger::instance().info("Objective: " + userTask);
+    if (!attachedFiles.empty()) {
+        Logger::instance().info("Attached " + std::to_string(attachedFiles.size()) + " file(s) to session.");
+    }
 
     startTimeEpoch_ = std::chrono::duration_cast<std::chrono::seconds>(
         std::chrono::steady_clock::now().time_since_epoch()).count();
@@ -102,9 +113,17 @@ bool ArenaAgent::startNewSession(const std::string& userTask) {
     std::string wsOverview = inspectWorkspaceSummary();
     memory_.addFact("Workspace root: " + config_.workspace_dir);
     memory_.addDiscovery("Initial workspace files:\n" + wsOverview);
+    for (const auto& f : attachedFiles) {
+        memory_.addFact("User attached file: " + f);
+    }
 
     session_.saveToDisk();
     return true;
+}
+
+void ArenaAgent::attachFile(const std::string& filePath, const std::string& content) {
+    session_.attachFile(filePath, content);
+    memory_.addFact("User attached file: " + filePath);
 }
 
 bool ArenaAgent::resumeSession(const std::string& sessionId) {
@@ -143,6 +162,38 @@ bool ArenaAgent::run() {
         TerminalUI::printFooter();
         return true;
     }
+
+    // 1. Autonomous Daemon & Service Detection (Windows & Linux)
+    // Autonomously detect and launch Ollama without asking the user
+    ServiceDaemon::ensureOllamaRunning(config_.ollama_url, 4);
+
+    // 2. Physical Hardware Assessment & Dynamic Limits (No hardcoding)
+    hostSpec_ = SystemProfiler::profileHostMachine(config_.force_cpu);
+    activeLimits_ = SystemProfiler::calculateDynamicLimits(config_.processing_level, hostSpec_);
+    config_.max_iterations = activeLimits_.maxIterations;
+    config_.default_max_tokens = activeLimits_.maxTokens;
+
+    // Display performance banner (highlights CUDA acceleration or warns of CPU/iGPU slowness)
+    std::cout << SystemProfiler::formatPerformanceBanner(hostSpec_);
+
+    std::cout << "----------------------------------------------------\n"
+              << "Processing Level: "
+              << (config_.isPerfectBoi() ? "PERFECT BOI (Exhaustive Verification & Adaptive)" : "FAST (Standard)")
+              << "\n"
+              << "Acceleration:     " << accelerationTypeToString(hostSpec_.acceleration) << "\n"
+              << "Host Assessment:  " << hostSpec_.logicalCores << " CPU Threads | "
+              << std::fixed << std::setprecision(1) << hostSpec_.availRamGb() << " GB RAM Available ("
+              << std::setprecision(0) << hostSpec_.memoryLoadPercent << "% Load)";
+    if (hostSpec_.isCuda()) {
+        std::cout << " | " << hostSpec_.gpuName << " (" << hostSpec_.cudaVersion << ")";
+    } else if (hostSpec_.isIntegratedGpu()) {
+        std::cout << " | " << hostSpec_.igpuName << " (iGPU Shared VRAM)";
+    }
+    std::cout << "\nAssessed Limits:  " << activeLimits_.maxIterations << " Max Loops | "
+              << activeLimits_.maxTokens << " Max Tokens | "
+              << activeLimits_.deepThinkingBudget << " Reasoning Tokens | "
+              << activeLimits_.parallelWorkers << " Concurrency\n"
+              << "----------------------------------------------------\n\n";
 
     // Check if any providers are available before starting
     router_.refreshModels();
@@ -317,6 +368,50 @@ bool ArenaAgent::run() {
         );
 
         if (verif.complete) {
+            // In Perfect Boi mode: Execute exhaustive multi-pass adversarial verification
+            if (config_.isPerfectBoi()) {
+                std::vector<std::string> modifiedFiles;
+                for (const auto& m : memory_.getItemsByCategory("file_change")) {
+                    modifiedFiles.push_back(m.content);
+                }
+
+                bool perfectionAchieved = true;
+                std::string perfectionFinding;
+                IndependentReviewer reviewer(router_, contextMgr_);
+
+                for (int pass = 0; pass < activeLimits_.adversarialReviewPasses; ++pass) {
+                    for (const auto& mf : modifiedFiles) {
+                        std::filesystem::path fp = std::filesystem::path(config_.workspace_dir) / mf;
+                        if (std::filesystem::exists(fp)) {
+                            std::ifstream ifs(fp);
+                            std::string fileContent((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
+                            AdversarialReviewResult rev = reviewer.performAdversarialReview(
+                                fileContent,
+                                session_.originalTask,
+                                {},
+                                pass == 0 ? ReviewMode::ADVERSARIAL : ReviewMode::NORMAL
+                            );
+                            if (!rev.approved || !rev.vulnerabilitiesFound.empty()) {
+                                perfectionAchieved = false;
+                                perfectionFinding = "Adversarial review pass " + std::to_string(pass + 1) +
+                                                    " flagged flaw in " + mf + ": " + rev.summary;
+                                break;
+                            }
+                        }
+                    }
+                    if (!perfectionAchieved) break;
+                }
+
+                if (!perfectionAchieved) {
+                    verif.complete = false;
+                    TerminalUI::printRecoveryNotice("[PERFECT BOI] Standard not met: " +
+                                                   perfectionFinding + ". Formulating remediation task...");
+                    planner_->replan(session_, memory_, perfectionFinding);
+                    session_.saveToDisk();
+                    continue;
+                }
+            }
+
             session_.completed = true;
             session_.currentState = "COMPLETED";
             session_.saveToDisk();
@@ -367,6 +462,16 @@ bool ArenaAgent::run() {
     );
 
     return false;
+}
+
+BenchmarkSuiteResult ArenaAgent::benchmarkAll(bool verbose) {
+    BenchmarkEngine engine(router_, config_);
+    return engine.benchmarkAll(verbose);
+}
+
+BenchmarkSuiteResult ArenaAgent::benchmarkModels(const std::vector<std::string>& modelNames, bool verbose) {
+    BenchmarkEngine engine(router_, config_);
+    return engine.benchmarkModels(modelNames, verbose);
 }
 
 } // namespace arenafight

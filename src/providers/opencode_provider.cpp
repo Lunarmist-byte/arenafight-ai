@@ -47,8 +47,19 @@ void OpenCodeProvider::checkVersion() {
             detectedVersion_.pop_back();
         }
         isInstalled_ = true;
-        isAvailable_ = true;
-        statusMessage_ = "Installed & Active (" + detectedVersion_ + ")";
+
+        bool hasAuth = (std::getenv("OPENCODE_API_KEY") != nullptr) ||
+                       (std::getenv("ANTHROPIC_API_KEY") != nullptr) ||
+                       (std::getenv("OPENAI_API_KEY") != nullptr) ||
+                       (std::getenv("OPENCODE_ENABLED") != nullptr);
+
+        if (hasAuth) {
+            isAvailable_ = true;
+            statusMessage_ = "Installed & Active (" + detectedVersion_ + ")";
+        } else {
+            isAvailable_ = false;
+            statusMessage_ = "Installed (" + detectedVersion_ + ") but requires API Key or login";
+        }
     } else {
         isInstalled_ = false;
         isAvailable_ = false;
@@ -75,6 +86,7 @@ std::vector<ModelInfo> OpenCodeProvider::discoverModels() {
     defaultM.isLocal = false;
     defaultM.capabilityScore = 3.2f;
     defaultM.description = "OpenCode multi-provider autonomous coding agent backend";
+    defaultM.abilities = {0.94f, 0.92f, 0.90f, 0.90f, 0.88f, 0.90f, 0.90f};
     models.push_back(defaultM);
 
     // 2. OpenCode with Claude 3.7 Sonnet
@@ -86,6 +98,7 @@ std::vector<ModelInfo> OpenCodeProvider::discoverModels() {
     sonnetM.isLocal = false;
     sonnetM.capabilityScore = 3.3f;
     sonnetM.description = "Anthropic Claude 3.7 Sonnet through OpenCode interface";
+    sonnetM.abilities = {0.96f, 0.98f, 0.97f, 0.95f, 0.90f, 0.85f, 0.98f};
     models.push_back(sonnetM);
 
     // 3. OpenCode with Gemini 2.5 Pro
@@ -97,6 +110,7 @@ std::vector<ModelInfo> OpenCodeProvider::discoverModels() {
     geminiM.isLocal = false;
     geminiM.capabilityScore = 3.2f;
     geminiM.description = "Google Gemini 2.5 Pro through OpenCode interface";
+    geminiM.abilities = {0.93f, 0.94f, 0.95f, 0.92f, 0.87f, 0.88f, 1.00f};
     models.push_back(geminiM);
 
     // 4. OpenCode with DeepSeek R1
@@ -108,6 +122,7 @@ std::vector<ModelInfo> OpenCodeProvider::discoverModels() {
     r1M.isLocal = false;
     r1M.capabilityScore = 3.4f;
     r1M.description = "DeepSeek R1 Reasoning Model through OpenCode interface";
+    r1M.abilities = {0.92f, 0.99f, 0.98f, 0.96f, 0.86f, 0.70f, 0.92f};
     models.push_back(r1M);
 
     // 5. OpenCode with Qwen 2.5 Coder
@@ -119,6 +134,7 @@ std::vector<ModelInfo> OpenCodeProvider::discoverModels() {
     qwenM.isLocal = false;
     qwenM.capabilityScore = 3.1f;
     qwenM.description = "Qwen 2.5 Coder through OpenCode interface";
+    qwenM.abilities = {0.99f, 0.91f, 0.88f, 0.92f, 0.95f, 0.92f, 0.88f};
     models.push_back(qwenM);
 
     return models;
@@ -211,11 +227,11 @@ AgentResponse OpenCodeProvider::generate(const AgentRequest& request) {
         runCmd = "cat " + tmpPromptFile + " | " + opencodeCommand_ + " run" + modelArg;
     }
 
-    ProcessResult procRes = ProcessExecutor::executeShell(runCmd, ".", 120000);
+    ProcessResult procRes = ProcessExecutor::executeShell(runCmd, ".", 15000);
 
     if (procRes.timedOut) {
         response.success = false;
-        response.errorMessage = "OpenCode CLI execution timed out after 120s";
+        response.errorMessage = "OpenCode CLI execution timed out after 15s";
         return response;
     }
 

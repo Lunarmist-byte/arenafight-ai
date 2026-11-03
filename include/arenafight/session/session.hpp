@@ -33,6 +33,11 @@ struct Session {
     bool completed = false;
     std::string startTime;
     std::string updatedTime;
+    std::vector<std::string> attachedFiles;
+    std::map<std::string, std::string> attachedFileContents;
+
+    void attachFile(const std::string& path, const std::string& content = "");
+    void clearAttachedFiles();
 
     std::shared_ptr<ClaimRegistry> claimRegistry = std::make_shared<ClaimRegistry>();
 

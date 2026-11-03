@@ -1,6 +1,7 @@
 #include "arenafight/tools/shell_tools.hpp"
 #include "arenafight/common/process.hpp"
 #include "arenafight/common/logger.hpp"
+#include "arenafight/security/security_sandbox.hpp"
 #include <iostream>
 #include <filesystem>
 
@@ -31,8 +32,17 @@ ToolResult RunCommandTool::execute(const nlohmann::json& arguments, const std::s
         return res;
     }
 
+    // Security check against forbidden threats (reverse shells, download-and-execute, fork bombs, full system wipe)
+    std::string secViolation;
+    if (!SecuritySandbox::isCommandPermitted(command, SecurityLevel::BALANCED, &secViolation)) {
+        res.success = false;
+        res.error = "ACCESS DENIED: " + secViolation;
+        SecuritySandbox::logAuditEvent("MALICIOUS_COMMAND_BLOCKED", "CRITICAL", "RunCommandTool", command + " -> " + secViolation, workingDir);
+        return res;
+    }
+
     // Safety check for destructive commands
-    if (requireConfirmation_ && ProcessExecutor::isDestructive(command)) {
+    if (requireConfirmation_ && (ProcessExecutor::isDestructive(command) || SecuritySandbox::analyzeCommandRisk(command) == CommandRisk::RESTRICTED)) {
         std::cout << "\n[SECURITY WARNING] The agent requested to execute a potentially destructive command:\n"
                   << "  COMMAND: " << command << "\n"
                   << "Do you want to authorize this operation? (yes/no): " << std::flush;
@@ -41,15 +51,17 @@ ToolResult RunCommandTool::execute(const nlohmann::json& arguments, const std::s
         if (reply != "yes" && reply != "y" && reply != "YES") {
             res.success = false;
             res.error = "Operation aborted by user confirmation check.";
+            SecuritySandbox::logAuditEvent("COMMAND_ABORTED_BY_USER", "WARN", "RunCommandTool", command, workingDir);
             return res;
         }
+        SecuritySandbox::logAuditEvent("RESTRICTED_COMMAND_AUTHORIZED", "INFO", "RunCommandTool", command, workingDir);
     }
 
     ProcessResult pr = ProcessExecutor::executeShell(command, cwd, timeoutMs);
     res.exitCode = pr.exitCode;
     res.durationMs = pr.durationMs;
-    res.output = Logger::sanitize(pr.stdOut);
-    res.error = Logger::sanitize(pr.stdErr);
+    res.output = SecuritySandbox::redactSecrets(Logger::sanitize(pr.stdOut));
+    res.error = SecuritySandbox::redactSecrets(Logger::sanitize(pr.stdErr));
     res.success = (pr.exitCode == 0);
 
     if (pr.timedOut) {
@@ -85,11 +97,22 @@ ToolResult RunProgramTool::execute(const nlohmann::json& arguments, const std::s
         }
     }
 
+    std::string fullInvocation = program;
+    for (const auto& a : args) fullInvocation += " " + a;
+
+    std::string secViolation;
+    if (!SecuritySandbox::isCommandPermitted(fullInvocation, SecurityLevel::BALANCED, &secViolation)) {
+        res.success = false;
+        res.error = "ACCESS DENIED: " + secViolation;
+        SecuritySandbox::logAuditEvent("MALICIOUS_PROGRAM_BLOCKED", "CRITICAL", "RunProgramTool", fullInvocation, workingDir);
+        return res;
+    }
+
     ProcessResult pr = ProcessExecutor::executeProgram(program, args, cwd);
     res.exitCode = pr.exitCode;
     res.durationMs = pr.durationMs;
-    res.output = Logger::sanitize(pr.stdOut);
-    res.error = Logger::sanitize(pr.stdErr);
+    res.output = SecuritySandbox::redactSecrets(Logger::sanitize(pr.stdOut));
+    res.error = SecuritySandbox::redactSecrets(Logger::sanitize(pr.stdErr));
     res.success = (pr.exitCode == 0);
     return res;
 }

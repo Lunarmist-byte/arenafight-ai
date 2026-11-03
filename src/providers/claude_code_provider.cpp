@@ -74,6 +74,7 @@ std::vector<ModelInfo> ClaudeCodeProvider::discoverModels() {
     defaultModel.isLocal = false;
     defaultModel.capabilityScore = 3.0f;
     defaultModel.description = "Local Claude Code CLI non-interactive agent backend";
+    defaultModel.abilities = {0.95f, 0.96f, 0.95f, 0.94f, 0.88f, 0.88f, 0.98f};
     models.push_back(defaultModel);
 
     ModelInfo sonnetModel;
@@ -84,6 +85,7 @@ std::vector<ModelInfo> ClaudeCodeProvider::discoverModels() {
     sonnetModel.isLocal = false;
     sonnetModel.capabilityScore = 3.2f;
     sonnetModel.description = "Anthropic Claude 3.7 Sonnet via Claude CLI";
+    sonnetModel.abilities = {0.97f, 0.98f, 0.97f, 0.96f, 0.90f, 0.88f, 0.99f};
     models.push_back(sonnetModel);
 
     return models;

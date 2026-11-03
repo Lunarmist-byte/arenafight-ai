@@ -199,6 +199,20 @@ AgentResponse OpenRouterProvider::generate(const AgentRequest& request) {
                 auto msg = choice["message"];
                 response.content = msg.value("content", "");
 
+                // Extract thinking / reasoning if returned by model (e.g. DeepSeek-R1, QwQ, o1, Claude 3.7)
+                if (msg.contains("reasoning_content")) {
+                    response.thinking = msg.value("reasoning_content", "");
+                } else if (msg.contains("reasoning")) {
+                    response.thinking = msg.value("reasoning", "");
+                }
+                if (response.thinking.empty() && !response.content.empty()) {
+                    size_t ts = response.content.find("<think>");
+                    size_t te = response.content.find("</think>");
+                    if (ts != std::string::npos && te != std::string::npos && te > ts) {
+                        response.thinking = response.content.substr(ts + 7, te - (ts + 7));
+                    }
+                }
+
                 // Check native tool calls
                 if (msg.contains("tool_calls") && msg["tool_calls"].is_array()) {
                     for (const auto& tcJson : msg["tool_calls"]) {

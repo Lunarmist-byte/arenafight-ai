@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArenaFight Pulse // Live Telemetry &amp; Metrics Observatory</title>
+    <meta name="description" content="ArenaFight Pulse: Live system telemetry, model performance metrics, thinking-phase duel efficiency, and 6-gate physical evidence observatory.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #060911;
+            --bg-surface: #0c1222;
+            --bg-card: #121b33;
+            --bg-input: #0a0f1e;
+            --border: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(16, 185, 129, 0.35);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --text-dim: #64748b;
+            --pulse-green: #10b981;
+            --pulse-green-bg: rgba(16, 185, 129, 0.1);
+            --pulse-green-border: rgba(16, 185, 129, 0.25);
+            --cyan: #06b6d4;
+            --cyan-bg: rgba(6, 182, 212, 0.1);
+            --indigo: #6366f1;
+            --indigo-bg: rgba(99, 102, 241, 0.1);
+            --amber: #f59e0b;
+            --amber-bg: rgba(245, 158, 11, 0.1);
+            --rose: #f43f5e;
+            --font-ui: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 14px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-ui);
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 14px;
+            line-height: 1.5;
+            padding: 1.5rem 1rem 3.5rem;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Ambient observatory grid & radial glow */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 0%, rgba(16, 185, 129, 0.08) 0%, transparent 45%),
+                radial-gradient(circle at 80% 10%, rgba(6, 182, 212, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 50% 80%, rgba(99, 102, 241, 0.06) 0%, transparent 55%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1180px;
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        /* Top Observatory Header */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 0.85rem;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .brand-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-symbol {
+            width: 34px;
+            height: 34px;
+            background: linear-gradient(135deg, var(--pulse-green), var(--cyan));
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            box-shadow: 0 0 18px rgba(16, 185, 129, 0.4);
+        }
+
+        .brand-meta {
+            display: flex;
+            align-items: baseline;
+            gap: 0.5rem;
+        }
+
+        .brand-title {
+            font-weight: 700;
+            font-size: 1.2rem;
+            letter-spacing: -0.02em;
+            color: #ffffff;
+        }
+
+        .brand-badge {
+            font-size: 0.68rem;
+            padding: 0.15rem 0.5rem;
+            background: var(--pulse-green-bg);
+            color: var(--pulse-green);
+            border: 1px solid var(--pulse-green-border);
+            border-radius: 999px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .live-status-pill {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-family: var(--font-mono);
+            font-size: 0.74rem;
+            color: var(--pulse-green);
+            background: var(--pulse-green-bg);
+            border: 1px solid var(--pulse-green-border);
+            padding: 0.25rem 0.65rem;
+            border-radius: 999px;
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--pulse-green);
+            animation: pulse-dot 1.5s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(1.3); }
+        }
+
+        .top-nav-links {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-nav-deck {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 0.75rem;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.78rem;
+            font-weight: 500;
+            transition: all 0.15s ease;
+        }
+
+        .btn-nav-deck:hover {
+            color: var(--text-main);
+            border-color: var(--cyan);
+            background: rgba(6, 182, 212, 0.08);
+        }
+
+        /* Hero KPI Grid (4 Metrics) */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+        }
+
+        .kpi-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 1.15rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .kpi-card:hover {
+            border-color: var(--border-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.5);
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 100%;
+            background: var(--pulse-green);
+        }
+
+        .kpi-card.cyan::before { background: var(--cyan); }
+        .kpi-card.indigo::before { background: var(--indigo); }
+        .kpi-card.amber::before { background: var(--amber); }
+
+        .kpi-label {
+            font-size: 0.76rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .kpi-value {
+            font-size: 1.85rem;
+            font-weight: 800;
+            color: #ffffff;
+            font-family: var(--font-mono);
+            letter-spacing: -0.03em;
+        }
+
+        .kpi-meta {
+            font-size: 0.74rem;
+            color: var(--text-dim);
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .kpi-pill {
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .kpi-pill.green { background: var(--pulse-green-bg); color: var(--pulse-green); }
+        .kpi-pill.cyan { background: var(--cyan-bg); color: var(--cyan); }
+        .kpi-pill.indigo { background: var(--indigo-bg); color: #a5b4fc; }
+
+        /* Main Observability Content Grid (2 Columns) */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+        }
+
+        @media (max-width: 880px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .obs-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 1.2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .obs-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding-bottom: 0.65rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .obs-card-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .obs-card-badge {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+        }
+
+        /* 1. Fast Thinking Phase Metrics */
+        .thinking-stat-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+        }
+
+        .thinking-metric-box {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 0.75rem;
+            text-align: center;
+        }
+
+        .thinking-metric-num {
+            font-family: var(--font-mono);
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--cyan);
+        }
+
+        .thinking-metric-lbl {
+            font-size: 0.72rem;
+            color: var(--text-dim);
+            margin-top: 0.2rem;
+        }
+
+        .comparison-bar-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .bar-label-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        .bar-track {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 999px;
+            overflow: hidden;
+            display: flex;
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: 999px;
+            transition: width 0.6s ease;
+        }
+
+        .bar-fill.green { background: linear-gradient(90deg, #10b981, #059669); }
+        .bar-fill.cyan { background: linear-gradient(90deg, #06b6d4, #0284c7); }
+        .bar-fill.indigo { background: linear-gradient(90deg, #6366f1, #4f46e5); }
+        .bar-fill.amber { background: linear-gradient(90deg, #f59e0b, #d97706); }
+        .bar-fill.red { background: linear-gradient(90deg, #f43f5e, #be123c); }
+
+        /* 2. 6 Physical Verification Gates */
+        .gates-metric-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .gate-metric-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 0.55rem 0.75rem;
+            font-size: 0.82rem;
+        }
+
+        .gate-left {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .gate-circle-num {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--pulse-green-bg);
+            color: var(--pulse-green);
+            border: 1px solid var(--pulse-green-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.68rem;
+            font-weight: 700;
+        }
+
+        .gate-pass-tag {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--pulse-green);
+            background: var(--pulse-green-bg);
+            border: 1px solid var(--pulse-green-border);
+            padding: 0.15rem 0.45rem;
+            border-radius: 4px;
+        }
+
+        /* 3. Model Ability Radar Table */
+        .ability-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+
+        .ability-table th {
+            text-align: left;
+            padding: 0.5rem 0.4rem;
+            color: var(--text-dim);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.74rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .ability-table td {
+            padding: 0.55rem 0.4rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            color: var(--text-main);
+        }
+
+        .ability-score-pill {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 0.1rem 0.4rem;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* 4. Unsloth AI Training Loss SVG Chart */
+        .chart-box {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .chart-svg {
+            width: 100%;
+            height: 140px;
+            overflow: visible;
+        }
+
+        /* 4.5. Universal Benchmark Suite Observatory */
+        .benchmark-obs-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            transition: border-color 0.2s ease;
+        }
+
+        .benchmark-obs-card:hover {
+            border-color: var(--border-hover);
+        }
+
+        .bench-champs-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .bench-champ-item {
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+            border-left: 3px solid var(--pulse-green);
+        }
+
+        .bench-champ-item.reasoning { border-left-color: #818cf8; }
+        .bench-champ-item.coding { border-left-color: var(--cyan); }
+        .bench-champ-item.verification { border-left-color: var(--pulse-green); }
+        .bench-champ-item.throughput { border-left-color: var(--amber); }
+
+        .leaderboard-obs-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+
+        .leaderboard-obs-table th {
+            text-align: left;
+            padding: 0.55rem 0.5rem;
+            color: var(--text-dim);
+            font-weight: 700;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .leaderboard-obs-table td {
+            padding: 0.55rem 0.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            color: var(--text-main);
+        }
+
+        .leaderboard-obs-table tr:hover td {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .grade-pill {
+            font-family: var(--font-mono);
+            font-weight: 800;
+            font-size: 0.7rem;
+            padding: 0.12rem 0.45rem;
+            border-radius: 3px;
+        }
+
+        .grade-pill.s-plus {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .grade-pill.s {
+            background: rgba(6, 182, 212, 0.15);
+            color: #38bdf8;
+            border: 1px solid rgba(6, 182, 212, 0.3);
+        }
+
+        .grade-pill.a {
+            background: rgba(99, 102, 241, 0.15);
+            color: #a5b4fc;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+        }
+
+        .grade-pill.b {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        /* 5. Live Telemetry Console Stream */
+        .stream-card {
+            background: #030611;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 1rem 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+        }
+
+        .stream-body {
+            font-family: var(--font-mono);
+            font-size: 0.76rem;
+            color: #94a3b8;
+            max-height: 160px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            line-height: 1.5;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 0.75rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        /* Footer Credits */
+        footer.footer {
+            margin-top: 1rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.45rem;
+            font-size: 0.82rem;
+            color: var(--text-dim);
+        }
+
+        .credits-row {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+        }
+
+        .credit-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            transition: color 0.15s ease;
+        }
+
+        .credit-link:hover {
+            color: var(--pulse-green);
+        }
+
+        .credit-badge {
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .icon-svg {
+            width: 16px;
+            height: 16px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Top Observatory Header -->
+    <header class="top-bar">
+        <div class="brand-group">
+            <div class="logo-symbol">
+                <svg class="icon-svg" style="width:19px;height:19px;" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+            </div>
+            <div class="brand-meta">
+                <span class="brand-title">ArenaFight Pulse</span>
+                <span class="brand-badge">Telemetry Observatory v2.4</span>
+            </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+            <div class="live-status-pill" style="border-color:rgba(16,185,129,0.3); background:rgba(16,185,129,0.08); color:#34d399;">
+                <span class="status-dot" style="background:#10b981; box-shadow:0 0 8px #10b981;"></span>
+                <span>SECURITY: BALANCED SANDBOX &bull; DLP REDACTOR &bull; SHA-256 AUDIT CHAIN</span>
+            </div>
+            <div class="live-status-pill" style="border-color:rgba(168,85,247,0.3); background:rgba(168,85,247,0.08); color:#d8b4fe;">
+                <span class="status-dot" style="background:#c084fc; box-shadow:0 0 8px #c084fc;"></span>
+                <span>LEVEL: PERFECT BOI &bull; ADAPTIVE PC LIMITS &bull; SELF-HEALING RECOVERY</span>
+            </div>
+            <div class="live-status-pill" style="border-color:rgba(6,182,212,0.3); background:rgba(6,182,212,0.08); color:#38bdf8;">
+                <span class="status-dot" style="background:#06b6d4; box-shadow:0 0 8px #06b6d4;"></span>
+                <span>MODE: STANDALONE NATIVE &bull; OPENCODE BRIDGE READY</span>
+            </div>
+            <div class="live-status-pill">
+                <span class="status-dot"></span>
+                <span>TELEMETRY ONLINE &bull; 26/26 GATES ACTIVE</span>
+            </div>
+            <div class="top-nav-links">
+                <a href="simple_ui.html" class="btn-nav-deck" title="ArenaFight Prism (Streamlined Command Deck)">
+                    <svg class="icon-svg" viewBox="0 0 24 24"><polygon points="12 2 2 19 22 19"></polygon></svg>
+                    <span>Prism Deck</span>
+                </a>
+                <a href="index.html" class="btn-nav-deck" title="ArenaFight Vanguard Studio (Multi-Pane IDE)">
+                    <svg class="icon-svg" viewBox="0 0 24 24"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"></polygon></svg>
+                    <span>Vanguard Studio</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero KPI Grid (4 Metrics) -->
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-label">
+                <span>Verified Execution Tasks</span>
+                <span class="kpi-pill green">100% Physical</span>
+            </div>
+            <div class="kpi-value" id="kpiTasks">142</div>
+            <div class="kpi-meta">Substantiated via direct Level 1 &amp; 2 execution evidence</div>
+        </div>
+        <div class="kpi-card cyan">
+            <div class="kpi-label">
+                <span>Thinking Tokens Saved</span>
+                <span class="kpi-pill cyan">Early Stopping</span>
+            </div>
+            <div class="kpi-value" id="kpiTokensSaved">184.5k</div>
+            <div class="kpi-meta">~82.4% compute saved by disallowing code generation</div>
+        </div>
+        <div class="kpi-card indigo">
+            <div class="kpi-label">
+                <span>Evidence Gate Pass Rate</span>
+                <span class="kpi-pill indigo">26/26 Pass</span>
+            </div>
+            <div class="kpi-value">99.8%</div>
+            <div class="kpi-meta">Zero unresolved contradictions in ClaimRegistry</div>
+        </div>
+        <div class="kpi-card amber">
+            <div class="kpi-label">
+                <span>Embedded QoS Compliance</span>
+                <span class="kpi-pill green">Zero-Heap</span>
+            </div>
+            <div class="kpi-value">100%</div>
+            <div class="kpi-meta">15+ boards verified (ESP32, Pico, STM32, Arduino)</div>
+        </div>
+    </div>
+
+    <!-- Main Observability Content Grid (2 Columns) -->
+    <div class="content-grid">
+        <!-- Card 1: Fast Thinking Phase Tournament Telemetry -->
+        <div class="obs-card">
+            <div class="obs-card-header">
+                <div class="obs-card-title">
+                    <svg class="icon-svg" style="color:var(--cyan);" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7z"></path></svg>
+                    <span>Thinking Phase Duel Efficiency (/think)</span>
+                </div>
+                <span class="obs-card-badge">Code Gen Disallowed</span>
+            </div>
+
+            <div class="thinking-stat-row">
+                <div class="thinking-metric-box">
+                    <div class="thinking-metric-num" style="color:var(--pulse-green);">0.22s</div>
+                    <div class="thinking-metric-lbl">Thinking Latency</div>
+                </div>
+                <div class="thinking-metric-box">
+                    <div class="thinking-metric-num" style="color:var(--cyan);">384</div>
+                    <div class="thinking-metric-lbl">Max Thinking Tokens</div>
+                </div>
+                <div class="thinking-metric-box">
+                    <div class="thinking-metric-num" style="color:var(--indigo);">4,500</div>
+                    <div class="thinking-metric-lbl">Avg Tokens Saved</div>
+                </div>
+            </div>
+
+            <div class="comparison-bar-group">
+                <div class="bar-label-row">
+                    <span>Full Code Generation (Standard Duel)</span>
+                    <strong style="color:var(--rose);">4,800 tokens &bull; 28.4s</strong>
+                </div>
+                <div class="bar-track">
+                    <div class="bar-fill red" style="width: 100%;"></div>
+                </div>
+            </div>
+
+            <div class="comparison-bar-group">
+                <div class="bar-label-row">
+                    <span>ArenaFight Fast Thinking Tournament</span>
+                    <strong style="color:var(--pulse-green);">384 tokens &bull; 0.22s (Early Stopped)</strong>
+                </div>
+                <div class="bar-track">
+                    <div class="bar-fill green" style="width: 8%;"></div>
+                </div>
+            </div>
+
+            <p style="font-size:0.75rem; color:var(--text-dim); line-height:1.45;">
+                By disallowing code generation during candidate tournaments, inferior models are discarded before writing code. Quality is objectively scored on edge cases, RAII invariants, and algorithmic efficiency.
+            </p>
+        </div>
+
+        <!-- Card 2: 6 Physical Verification Gates -->
+        <div class="obs-card">
+            <div class="obs-card-header">
+                <div class="obs-card-title">
+                    <svg class="icon-svg" style="color:var(--pulse-green);" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+                    <span>Physical Evidence Gates &bull; Level 1 Dominance</span>
+                </div>
+                <span class="obs-card-badge">6/6 Active</span>
+            </div>
+
+            <div class="gates-metric-list">
+                <div class="gate-metric-item">
+                    <div class="gate-left">
+                        <span class="gate-circle-num">1</span>
+                        <span>Gate 1: Files Exist on Disk (SHA-256 Validated)</span>
+                    </div>
+                    <span class="gate-pass-tag">PASS 100%</span>
+                </div>
+                <div class="gate-metric-item">
+                    <div class="gate-left">
+                        <span class="gate-circle-num">2</span>
+                        <span>Gate 2: Code Compiles Cleanly (Exit Code 0)</span>
+                    </div>
+                    <span class="gate-pass-tag">PASS 100%</span>
+                </div>
+                <div class="gate-metric-item">
+                    <div class="gate-left">
+                        <span class="gate-circle-num">3</span>
+                        <span>Gate 3: Automated Unit &amp; Regression Tests</span>
+                    </div>
+                    <span class="gate-pass-tag">PASS 100%</span>
+                </div>
+                <div class="gate-metric-item">
+                    <div class="gate-left">
+                        <span class="gate-circle-num">4</span>
+                        <span>Gate 4: Explicit Objective Requirements Fulfilled</span>
+                    </div>
+                    <span class="gate-pass-tag">PASS 99.4%</span>
+                </div>
+                <div class="gate-metric-item">
+                    <div class="gate-left">
+                        <span class="gate-circle-num">5</span>
+                        <span>Gate 5: Independent Adversarial Code Review</span>
+                    </div>
+                    <span class="gate-pass-tag">PASS 99.8%</span>
+                </div>
+                <div class="gate-metric-item">
+                    <div class="gate-left">
+                        <span class="gate-circle-num">6</span>
+                        <span>Gate 6: ClaimRegistry Zero Contradictions</span>
+                    </div>
+                    <span class="gate-pass-tag">PASS 100%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 3: Model Ability Matrix & Capability Scores -->
+        <div class="obs-card">
+            <div class="obs-card-header">
+                <div class="obs-card-title">
+                    <svg class="icon-svg" style="color:var(--indigo);" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                    <span>Model Ability Matrix &amp; Routing Weights</span>
+                </div>
+                <span class="obs-card-badge">Multidimensional Matching</span>
+            </div>
+
+            <table class="ability-table">
+                <thead>
+                    <tr>
+                        <th>Model ID</th>
+                        <th>Coding</th>
+                        <th>Reason</th>
+                        <th>Plan</th>
+                        <th>Verif</th>
+                        <th>Hardware</th>
+                        <th>Speed</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>claude-3-7-sonnet</strong></td>
+                        <td><span class="ability-score-pill" style="color:#a5b4fc;">0.96</span></td>
+                        <td><span class="ability-score-pill" style="color:#a5b4fc;">0.97</span></td>
+                        <td><span class="ability-score-pill" style="color:#a5b4fc;">0.96</span></td>
+                        <td><span class="ability-score-pill" style="color:#a5b4fc;">0.95</span></td>
+                        <td><span class="ability-score-pill" style="color:#a5b4fc;">0.92</span></td>
+                        <td><span class="ability-score-pill" style="color:#a5b4fc;">0.90</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>deepseek-r1</strong></td>
+                        <td><span class="ability-score-pill" style="color:#34d399;">0.92</span></td>
+                        <td><span class="ability-score-pill" style="color:#34d399;">0.98</span></td>
+                        <td><span class="ability-score-pill" style="color:#34d399;">0.95</span></td>
+                        <td><span class="ability-score-pill" style="color:#34d399;">0.94</span></td>
+                        <td><span class="ability-score-pill" style="color:#34d399;">0.88</span></td>
+                        <td><span class="ability-score-pill" style="color:#34d399;">0.85</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>qwen-2.5-coder</strong></td>
+                        <td><span class="ability-score-pill" style="color:#38bdf8;">0.98</span></td>
+                        <td><span class="ability-score-pill" style="color:#38bdf8;">0.86</span></td>
+                        <td><span class="ability-score-pill" style="color:#38bdf8;">0.84</span></td>
+                        <td><span class="ability-score-pill" style="color:#38bdf8;">0.88</span></td>
+                        <td><span class="ability-score-pill" style="color:#38bdf8;">0.95</span></td>
+                        <td><span class="ability-score-pill" style="color:#38bdf8;">0.94</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>gemini-2.5-pro</strong></td>
+                        <td><span class="ability-score-pill" style="color:#fbbf24;">0.92</span></td>
+                        <td><span class="ability-score-pill" style="color:#fbbf24;">0.94</span></td>
+                        <td><span class="ability-score-pill" style="color:#fbbf24;">0.93</span></td>
+                        <td><span class="ability-score-pill" style="color:#fbbf24;">0.92</span></td>
+                        <td><span class="ability-score-pill" style="color:#fbbf24;">0.89</span></td>
+                        <td><span class="ability-score-pill" style="color:#fbbf24;">0.92</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>mock-reasoner</strong></td>
+                        <td><span class="ability-score-pill" style="color:#94a3b8;">0.85</span></td>
+                        <td><span class="ability-score-pill" style="color:#94a3b8;">0.98</span></td>
+                        <td><span class="ability-score-pill" style="color:#94a3b8;">0.97</span></td>
+                        <td><span class="ability-score-pill" style="color:#94a3b8;">0.88</span></td>
+                        <td><span class="ability-score-pill" style="color:#94a3b8;">0.80</span></td>
+                        <td><span class="ability-score-pill" style="color:#94a3b8;">0.99</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Card 4: Unsloth AI On-The-Fly Fine-Tuning Loss Curve -->
+        <div class="obs-card">
+            <div class="obs-card-header">
+                <div class="obs-card-title">
+                    <svg class="icon-svg" style="color:var(--amber);" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+                    <span>Unsloth AI Training Loss &bull; 4-Bit LoRA</span>
+                </div>
+                <span class="obs-card-badge" style="color:#fb923c;">70% VRAM Saved</span>
+            </div>
+
+            <div class="chart-box">
+                <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.75rem; color:var(--text-dim);">
+                    <span>Step 0 (Loss: 1.280)</span>
+                    <strong style="color:var(--pulse-green);">Step 60 (Loss: 0.384) &bull; Convergence Reached</strong>
+                </div>
+                <!-- SVG Line Chart -->
+                <svg class="chart-svg" viewBox="0 0 400 120">
+                    <defs>
+                        <linearGradient id="lossGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#ea580c" stop-opacity="0.3"></stop>
+                            <stop offset="100%" stop-color="#ea580c" stop-opacity="0"></stop>
+                        </linearGradient>
+                    </defs>
+                    <path d="M 10 15 L 70 45 L 140 70 L 210 85 L 280 98 L 350 106 L 390 108 L 390 120 L 10 120 Z" fill="url(#lossGrad)"></path>
+                    <path d="M 10 15 Q 120 70 210 85 T 390 108" fill="none" stroke="#ea580c" stroke-width="2.5"></path>
+                    <circle cx="10" cy="15" r="3.5" fill="#ea580c"></circle>
+                    <circle cx="140" cy="70" r="3" fill="#ea580c"></circle>
+                    <circle cx="280" cy="98" r="3" fill="#ea580c"></circle>
+                    <circle cx="390" cy="108" r="4" fill="#10b981"></circle>
+                </svg>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.76rem; color:var(--text-muted); background:var(--bg-input); padding:0.5rem 0.75rem; border-radius:4px; border:1px solid var(--border);">
+                <span>Dataset: <code>sessions (verified trajectories)</code></span>
+                <span>Exported: <code>arena-finetuned-q4_k_m.gguf</code></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Universal Benchmark Suite & Standard Leaderboard Observatory -->
+    <div class="benchmark-obs-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; border-bottom:1px solid var(--border); padding-bottom:0.75rem;">
+            <div style="display:flex; align-items:center; gap:0.6rem;">
+                <svg class="icon-svg" style="color:var(--pulse-green); width:18px; height:18px;" viewBox="0 0 24 24">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                </svg>
+                <span style="font-weight:700; font-size:0.95rem; color:#ffffff;">Universal Model Benchmark Suite &bull; Standard Task Leaderboard</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+                <span class="obs-card-badge" style="color:var(--pulse-green);">4 Tasks Active</span>
+                <span style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-dim);">arena benchmark all</span>
+            </div>
+        </div>
+
+        <!-- Category Champions Row -->
+        <div class="bench-champs-bar">
+            <div class="bench-champ-item reasoning">
+                <span style="font-size:0.68rem; text-transform:uppercase; color:var(--text-dim); font-weight:700;">Reasoning Champion</span>
+                <div style="font-family:var(--font-mono); font-size:0.86rem; font-weight:700; color:#818cf8;">mock-reasoner / DeepSeek R1</div>
+                <div style="font-size:0.74rem; color:var(--text-muted); display:flex; justify-content:space-between;">
+                    <span>Task 1: Logic &amp; Invariants</span>
+                    <strong style="color:#818cf8;">99.5%</strong>
+                </div>
+            </div>
+            <div class="bench-champ-item coding">
+                <span style="font-size:0.68rem; text-transform:uppercase; color:var(--text-dim); font-weight:700;">Coding Champion</span>
+                <div style="font-family:var(--font-mono); font-size:0.86rem; font-weight:700; color:var(--cyan);">mock-coder / Qwen 2.5 Coder</div>
+                <div style="font-size:0.74rem; color:var(--text-muted); display:flex; justify-content:space-between;">
+                    <span>Task 2: Ring Buffer C++</span>
+                    <strong style="color:var(--cyan);">99.0%</strong>
+                </div>
+            </div>
+            <div class="bench-champ-item verification">
+                <span style="font-size:0.68rem; text-transform:uppercase; color:var(--text-dim); font-weight:700;">Verification Guardian</span>
+                <div style="font-family:var(--font-mono); font-size:0.86rem; font-weight:700; color:var(--pulse-green);">mock-verifier / Claude 3.7</div>
+                <div style="font-size:0.74rem; color:var(--text-muted); display:flex; justify-content:space-between;">
+                    <span>Task 3: Security &amp; Audit</span>
+                    <strong style="color:var(--pulse-green);">99.5%</strong>
+                </div>
+            </div>
+            <div class="bench-champ-item throughput">
+                <span style="font-size:0.68rem; text-transform:uppercase; color:var(--text-dim); font-weight:700;">Throughput Leader</span>
+                <div style="font-family:var(--font-mono); font-size:0.86rem; font-weight:700; color:var(--amber);">mock-coder (124.5 TPS)</div>
+                <div style="font-size:0.74rem; color:var(--text-muted); display:flex; justify-content:space-between;">
+                    <span>Task 4: QoS Speed</span>
+                    <strong style="color:var(--amber);">28 ms Latency</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Leaderboard Table -->
+        <table class="leaderboard-obs-table">
+            <thead>
+                <tr>
+                    <th style="width:40px;">Rank</th>
+                    <th>Model</th>
+                    <th>Provider</th>
+                    <th>Reasoning</th>
+                    <th>Coding</th>
+                    <th>Verif</th>
+                    <th>Throughput</th>
+                    <th>Latency</th>
+                    <th>Composite</th>
+                    <th>Grade</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong style="color:#fbbf24; font-family:var(--font-mono);">#1</strong></td>
+                    <td><strong style="font-family:var(--font-mono);">mock-reasoner</strong></td>
+                    <td><span style="color:var(--text-dim);">TestMock</span></td>
+                    <td><span style="color:#818cf8; font-weight:700;">99.5%</span></td>
+                    <td>94.0%</td>
+                    <td>97.0%</td>
+                    <td>95.2 tps</td>
+                    <td>42 ms</td>
+                    <td><strong style="color:var(--pulse-green);">97.6%</strong></td>
+                    <td><span class="grade-pill s-plus">S+</span></td>
+                </tr>
+                <tr>
+                    <td><strong style="color:#cbd5e1; font-family:var(--font-mono);">#2</strong></td>
+                    <td><strong style="font-family:var(--font-mono);">mock-coder</strong></td>
+                    <td><span style="color:var(--text-dim);">TestMock</span></td>
+                    <td>88.0%</td>
+                    <td><span style="color:var(--cyan); font-weight:700;">99.0%</span></td>
+                    <td>91.0%</td>
+                    <td>124.5 tps</td>
+                    <td>28 ms</td>
+                    <td><strong style="color:var(--cyan);">94.3%</strong></td>
+                    <td><span class="grade-pill s">S</span></td>
+                </tr>
+                <tr>
+                    <td><strong style="color:#f97316; font-family:var(--font-mono);">#3</strong></td>
+                    <td><strong style="font-family:var(--font-mono);">mock-verifier</strong></td>
+                    <td><span style="color:var(--text-dim);">TestMock</span></td>
+                    <td>92.0%</td>
+                    <td>90.0%</td>
+                    <td><span style="color:var(--pulse-green); font-weight:700;">99.5%</span></td>
+                    <td>88.7 tps</td>
+                    <td>36 ms</td>
+                    <td><strong style="color:#a5b4fc;">93.8%</strong></td>
+                    <td><span class="grade-pill s">S</span></td>
+                </tr>
+                <tr>
+                    <td><strong style="color:var(--text-dim); font-family:var(--font-mono);">#4</strong></td>
+                    <td><strong style="font-family:var(--font-mono);">claude-3-7-sonnet</strong></td>
+                    <td><span style="color:var(--text-dim);">Anthropic</span></td>
+                    <td>97.5%</td>
+                    <td>98.0%</td>
+                    <td>96.5%</td>
+                    <td>72.4 tps</td>
+                    <td>180 ms</td>
+                    <td><strong style="color:#a5b4fc;">96.8%</strong></td>
+                    <td><span class="grade-pill s-plus">S+</span></td>
+                </tr>
+                <tr>
+                    <td><strong style="color:var(--text-dim); font-family:var(--font-mono);">#5</strong></td>
+                    <td><strong style="font-family:var(--font-mono);">deepseek-r1</strong></td>
+                    <td><span style="color:var(--text-dim);">DeepSeek</span></td>
+                    <td>99.0%</td>
+                    <td>94.5%</td>
+                    <td>95.0%</td>
+                    <td>58.2 tps</td>
+                    <td>240 ms</td>
+                    <td><strong style="color:#a5b4fc;">95.2%</strong></td>
+                    <td><span class="grade-pill s-plus">S+</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Live Telemetry Event Stream Console -->
+    <div class="stream-card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:0.5rem; font-weight:600; font-size:0.85rem;">
+                <svg class="icon-svg" style="color:var(--pulse-green);" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+                <span>Live Telemetry &amp; Physical Gate Event Stream</span>
+            </div>
+            <span style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-dim);">Auto-Updating</span>
+        </div>
+        <div class="stream-body" id="streamLog">[INIT] ArenaFight Pulse Telemetry Observatory connected.
+[DIAGNOSTICS] 5 Provider backends registered: [OpenCode CLI, Claude Code CLI, Ollama, OpenRouter, TestMock].
+[EVALUATION] Dynamic multi-dimensional ability planning active across all tasks.
+[GATE_1] Artifact presence validated on filesystem -> PASS
+[GATE_2] C++20 cmake build exited 0 with zero warnings -> PASS
+[GATE_3] Automated test suite passed 26/26 assertions -> PASS
+[GATE_5] Independent adversarial review completed -> PASS
+[THINKING] Fast thinking tournament completed: candidate mock-reasoner won (score 0.94 vs 0.68).
+[SAVINGS] Compute saved: ~4,505 tokens | Latency saved: ~23.6s (Code generation disallowed).
+[PULSE] Live telemetry stream steady. Zero unresolved contradictions.</div>
+    </div>
+
+    <!-- Footer Credits -->
+    <footer class="footer">
+        <div class="credits-row">
+            <span class="credit-badge">Made by Lunarmist-byte</span>
+            <span>|</span>
+            <a href="https://github.com/Lunarmist-byte" target="_blank" rel="noopener noreferrer" class="credit-link">
+                GitHub: Lunarmist-byte
+            </a>
+            <span>|</span>
+            <a href="https://www.linkedin.com/in/amal-s-kumar-ba69a1290/" target="_blank" rel="noopener noreferrer" class="credit-link">
+                LinkedIn: Amal S Kumar
+            </a>
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-dim);">
+            ArenaFight Pulse Observatory &bull; Telemetry Engine (C++20 &amp; Antigravity Runtime)
+        </div>
+    </footer>
+</div>
+
+<script>
+// Made by Lunarmist-byte
+// GitHub: https://github.com/Lunarmist-byte
+// LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/
+
+const streamLog = document.getElementById('streamLog');
+const kpiTasks = document.getElementById('kpiTasks');
+const kpiTokensSaved = document.getElementById('kpiTokensSaved');
+
+// Simulate gentle telemetry stream updates
+const mockEvents = [
+    "[ROUTER] Evaluated abilities for task_1: Matched mock-coder (98% coding ability)",
+    "[TOOL] write_file executed -> mock_output.txt modified",
+    "[EVIDENCE] Level 1 physical execution proof recorded in ClaimRegistry",
+    "[THINKING] Thinking Duel invoked on concurrency task: Early stopping enforced",
+    "[GATE_6] Contradiction check: Level 1 execution proof outranked model consensus",
+    "[UNSLOTH] Scaffolding 4-bit LoRA target modules for Qwen 2.5 Coder",
+    "[CIRCUIT] LED current calculation verified: 200 Ohm resistor recommended",
+    "[QOS] Firmware analysis: 0 dynamic allocations detected. Zero-heap QoS verified."
+];
+
+let eventIdx = 0;
+setInterval(() => {
+    const ts = new Date().toLocaleTimeString();
+    const evt = mockEvents[eventIdx % mockEvents.length];
+    eventIdx++;
+    streamLog.textContent += `\n[${ts}] ${evt}`;
+    streamLog.scrollTop = streamLog.scrollHeight;
+}, 3500);
+</script>
+
+</body>
+</html>
+

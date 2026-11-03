@@ -64,6 +64,7 @@ set(CORE_SOURCES
     src/session/memory.cpp
     src/session/context_manager.cpp
     src/router/model_router.cpp
+    src/benchmark/benchmark_engine.cpp
     src/planner/planner.cpp
     src/executor/executor.cpp
     src/evidence/claim_registry.cpp
@@ -72,6 +73,10 @@ set(CORE_SOURCES
     src/ui/terminal_ui.cpp
     src/artifacts/artifact.cpp
     src/customizations/customization_manager.cpp
+    src/finetune/unsloth_manager.cpp
+    src/security/security_sandbox.cpp
+    src/system/system_profiler.cpp
+    src/services/service_daemon.cpp
     src/repl/repl_engine.cpp
     src/agent/arena_agent.cpp
 )

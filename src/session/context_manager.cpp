@@ -55,6 +55,8 @@ AgentRequest ContextManager::buildContext(
 ) {
     AgentRequest req;
     req.model = modelName;
+    req.temperature = config_.default_temperature;
+    req.maxTokens = config_.default_max_tokens;
     req.systemPrompt = buildSystemPrompt(session);
     req.tools = availableTools;
 
@@ -80,10 +82,17 @@ AgentRequest ContextManager::buildContext(
         userPrompt << "SESSION MEMORY:\n" << memSummary << "\n";
     }
 
-    // 5. Relevant File Contents (targeted, not whole repository)
-    if (!relevantFileContents.empty()) {
-        userPrompt << "RELEVANT FILES:\n";
-        for (const auto& [path, content] : relevantFileContents) {
+    // 5. Relevant File Contents (targeted, plus session attached files)
+    std::map<std::string, std::string> mergedFiles = relevantFileContents;
+    for (const auto& [path, content] : session.attachedFileContents) {
+        if (mergedFiles.find(path) == mergedFiles.end()) {
+            mergedFiles[path] = content;
+        }
+    }
+
+    if (!mergedFiles.empty()) {
+        userPrompt << "RELEVANT & ATTACHED FILES:\n";
+        for (const auto& [path, content] : mergedFiles) {
             userPrompt << "--- " << path << " ---\n";
             if (content.size() > 4000) {
                 userPrompt << content.substr(0, 4000) << "\n... [truncated] ...\n";
@@ -130,11 +139,28 @@ AgentRequest ContextManager::buildPlanningContext(
 ) {
     AgentRequest req;
     req.model = modelName;
+    req.temperature = config_.default_temperature;
+    req.maxTokens = config_.default_max_tokens;
     req.systemPrompt = buildSystemPrompt(session);
 
     std::stringstream ss;
-    ss << "TASK OBJECTIVE: " << session.originalTask << "\n\n"
-       << "WORKSPACE OVERVIEW:\n" << workspaceOverview << "\n\n"
+    ss << "TASK OBJECTIVE: " << session.originalTask << "\n\n";
+
+    if (!session.attachedFileContents.empty()) {
+        ss << "ATTACHED FILES FOR PLANNING:\n";
+        for (const auto& [path, content] : session.attachedFileContents) {
+            ss << "--- " << path << " ---\n";
+            if (content.size() > 4000) {
+                ss << content.substr(0, 4000) << "\n... [truncated] ...\n";
+            } else {
+                ss << content << "\n";
+            }
+            ss << "-------------------\n";
+        }
+        ss << "\n";
+    }
+
+    ss << "WORKSPACE OVERVIEW:\n" << workspaceOverview << "\n\n"
        << "Please create a structured execution plan. Break down the objective into ordered subtasks with clear dependencies.\n"
        << "Output your plan as a JSON array inside a ```json ``` code block:\n"
        << "```json\n"
@@ -166,6 +192,8 @@ AgentRequest ContextManager::buildVerificationContext(
 ) {
     AgentRequest req;
     req.model = modelName;
+    req.temperature = std::min(config_.default_temperature, 0.1f);
+    req.maxTokens = config_.default_max_tokens;
     req.systemPrompt = "You are an independent Verifier for ArenaFight Agent.\n"
                        "Your job is to objectively inspect whether the original user task has been completed based on actual evidence.\n"
                        "DO NOT accept 'looks good' without proof.\n";

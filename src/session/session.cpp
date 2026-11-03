@@ -1,4 +1,5 @@
 #include "arenafight/session/session.hpp"
+#include "arenafight/common/fs_utils.hpp"
 #include <fstream>
 #include <filesystem>
 #include <iostream>
@@ -46,12 +47,30 @@ nlohmann::json Session::toJson() const {
         {"iteration", iteration},
         {"completed", completed},
         {"startTime", startTime},
-        {"updatedTime", updatedTime}
+        {"updatedTime", updatedTime},
+        {"attachedFiles", attachedFiles},
+        {"attachedFileContents", attachedFileContents}
     };
     if (claimRegistry) {
         jOut["claimRegistry"] = claimRegistry->toJson();
     }
     return jOut;
+}
+
+void Session::attachFile(const std::string& path, const std::string& content) {
+    if (std::find(attachedFiles.begin(), attachedFiles.end(), path) == attachedFiles.end()) {
+        attachedFiles.push_back(path);
+    }
+    if (!content.empty()) {
+        attachedFileContents[path] = content;
+    } else if (std::filesystem::exists(path)) {
+        attachedFileContents[path] = FileUtils::readTextFile(path);
+    }
+}
+
+void Session::clearAttachedFiles() {
+    attachedFiles.clear();
+    attachedFileContents.clear();
 }
 
 Session Session::fromJson(const nlohmann::json& j) {
@@ -84,6 +103,8 @@ Session Session::fromJson(const nlohmann::json& j) {
     s.completed = j.value("completed", false);
     s.startTime = j.value("startTime", "");
     s.updatedTime = j.value("updatedTime", "");
+    s.attachedFiles = j.value("attachedFiles", std::vector<std::string>{});
+    s.attachedFileContents = j.value("attachedFileContents", std::map<std::string, std::string>{});
 
     if (j.contains("claimRegistry") && s.claimRegistry) {
         s.claimRegistry->fromJson(j["claimRegistry"]);

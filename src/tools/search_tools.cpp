@@ -1,4 +1,5 @@
 #include "arenafight/tools/search_tools.hpp"
+#include "arenafight/security/security_sandbox.hpp"
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -10,10 +11,8 @@ namespace arenafight {
 
 namespace {
 
-std::string resolvePath(const std::string& path, const std::string& workingDir) {
-    std::filesystem::path p(path);
-    if (p.is_absolute()) return p.string();
-    return (std::filesystem::path(workingDir) / p).lexically_normal().string();
+std::string resolvePath(const std::string& path, const std::string& workingDir, std::string* violation = nullptr) {
+    return SecuritySandbox::resolveSafePath(path, workingDir, violation);
 }
 
 bool shouldSkipDir(const std::string& name) {
@@ -86,7 +85,14 @@ ToolResult ListDirectoryTool::execute(const nlohmann::json& arguments, const std
     std::string relPath = arguments.value("path", ".");
     int maxDepth = arguments.value("max_depth", 2);
 
-    std::string fullPath = resolvePath(relPath, workingDir);
+    std::string violation;
+    std::string fullPath = resolvePath(relPath, workingDir, &violation);
+    if (fullPath.empty()) {
+        res.success = false;
+        res.error = "ACCESS DENIED: " + (violation.empty() ? "Path traversal detected outside workspace sandbox: " + relPath : violation);
+        SecuritySandbox::logAuditEvent("PATH_TRAVERSAL_BLOCKED", "CRITICAL", "ListDirectoryTool", relPath + " -> " + res.error, workingDir);
+        return res;
+    }
     if (!std::filesystem::exists(fullPath)) {
         res.success = false;
         res.error = "Directory does not exist: " + relPath;
@@ -136,7 +142,14 @@ ToolResult SearchFilesTool::execute(const nlohmann::json& arguments, const std::
         return res;
     }
 
-    std::string fullPath = resolvePath(relPath, workingDir);
+    std::string violation;
+    std::string fullPath = resolvePath(relPath, workingDir, &violation);
+    if (fullPath.empty()) {
+        res.success = false;
+        res.error = "ACCESS DENIED: " + (violation.empty() ? "Path traversal detected outside workspace sandbox: " + relPath : violation);
+        SecuritySandbox::logAuditEvent("PATH_TRAVERSAL_BLOCKED", "CRITICAL", "ListDirectoryTool", relPath + " -> " + res.error, workingDir);
+        return res;
+    }
     if (!std::filesystem::exists(fullPath)) {
         res.success = false;
         res.error = "Path does not exist: " + relPath;
@@ -203,7 +216,7 @@ ToolResult SearchFilesTool::execute(const nlohmann::json& arguments, const std::
     if (matchesFound == 0) {
         res.output = "No matches found for pattern: " + pattern;
     } else {
-        res.output = ss.str();
+        res.output = SecuritySandbox::redactSecrets(ss.str());
         if (matchesFound >= maxResults) {
             res.output += "... [capped at " + std::to_string(maxResults) + " matches] ...\n";
         }

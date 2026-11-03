@@ -34,9 +34,40 @@ public:
         const std::string& excludedProvider = ""
     );
 
+    // Ability-based planning and selection: find which model is best suited based on multidimensional abilities
+    ModelSelection selectModelForTask(
+        const Task& task,
+        const std::string& previousFailedModel = "",
+        const std::string& coderModelUsed = "",
+        const std::string& excludedProvider = ""
+    );
+
+    std::vector<std::pair<ModelInfo, ModelAbilities>> getAbilityMatrix() const;
+
+    // Fast thinking-phase duel: Evaluate reasoning, strategy, edge cases, and safety invariants
+    // while strictly disallowing full code generation to accelerate execution and save tokens.
+    ThinkingDuelResult duelThinkingPhase(
+        const std::string& taskObjective,
+        const std::string& candidateModelA = "",
+        const std::string& candidateModelB = ""
+    );
+
+    ThinkingEvaluation evaluateThinking(
+        const std::string& modelId,
+        const std::string& thinkingText,
+        int tokens,
+        int latencyMs
+    );
+
     void markProviderUnavailable(const std::string& providerName);
 
     std::shared_ptr<ModelProvider> getProviderByName(const std::string& name) const;
+
+    // Register a custom model explicitly (e.g. fine-tuned with Unsloth or configured by user)
+    void registerCustomModel(const ModelInfo& model, std::shared_ptr<ModelProvider> provider = nullptr);
+
+    // Dynamically retrieve or bind any arbitrary model string to an active provider
+    ModelSelection getOrRegisterDynamicModel(const std::string& modelName);
 
 private:
     Config config_;

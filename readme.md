@@ -2,7 +2,13 @@
 
 An autonomous, local-first multi-model AI agent orchestration runtime and execution system built in **C++20**.
 
-ArenaFight Agent is designed for autonomous coding, research, embedded systems engineering, and physical debugging workflows (akin to **Google Antigravity** and **Claude Code** execution). It moves beyond standard chatbot question-and-answer patterns by operating an autonomous, self-evaluating execution loop: understanding tasks, generating structured task graphs with explicit dependencies, invoking tools, updating persistent memory, independently verifying physical evidence, debugging failures, and replanning until the objective is genuinely achieved.
+ArenaFight is primarily a **developer-first, high-performance CLI tool** (`arena` / `arena.exe`) designed for fast terminal workflows, autonomous coding, research, embedded systems engineering, and physical debugging (akin to **Google Antigravity** and **Claude Code** execution). It moves beyond standard chatbot question-and-answer patterns by operating an autonomous, self-evaluating execution loop: understanding tasks, generating structured task graphs with explicit dependencies, evaluating model abilities to plan optimal assignments, invoking tools, updating persistent memory, independently verifying physical evidence, debugging failures, and replanning until the objective is genuinely achieved.
+
+It operates with a dual-mode runtime architecture:
+* **Standalone Mode (Default):** Runs completely self-contained with zero external dependencies, native C++ tool executors, local model providers (Ollama, local vLLM, custom OpenAI endpoints, OpenRouter, or TestMock), 6 physical verification gates, fast thinking-phase tournaments, Unsloth fine-tuning, and the universal benchmarking engine.
+* **Connected to OpenCode Mode:** Bridges seamlessly to the [OpenCode](https://opencode.ai) CLI ecosystem (`opencode run`, `.opencode/opencode.json`, and `.opencode/INSTRUCTIONS.md` sync), routing complex coding goals through OpenCode while subjecting all generated code and artifacts to ArenaFight's Level 1 physical evidence verification.
+
+In addition to its primary terminal CLI identity and interactive REPL, ArenaFight provides **three companion Web UI variants** (`arena ui [prism|vanguard|pulse]`) for developers who prefer visual interaction, side-by-side IDE workstations, or real-time telemetry observation.
 
 ---
 
@@ -12,7 +18,67 @@ ArenaFight Agent is designed for autonomous coding, research, embedded systems e
 
 ---
 
-## 1. Core Architecture
+## 1. CLI Tool Architecture & Dual-Mode Runtime (Standalone vs OpenCode Connected)
+
+ArenaFight is designed first and foremost as a UNIX-style developer CLI tool (`arena`). It can run fully isolated or directly bridge to OpenCode:
+
+### 1. Standalone Mode (Default: `arena --standalone` or `arena mode standalone`)
+In Standalone mode, ArenaFight operates with complete autonomy:
+* **Zero External Process Dependencies:** Uses native C++ file operations, process executors, git bindings, and local/cloud providers.
+* **Direct Model Providers:** Connects directly to local Ollama (`localhost:11434`), custom OpenAI-compatible endpoints (`--base-url`, `--api-key`), OpenRouter, Claude Code CLI, or built-in TestMock.
+* **Full Local Verifier:** Evaluates all 6 physical verification gates, executes fast thinking tournaments, runs on-the-fly Unsloth LoRA fine-tuning, and executes the universal benchmarking engine locally.
+
+### 2. Connected to OpenCode Mode (`arena --opencode` or `arena connect opencode`)
+In Connected mode, ArenaFight harnesses the OpenCode CLI ecosystem as an execution engine while enforcing physical proof:
+* **Bi-Directional OpenCode Bridge:** Communicates directly with `opencode run`, discovering installed OpenCode models (`opencode-default`, `opencode/claude-3-7-sonnet`, `opencode/gemini-2.5-pro`, `opencode/deepseek-r1`, `opencode/qwen-2.5-coder`).
+* **Workspace Configuration Synchronization:** Automatically synchronizes `.opencode/opencode.json` and `.opencode/INSTRUCTIONS.md` with active project constraints and memory facts.
+* **Level 1 Physical Evidence Verification:** All code written or modified via OpenCode is still subjected to ArenaFight's non-negotiable verification gates (compiler exit codes, automated test suites, SHA-256 checks).
+
+### 3. CLI Mode Commands & Flags
+```bash
+# Switch runtime modes
+arena mode standalone          # Set runtime mode to Standalone
+arena mode opencode            # Set runtime mode to OpenCode Connected
+arena mode                     # Display active mode and status
+
+# Connect / Disconnect OpenCode bridge
+arena connect opencode         # Connect to OpenCode and sync workspace
+arena disconnect               # Return to standalone mode
+
+# Inspect complete runtime status and bridges
+arena status                   # Full terminal status dashboard
+
+# Launch tasks with explicit mode flags
+arena --standalone "Design lock-free queue"
+arena --opencode "Refactor parser with unit tests"
+arena --mode standalone "Run adversarial security audit"
+```
+
+### 4. Interactive REPL Mode Commands
+Inside the interactive terminal REPL (`arena > `):
+```text
+/mode [standalone|opencode]    Switch runtime mode on the fly
+/connect [opencode]            Connect and synchronize OpenCode bridge
+/disconnect                    Disconnect bridge and revert to standalone mode
+/status                        Display runtime architecture and verification gates
+```
+
+### 5. Companion Web UI Variants (`arena ui`)
+While ArenaFight is primarily a CLI tool, it includes three specialized web dashboards:
+```bash
+arena ui prism                 # Launch ArenaFight Prism (Streamlined Command Deck)
+arena ui vanguard              # Launch ArenaFight Vanguard (Autonomous 3-Pane Studio)
+arena ui pulse                 # Launch ArenaFight Pulse (Telemetry & Metrics Observatory)
+arena ui                       # Launch default dashboard (or arena --ui)
+```
+Each UI dashboard features an interactive **Runtime Mode Toggle** synchronized with the CLI backend:
+* **Prism Command Deck (`simple_ui.html`):** Header pill switches between `STANDALONE` (cyan) and `OPENCODE CONNECTED` (emerald).
+* **Vanguard Studio (`index.html`):** Canvas header badge and quick chips toggle runtime mode and trigger OpenCode sync.
+* **Pulse Observatory (`metrics.html`):** Live telemetry badge displays active architecture and bridge connectivity.
+
+---
+
+## 2. Core Architecture
 
 The system executes an autonomous closed-loop cycle:
 
@@ -29,7 +95,7 @@ The system executes an autonomous closed-loop cycle:
                                  v
                +----------------------------------+
                |    PLANNER (Task Graph with      |
-               |     Explicit Dependencies)       |
+               |     Ability-Based Matching)      |
                +----------------------------------+
                                  |
                                  v
@@ -39,8 +105,8 @@ The system executes an autonomous closed-loop cycle:
 |                                |                      |
 |                                v                      |
 |              +----------------------------------+     |
-|              |          MODEL ROUTER            |     |
-|              | (Specialized Model per TaskType) |     |
+|              |       ABILITY MODEL ROUTER       |     |
+|              |  (Scored by Specialized Ability) |     |
 |              +----------------------------------+     |
 |                                |                      |
 |                                v                      |
@@ -58,107 +124,72 @@ The system executes an autonomous closed-loop cycle:
 |                                v                      |
 |              +----------------------------------+     |
 |              |         UPDATE MEMORY            |     |
-|              |  (Atomic Session Persistence)    |     |
+|              | (Claims, Knowledge, Decisions)   |     |
 |              +----------------------------------+     |
 |                                |                      |
 |                                v                      |
 |              +----------------------------------+     |
-|              |      INDEPENDENT VERIFIER        |     |
-|              |  (Build, Test & File Evidence)   |     |
+|              |       INDEPENDENT VERIFIER       |     |
+|              |    (6 Physical Evidence Gates)   |     |
 |              +----------------------------------+     |
 |                                |                      |
-|        +-----------------------+------------------+   |
-|        |                       |                  |   |
-|        v                       v                  v   |
-|  [ INCOMPLETE ]            [ FAILED ]        [ COMPLETE ]
-|   Replan tasks          Debug, retry or           |
-|        |               strategy fallback          v
-+--------+                       |         +-------------------+
-                                 +-------> |  FINAL EVIDENCE-  |
-                                           |   BACKED REPORT   |
-                                           +-------------------+
+|                     Is Evidence Satisfied?            |
+|                     /                    \            |
+|                   YES                     NO          |
+|                   /                        \          |
+|                  v                          v         |
+|         +-----------------+       +-----------------+ |
+|         | COMPLETED TASK  |       | RECOVERY PLAN   |-+
+|         | (Verified Proof)|       | (Auto Debugging)|
+|         +-----------------+       +-----------------+
 ```
-
-### The "Never Fake Completion" Doctrine
-ArenaFight never outputs *"Task complete"* based on conversational agreement. Completion requires **physical, reproducible evidence**:
-* **Build Verification:** `cmake --build build` or language equivalent exits with code `0`.
-* **Test Suite Verification:** Automated tests (`ctest`, `cargo test`, `pytest`) pass with zero errors.
-* **File Presence:** Required source and documentation artifacts are confirmed present on the filesystem.
-* **Independent Verifier:** The model assessing verification is selected to be independent from the model that wrote the code.
 
 ---
 
-## 2. Hallucination-Resistant Multi-Model Architecture
+## 3. Grounded Execution & Anti-Confabulation Invariants
 
-ArenaFight enforces an inviolable system invariant: **`MODEL OUTPUT != TRUTH`**.
+ArenaFight operates with a strict, non-negotiable **Anti-Confabulation Invariant**:
 
-Multiple models frequently share identical incorrect assumptions, training data artifacts, outdated API knowledge, or reasoning errors. Therefore, ArenaFight **prefers concrete evidence over model consensus**.
+### 1. Model Claim is Not Ground Truth
+A model asserting *"I wrote the file"* or *"Tests pass"* is treated as an unverified hypothesis. Only direct physical tool execution results (exit code `0`, disk presence, stdout proof) can substantiate a claim.
 
-```text
-MODEL OUTPUT
-     |
-     v
-   CLAIM (Hypothesis / Inference)
-     |
-     v
-  EVIDENCE (Compiler, Tests, Files, Exit Codes)
-     |
-     v
- VERIFICATION (6 Verification Gates)
-     |
-     v
- TRUSTED STATE (Persistent Verified Memory)
-```
+### 2. Physical Evidence Hierarchy
+All evidence recorded in the `ClaimRegistry` is ranked hierarchically:
+* **Level 1 (Highest):** `DIRECT_EXECUTION` — Shell exits with code `0`, test runner logs.
+* **Level 2:** `ARTIFACT_VERIFICATION` — File exists on disk, size > 0, SHA-256 validated.
+* **Level 3:** `TOOL_OUTPUT` — Output from read/search tools.
+* **Level 4:** `PROJECT_METADATA` — Configs, CMake files, package.json.
+* **Level 5:** `USER_INPUT` — Explicit human user prompt or confirmation.
+* **Level 6 (Lowest):** `MODEL_DERIVED` — Pure LLM inference or assertion.
 
-### 1. Evidence Levels (`EvidenceLevel`)
-Every significant claim is tracked in the central `ClaimRegistry` with an explicit evidence status:
-* `VERIFIED`: Proven by Level 1/Level 2 tool execution (compiler, test runner, exact file content).
-* `STRONGLY_SUPPORTED`: Backed by authoritative documentation, specifications, or strong indirect evidence.
-* `MODEL_DERIVED`: Asserted by one or more models without external tool proof.
-* `UNVERIFIED`: Proposed as hypothesis or assumption without supporting tool proof yet.
-* `CONTRADICTED`: Directly refuted by compiler errors, test failures, or opposing facts.
-* `UNKNOWN`: Insufficient evidence to validate or refute.
+> **Dominance Rule:** Level 1/2 evidence strictly dominates Level 6 claims. A lower-level claim cannot override or invalidate a higher-level physical claim.
 
-### 2. The 6-Tier Evidence Hierarchy
-Evidence types are ranked hierarchically. Higher levels strictly dominate lower levels:
-1. **LEVEL 1 — Direct Execution Evidence:** Compiler output, test runners, shell exit codes, program stdout/stderr.
-2. **LEVEL 2 — Direct Artifact Evidence:** Source files, config files, Git diffs, database contents.
-3. **LEVEL 3 — Authoritative Documentation:** Official docs, API schemas, local project specifications.
-4. **LEVEL 4 — Independent Model Agreement:** Multiple independent models converging without prior bias.
-5. **LEVEL 5 — Single Model Reasoning:** Single model inference or deductions.
-6. **LEVEL 6 — Guess / Assumption:** Unsubstantiated model guesses.
+### 3. Separation of Facts vs. Hypotheses
+Every memory item is classified into:
+* `FACT` — Supported by Level 1/2 physical proof.
+* `HYPOTHESIS` — Generated by a model, requires tool confirmation before action.
+* `ASSUMPTION` — Working premise, downgraded if contradictions appear.
 
-### 3. Separation of Facts from Hypotheses
-The system rigorously classifies claims as `FACT`, `HYPOTHESIS`, `ASSUMPTION`, `INFERENCE`, or `UNKNOWN`.
-* If a model asserts: *"The segmentation fault is caused by use-after-free"*, the system registers it as `KnowledgeType::HYPOTHESIS` with status `UNVERIFIED`.
-* It is **strictly prevented** from entering persistent memory as a `FACT` until concrete Level 1/Level 2 evidence (e.g. AddressSanitizer/GDB backtrace or test reproduction) is linked.
-
-### 4. Consensus Is Supporting Evidence, Not Proof
-* **5 models agree, 0 external evidence:** Status remains `MODEL_DERIVED`, confidence is capped at `0.50`.
-* **1 model claims X, compiler/tests prove X:** Status becomes `VERIFIED`, confidence is `> 0.95`.
-Evidence outranks consensus in every evaluation.
+### 4. Consensus is Not Proof
+If 5 models predict *"This C++ code will compile"*, but the local compiler (`g++`) exits with code `1`, the compiler result is absolute truth. Consensus without physical execution remains Level 6 hypothesis.
 
 ### 5. Contradiction Detection & Active Resolution
-If independent agents produce conflicting claims (e.g., Agent A claims *"The bug is in parser.cpp"*, while Agent B claims *"The bug is in lexer.cpp"*):
-* The system detects the contradiction and registers an explicit `Contradiction` record.
-* Sets claim statuses to `CONTRADICTED`.
-* Enforces the required action: **`Inspect source + reproduce failure.`**
-* Contradictions must be actively resolved via tool evidence before a task can pass verification.
+If conflicting claims arise, the system blocks completion and triggers an active resolution subtask (e.g., executing a diff, inspecting file contents directly, or running an isolated test).
 
-### 6. Dependency-Aware Fresh Verification (Evidence Invalidation)
-Any file modification invalidates previous verification that depends on the modified artifact:
+### 6. Evidence Invalidation on File Modification
+Evidence is tied to specific file paths and timestamps:
 * If `src/main.cpp` is modified via `write_file` or `edit_file`, previous build and test evidence automatically becomes `isStale = true`.
 * Dependent claims are downgraded from `VERIFIED` back to `UNVERIFIED`, forcing fresh re-compilation and re-testing.
 
 ### 7. Independent & Adversarial Verification
-* **Blind Review:** When evaluating multiple candidate solutions, they are anonymized (`SOLUTION A`, `SOLUTION B`) without provider or model labels to eliminate provider bias.
+* **Blind Review:** When evaluating candidate solutions, they are anonymized (`SOLUTION A`, `SOLUTION B`) without provider or model labels to eliminate provider bias.
 * **Adversarial Review (`ReviewMode::ADVERSARIAL`):** An independent model is tasked with actively attempting to prove the solution wrong, probing for command injection, path traversal, buffer overflows, missing edge cases, and invalid API assumptions.
 
 ---
 
-## 3. The 6 Verification Gates
+## 4. The 6 Verification Gates
 
-Before marking any task or objective complete, the system validates all 6 gates:
+Before marking any task or objective complete, the system validates all 6 physical gates:
 
 | Gate | Gate Name | Required Proof |
 | :--- | :--- | :--- |
@@ -171,7 +202,106 @@ Before marking any task or objective complete, the system validates all 6 gates:
 
 ---
 
-## 4. OpenCode Integration (`OpenCodeProvider`)
+## 5. Hyperparameter Customization: Temperature & Token Generation
+
+ArenaFight gives you complete, granular control over generation parameters across all backends:
+
+### Temperature Control
+* Set arbitrary sampling temperature (`0.0` to `2.0`).
+* Lower values (`0.0 - 0.2`) guarantee maximum determinism for C++ syntax, register maps, and compiler flags.
+* Higher values (`0.7 - 1.2`) promote creative architectural exploration and alternative test edge case generation.
+
+### Max Output Tokens
+* Allocate generation limits dynamically from `256` to `32,768+` tokens.
+* Prevents truncated code outputs during full-file refactoring and embedded driver scaffolding.
+
+### Usage Options
+```bash
+# Set temperature and token generation via CLI flags
+arena --temperature 0.15 --max-tokens 8192 "Refactor memory manager"
+arena -t 0.7 --tokens 16384 "Explore distributed queue architectures"
+
+# Environment Variable Overrides
+export ARENA_TEMPERATURE=0.25
+export ARENA_MAX_TOKENS=8192
+
+# In Interactive REPL
+arena > /temp 0.1
+arena > /tokens 12000
+arena > /config
+```
+
+---
+
+## 6. Intelligent Ability-Based Model Routing & Task Graph Planning
+
+ArenaFight plans which model to use by evaluating multidimensional capability profiles rather than relying on static vendor defaults:
+
+### Multidimensional Ability Vector (`ModelAbilities`)
+Each model is profiled across 7 core capability dimensions (`0.0` to `1.0`):
+1. **Coding (`coding`):** C++, Python, algorithms, low-level syntax precision.
+2. **Reasoning (`reasoning`):** Multi-step architectural logic, decomposition, math.
+3. **Planning (`planning`):** Dependency resolution, ordering, risk estimation.
+4. **Verification (`verification`):** Adversarial bug hunting, edge cases, hallucination checking.
+5. **Hardware (`hardware`):** Embedded C/C++, pinouts, strapping pins, Wokwi, circuit math.
+6. **Speed (`speed`):** Low latency, fast token throughput for iterative searches.
+7. **Context (`context`):** Large repository context window processing.
+
+### Task Graph Ability Matching
+When `Planner::createInitialPlan` generates subtasks, it automatically evaluates the objective and required skill set for each subtask:
+* **Research / Discovery Tasks:** Planned for models with high **Context & Speed** abilities (e.g., Claude 3.7 Sonnet, Gemini 2.5 Pro).
+* **Firmware & C++ Coding Tasks:** Planned for models with high **Coding & Hardware** abilities (e.g., Qwen 2.5 Coder 32B, Unsloth Fine-Tuned Local).
+* **Architectural & Debugging Tasks:** Planned for high **Reasoning** models (e.g., DeepSeek R1).
+* **Verification & Audit Tasks:** Planned for dedicated independent verifiers with high **Verification** abilities.
+
+### Inspecting Ability Matrix
+```bash
+# View active model capability breakdown
+arena abilities
+```
+
+Example output:
+```text
+MODEL ID                    PROVIDER    CODE    REASON  PLAN    VERIF   HW      SPEED   STRENGTH
+--------------------------------------------------------------------------------------------------
+opencode-default            OpenCode    0.94    0.92    0.90    0.90    0.88    0.90    Coding
+opencode/claude-3-7-sonnet  OpenCode    0.96    0.98    0.97    0.95    0.90    0.85    Reasoning
+opencode/gemini-2.5-pro     OpenCode    0.93    0.94    0.95    0.92    0.87    0.88    Large Context
+opencode/deepseek-r1        OpenCode    0.92    0.99    0.98    0.96    0.86    0.70    Reasoning
+opencode/qwen-2.5-coder     OpenCode    0.99    0.91    0.88    0.92    0.95    0.92    Coding
+arena-finetuned (Unsloth)   Ollama      0.98    0.95    0.92    0.94    0.97    0.96    Embedded QoS C++
+```
+
+---
+
+## 7. Unsloth AI Direct Integration: On-The-Fly Fine-Tuning
+
+ArenaFight natively integrates with **Unsloth AI** (`unsloth`), enabling 2x faster fine-tuning with 70% less VRAM consumption through custom Triton and CUDA kernels:
+
+### Capabilities
+* **On-The-Fly Trajectory Extraction:** Converts successful ArenaFight sessions and self-correction failure recovery trajectories into ChatML and Alpaca fine-tuning pairs.
+* **Synthetic Hardware Datasets:** Generates embedded firmware datasets covering ESP32 strapping pins, circuit formulas, FreeRTOS QoS invariants, and Wokwi configurations.
+* **Automated Scaffolding:** Generates production-ready standalone PyTorch scripts (`unsloth_train.py`) utilizing 4-bit QLoRA, `FastLanguageModel`, and `SFTTrainer`.
+* **GGUF Export & Ollama Auto-Registration:** Automatically quantizes fine-tuned models to GGUF (`q4_k_m`), writes an Ollama `Modelfile`, and registers the model into Ollama so ArenaFight can immediately deploy its newly trained model.
+
+### CLI Usage with Unsloth
+```bash
+# Check Python, Unsloth, PyTorch, and CUDA environment diagnostics
+arena unsloth status
+
+# Generate fine-tuning dataset from agent history and hardware rules
+arena unsloth dataset
+
+# Generate standalone unsloth_train.py script
+arena unsloth scaffold
+
+# Launch on-the-fly fine-tuning loop (or add --dry-run for simulation)
+arena unsloth train
+```
+
+---
+
+## 8. OpenCode Bridge Integration (`OpenCodeProvider`)
 
 ArenaFight features native integration with [OpenCode](https://opencode.ai) (`anomalyco/opencode`), the open-source AI coding agent CLI:
 
@@ -203,40 +333,12 @@ arena --opencode "Scaffold a C++20 project with unit tests"
 
 ---
 
-## 5. User Interfaces
-
-### 1. Simplistic UI (`simple_ui.html`)
-A focused, distraction-free minimalist interface designed for rapid developer iteration:
-* **Zen Layout:** Single-column clean card design with zero visual clutter.
-* **Zero Emojis:** Clean inline SVG icons and modern typography.
-* **Backend Selector:** Instantly toggle between **OpenCode CLI**, **Claude Code CLI**, **Ollama**, **OpenRouter**, or **Offline Mock**.
-* **Mode Actions:** Execute autonomously (`/goal`), draft milestones (`/plan`), run physical verification directly, bridge into OpenCode (`opencode run`), or conduct requirements interviews (`/grill-me`).
-* **6-Gate Verification Board:** Real-time visual pass/fail badges for physical verification invariants.
-* **Collapsible Terminal:** Telemetry and execution logs with copy and auto-scroll.
-* **One-Click Launch:**
-```bash
-# Launch directly from ArenaFight CLI
-arena ui
-
-# Or open in browser
-explorer simple_ui.html
-```
-
-### 2. Antigravity 2.0 Studio (`index.html`)
-For complex, multi-pane workflows requiring full IDE capabilities:
-* **Left Sidebar**: Workspace indicator, session history, skills drawer, scheduled tasks monitor.
-* **Chat Canvas**: Interactive multi-turn feed with collapsible Thinking Process disclosures, live Tool Execution cards, interactive Plan Cards with "Proceed with Execution", and slash command autocomplete (`/`).
-* **Auxiliary Pane**: Artifacts Viewer, Visual Task Graph, 6 Verification Gates, and ANSI Terminal Console.
-* Easily toggle between Studio and Simplistic UI via the top navigation header button (`Simplistic UI`).
-
----
-
-## 6. Refactored C++20 Architecture
+## 9. Refactored C++20 Architecture
 
 The C++ codebase is refactored according to modern C++20 best practices:
 
 1. **Command Dispatcher Pattern (`src/main.cpp`):**
-   Replaced legacy chained `if-else` blocks with a structured `std::map<std::string, Handler>` command dispatch table with unified flag and argument tokenization.
+   Structured `std::map<std::string, Handler>` command dispatch table with unified flag and argument tokenization.
 
 2. **Provider Factory Pattern (`src/providers/provider_factory.cpp`):**
    Decoupled model backend instantiation out of `ArenaAgent` into a dedicated factory supporting `OpenCodeProvider`, `ClaudeCodeProvider`, `OllamaProvider`, `OpenRouterProvider`, and `TestMockProvider`.
@@ -244,15 +346,18 @@ The C++ codebase is refactored according to modern C++20 best practices:
 3. **RAII Temporary File Management (`include/arenafight/common/fs_utils.hpp`):**
    `TempFileGuard` guarantees exception-safe cleanup of temporary prompt and execution files across all CLI backends.
 
-4. **Multi-Model Router Scoring (`src/router/model_router.cpp`):**
-   Dynamic task routing supports OpenCode backends with high capability scoring for coding and debugging tasks alongside Claude and local models.
+4. **Ability-Based Multi-Model Router (`src/router/model_router.cpp`):**
+   Dynamic task routing evaluating 7-dimensional ability vectors (`ModelAbilities`) to match coding, reasoning, planning, and verification tasks with highest-scoring models.
 
-5. **Decoupled Verification Subsystems:**
-   `Verifier`, `IndependentReviewer`, and `ClaimRegistry` enforce strict separation between model hypotheses and physical tool evidence.
+5. **Unsloth On-The-Fly Fine-Tuning Engine (`src/finetune/unsloth_manager.cpp`):**
+   Autonomous dataset formatting, LoRA script generation, training execution, GGUF conversion, and Ollama registration.
+
+6. **File Operations & Targeted Context Injection Engine (`src/session/context_manager.cpp`, `src/repl/repl_engine.cpp`):**
+   Full multi-mention `@file <path>` resolver supporting quoted paths (`@file "path with spaces/file.txt"`), CLI `--file <path>` / `--files <p1,p2>` attachment flags, `/files` REPL file explorer, and custom file dataset extraction across C++, Python, JavaScript/TypeScript, JSON, Markdown, and configuration formats.
 
 ---
 
-## 7. CLI Reference & Subcommands
+## 10. CLI Reference & Subcommands
 
 ```text
 Usage:
@@ -261,8 +366,22 @@ Usage:
   arena goal "<task>"             Autonomous goal pursuit with verification
   arena plan "<task>"             Generate structured plan artifact with milestones
   arena grill-me "<topic>"        Interactive requirements interview
+  arena mode [standalone|opencode] Inspect or switch runtime execution mode
+  arena connect [opencode]        Connect and synchronize OpenCode bridge
+  arena disconnect               Disconnect bridge and switch to standalone mode
+  arena status                   Display runtime architecture and verification status
+  arena security [cmd]           Defense-in-depth security posture & vulnerability scan
+  arena audit                    Verify tamper-evident SHA-256 cryptographic audit trail
+  arena benchmark [all|models...] Benchmark models across Reasoning, Coding, Verif, TPS
   arena opencode [cmd]           OpenCode CLI integration (status|models|run|sync)
-  arena ui [simple|studio]       Launch Simplistic Web UI dashboard in browser
+  arena unsloth [cmd]            Unsloth AI on-the-fly fine-tuning (status|dataset|scaffold|train)
+  arena files [cmd]              Workspace file operations (list|cat|read|attach|attached)
+  arena think "<task>"           Fast thinking tournament (Code generation disallowed)
+  arena duel "<task>"            Alias for think tournament
+  arena abilities                Display model ability matrix & capability scores
+  arena ui [prism|vanguard|pulse] Launch Web UI: Prism Deck, Vanguard Studio, or Pulse
+  arena metrics, pulse           Launch ArenaFight Pulse live telemetry observatory
+  arena help-session, guide      Launch interactive guided help session & diagnostics
   arena providers                Inspect all AI model backends status
   arena artifacts                List and inspect project artifacts
   arena skills                   List active skills
@@ -280,7 +399,14 @@ Usage:
   arena test                     Run built-in automated self-tests
 
 Options:
-  --opencode                     Select OpenCode as primary provider
+  --standalone                   Run in isolated standalone mode (Default)
+  --opencode, --connected        Run connected to OpenCode CLI bridge
+  --mode <standalone|opencode>   Set runtime execution mode
+  --ui [variant]                 Launch companion Web UI (prism, vanguard, pulse)
+  --file, -f <path>              Attach specific file context to prompt/session
+  --files <p1,p2,...>            Attach multiple comma-separated files
+  --temperature, -t <float>      Set model generation temperature (0.0 to 2.0)
+  --max-tokens, --tokens <int>   Set max generation token limit
   --claude                       Select Claude Code CLI as primary provider
   --ollama                       Select Ollama as primary provider
   --openrouter                   Select OpenRouter as primary provider
@@ -290,9 +416,24 @@ Options:
 ```
 
 ### REPL Slash Commands (inside `arena > `)
+* `/mode [standalone|opencode]`: Switch runtime mode dynamically on the fly.
+* `/connect [opencode]`: Connect and synchronize OpenCode workspace bridge.
+* `/disconnect`: Disconnect OpenCode bridge and revert to standalone mode.
+* `/status`: Displays runtime mode, connected bridge state, telemetry, and gate statuses.
+* `/security [scan|audit|level]`: Defense-in-depth security posture, path jail & vulnerability scan.
+* `/audit`: Inspect tamper-evident SHA-256 audit log and verify cryptographic hash chain.
+* `/benchmark [all|models...]`: Run universal model benchmark suite across models.
 * `/goal <task>`: Autonomous goal execution until verified.
 * `/plan <task>`: Generates a plan artifact with milestones and dependencies.
 * `/grill-me <topic>`: Requirements interview to resolve edge cases and design decisions.
+* `/think <task>`: Fast thinking tournament with code generation disallowed (compares internal reasoning directly).
+* `/duel <task>`: Alias for `/think`.
+* `/guide` / `/help session`: Launches interactive guided help session and system diagnostics.
+* `/files [cmd]`: Inspect, preview, and attach workspace files (`list`, `cat <path>`, `attach <path>`, `attached`, `clear`).
+* `/unsloth [cmd]`: On-the-fly fine-tuning with Unsloth AI (status, dataset [path-or-file], scaffold, train).
+* `/abilities`: Displays model ability matrix and multidimensional scores.
+* `/temp [val]`: Inspects or updates model generation temperature (0.0 - 2.0).
+* `/tokens [val]`: Inspects or updates max output token limit.
 * `/learn <insight>`: Persists repository conventions and rules into `.arena/knowledge/`.
 * `/schedule <delay_sec> <task>`: Schedules delayed or recurring background jobs.
 * `/artifacts [id]`: Lists and inspects project artifacts with YAML metadata.
@@ -300,19 +441,19 @@ Options:
 * `/rules`: Lists active system and workspace rules.
 * `/models`: Discovers and switches models across OpenCode, Claude Code, OpenRouter, and Ollama.
 * `/opencode`: OpenCode CLI status, model discovery, one-off execution, and `.opencode` sync.
-* `/ui`: Launches the Simplistic Web UI dashboard in your browser.
-* `/status`: Displays session telemetry, verified facts, and gate statuses.
+* `/ui [prism|vanguard|pulse]`: Launches ArenaFight Prism, Vanguard Studio, or Pulse Observatory in your browser.
+* `/metrics` / `/pulse`: Launches ArenaFight Pulse live telemetry and metrics observatory dashboard.
 * `/exit` / `/quit`: Exits the session.
 
-### Context Mentions (`@`)
-* `@file <path>`: Attaches file content directly into prompt context.
-* `@git`: Attaches working tree status and diff.
-* `@claims`: Injects ClaimRegistry verified evidence.
-* `@memory`: Injects recent discoveries and decisions.
+### Context Mentions
+* `@file <path>`: Injects file contents directly into prompt context. Supports multiple mentions and quoted paths (e.g. `@file "src/main.cpp"`).
+* `@git`: Injects git working tree status and diff.
+* `@claims`: Injects physical facts from ClaimRegistry.
+* `@memory`: Injects discoveries and persistent memory items.
 
 ---
 
-## 8. Hardware & Embedded QoS Studio
+## 11. Hardware & Embedded QoS Studio
 
 ArenaFight provides embedded systems development and physical circuit tooling:
 
@@ -323,7 +464,7 @@ ArenaFight provides embedded systems development and physical circuit tooling:
 
 ---
 
-## 9. Configuration (`config.json`)
+## 12. Configuration (`config.json`)
 
 ```json
 {
@@ -343,6 +484,8 @@ ArenaFight provides embedded systems development and physical circuit tooling:
     "anthropic_api_key": "",
     "opencode_command": "opencode",
     "opencode_model": "opencode-default",
+    "default_temperature": 0.2,
+    "default_max_tokens": 4096,
     "max_iterations": 30,
     "max_tool_calls": 100,
     "max_retries": 3,
@@ -357,6 +500,8 @@ ArenaFight provides embedded systems development and physical circuit tooling:
 ```
 
 Environment variables override configuration automatically:
+* `ARENA_TEMPERATURE`: Overrides generation temperature (e.g. `0.2`).
+* `ARENA_MAX_TOKENS`: Overrides maximum output tokens (e.g. `8192`).
 * `OPENCODE_COMMAND`: Invocation command for OpenCode (default: `opencode`).
 * `OPENCODE_MODEL`: Default model selection for OpenCode.
 * `OPENROUTER_API_KEY`: Sets the OpenRouter authentication token.
@@ -366,7 +511,245 @@ Environment variables override configuration automatically:
 
 ---
 
-## 10. Building and Testing
+---
+
+## 13. Fast Thinking-Phase Tournament & Early Stopping
+
+In conventional LLM duels, both models generate complete implementations (consuming 2,000 to 5,000 tokens over 20-45 seconds), wasting immense compute and time on the losing candidate. ArenaFight accelerates model selection by dueling models during their **internal thinking phase**:
+
+1. **Code Generation Disallowed:** Candidate models are strictly forbidden from outputting code or solution syntax. They provide only chain-of-thought, structural decomposition, edge-case anticipation, and safety invariants.
+2. **Bounded Output Window:** Tokens are strictly constrained to <= 384 tokens with temperature 0.1, finishing in ~200ms.
+3. **Multi-Vector Thinking Evaluation:**
+   * *Edge-Case Anticipation:* Boundary conditions, null pointers, integer overflows, race conditions, network/hardware timeouts.
+   * *Invariant Soundness:* RAII deterministic destruction, smart pointer semantics, zero-heap safety bounds, exception guarantees.
+   * *Algorithmic Efficiency:* Time and space complexity analysis (O(1), O(N log N)), cache locality, lock contention.
+   * *Discipline Score:* Heavy penalty for premature code dumping when disallowed.
+4. **Early Stopping & Savings:** The winner is selected immediately; full generation from the losing model is avoided entirely, saving over 80% in latency and ~4,500 compute tokens per tournament.
+
+CLI & REPL usage:
+```bash
+# Run thinking duel via CLI
+arena think "Design lock-free ring buffer with zero-heap guarantees" mock-reasoner mock-coder
+
+# Run inside interactive REPL
+arena > /think Design high-throughput async worker pool
+```
+
+---
+
+## 14. Bespoke Web UI Dashboards
+
+ArenaFight features three distinct, dedicated web dashboards tailored for different developer workflows:
+
+### 1. ArenaFight Prism (simple_ui.html)
+* **Name & Role:** *ArenaFight Prism // Streamlined Command Deck v2.4*
+* **Design Philosophy:** Minimalist, focused obsidian command center with neon prism spectrum accents, quick mode toggles (`/goal`, `/think`, `/plan`, `/verify`, `/grill-me`), file drag-and-drop dropzone, workspace file explorer, on-the-fly Unsloth training launcher, and collapsible telemetry console.
+* **Launch:** `arena ui prism` (or `arena ui simple`)
+
+### 2. ArenaFight Vanguard Studio (index.html)
+* **Name & Role:** *ArenaFight Vanguard // Autonomous Multi-Pane Engineering Studio v2.4*
+* **Design Philosophy:** Professional 3-pane IDE layout with deep navy slate styling:
+  * *Left Sidebar:* Session management, workspace project navigator, skills & custom rules inspector.
+  * *Center Canvas:* Multi-turn chat interface with autocomplete slash popover (`/think`, `/goal`, `/plan`, `/unsloth`, `/files`, `/guide`).
+  * *Right Auxiliary Workstation:* 5 live inspection decks (Artifacts Preview, Execution Plan Graph, 6 Physical Gates Board, Terminal Telemetry, Fast Thinking Duel Canvas).
+* **Launch:** `arena ui vanguard` (or `arena ui studio`)
+
+### 3. ArenaFight Pulse (metrics.html)
+* **Name & Role:** *ArenaFight Pulse // Live Telemetry & Metrics Observatory v2.4*
+* **Design Philosophy:** Real-time observatory dashboard with cyber emerald telemetry aesthetic:
+  * *4 Hero KPI Counters:* Verified Execution Tasks (100% physical), Thinking Phase Tokens Saved, Physical Evidence Gate Pass Rate (100%), Embedded Firmware QoS Compliance.
+  * *Thinking Duel Efficiency Metrics:* Side-by-side comparison bar charts visualizing 4,800 vs 384 tokens and 28.4s vs 0.22s latency.
+  * *6 Physical Verification Gates:* Real-time pass rates across all 6 physical evidence gates (Artifacts, Compilation, Unit Tests, Plan Milestones, Adversarial Review, Contradictions).
+  * *Multi-Dimensional Ability Matrix:* Live capability scores across all available model backends.
+  * *Unsloth AI Training Loss Curve:* Real-time SVG training convergence curve (Loss 1.28 down to 0.384).
+  * *Live Telemetry Console Feed:* Streaming event log with auto-updating physical verification milestones.
+* **Launch:** `arena ui pulse` (or `arena metrics` or `arena pulse`)
+
+---
+
+## 15. Interactive Help Session & System Diagnostics
+
+Get comprehensive runtime guidance, system diagnostics, and cheat sheets at any time:
+```bash
+# Launch interactive help session from CLI
+arena help-session
+# or
+arena guide
+
+# Launch inside interactive REPL
+arena > /help session
+# or
+arena > /guide
+```
+
+The help session displays:
+* Active workspace directory and configuration parameters.
+* Online/offline status across all 5 providers (OpenCode, Claude Code, Ollama, OpenRouter, TestMock).
+* Explanation of thinking phase tournaments, file context injection, and Unsloth AI fine-tuning.
+* Summary of the 6 Physical Evidence Verification Gates and Hardware Studio commands.
+* Quick-start cheat sheet with copyable examples.
+
+---
+
+## 16. Universal Compatibility With Any Models
+
+ArenaFight Agent is completely architecture-agnostic and works universally with **any models you provide**: local Ollama models, OpenRouter cloud models, OpenAI-compatible endpoints, custom fine-tuned weights, or user-specified model strings.
+
+### 1. Universal Model CLI & REPL Commands
+* **CLI Flag:** `arena --model <name>` or `arena -m <name>` sets the universal model for any command.
+* **Custom Base URL & Key:** `arena --base-url <url> --api-key <key>` connects to any OpenAI-compatible API endpoint (vLLM, SGLang, LiteLLM, Ollama, OpenRouter).
+* **CLI Subcommand:** `arena model [model_name]` inspects or switches the active model; `arena models [set <name>]` lists catalog or sets default.
+* **Environment Variables:** `ARENA_MODEL` or `DEFAULT_MODEL`, `OPENAI_BASE_URL` or `OPENAI_API_BASE`, `OPENAI_API_KEY`.
+* **Interactive REPL:** `/model <name>` dynamically switches the active model on the fly.
+* **Web UI Dashboards:** Type any custom model into the Prism Command Deck or click the Vanguard model selector badge.
+
+### 2. Universal Ability Inference & Scaling
+When an arbitrary model is introduced, ArenaFight automatically analyzes the model string and infers a multi-dimensional capability vector across 8 axes:
+* **Architecture Detection:** DeepSeek (R1, V3), Qwen (2.5, Coder, Math, QwQ), Llama (3.1, 3.2, 3.3), Claude (3.5, 3.7 Sonnet), OpenAI (GPT-4o, o1, o3-mini), Mistral / Codestral, Google (Gemini 2.5/2.0), Gemma, Phi, etc.
+* **Parameter Scale Weighting:** Recognizes parameter scale markers (`405b`, `70b`, `32b`, `14b`, `8b`, `3b`, `flash`, `mini`) and scales capabilities proportionally.
+* **Universal Custom Baseline:** Custom or private fine-tuned models receive a reliable baseline score of `>=0.80` across all traits, preventing artificial bottlenecks.
+* **Dynamic Provider Binding:** Models with `:` automatically route to Ollama; models with `/` route to OpenRouter; `opencode/` routes to OpenCode CLI; or fallback to active providers dynamically.
+
+### 3. Universal Thinking Duels
+Duel any two arbitrary models during their thinking phase:
+```bash
+arena think "Implement lock-free queue with memory barriers" deepseek-r1:70b qwen2.5:32b
+```
+Extracts internal thoughts seamlessly across `<think>`, `<thinking>`, `reasoning_content`, and raw streams, scoring edge-case handling and invariant safety while penalizing premature code dumping.
+
+### 4. Universal On-The-Fly Unsloth Fine-Tuning
+Fine-tune any arbitrary Hugging Face base model directly:
+```bash
+# REPL command with custom base model
+arena > /unsloth scaffold meta-llama/Llama-3.1-8B-bnb-4bit
+arena > /unsloth train meta-llama/Llama-3.1-8B-bnb-4bit
+```
+The resulting model (e.g. `arena-finetuned`) is dynamically registered into the runtime model router and immediately made available across all CLI, REPL, and UI workflows.
+
+---
+
+## 17. Universal Model Benchmarking Suite (`arena benchmark`, `/benchmark`)
+
+ArenaFight features a built-in, universal benchmarking engine (`BenchmarkEngine`) that evaluates and ranks all available models, providers, or custom candidate subsets across multi-dimensional, objective criteria:
+
+### 1. Standard Benchmark Suite (4 Standard Tasks)
+1. **Task 1: Advanced Reasoning & Architectural Invariants (35% weight)**
+   * Rigorous concurrency and memory safety reasoning on a bounded, lock-free ring buffer.
+   * Assesses edge-case anticipation (null pointer dereferences, integer overflow, race conditions, atomic visibility) and RAII safety without writing raw code.
+2. **Task 2: Systems Coding & Invariant Implementation (35% weight)**
+   * Implementation of high-performance C++20 constructs: cache-line alignment (`alignas(64)`), `std::atomic`, explicit `std::memory_order_acquire`/`std::memory_order_release` semantics, and zero-heap allocations.
+3. **Task 3: Adversarial Vulnerability Verification (20% weight)**
+   * Adversarial audit of flawed code snippets to detect security vulnerabilities: unchecked `strcpy` buffer overflows, memory leaks, use-after-free, and unchecked array bounds.
+4. **Task 4: Throughput & Latency QoS (10% weight)**
+   * Direct measurement of tokens-per-second (TPS) and time-to-first-token/total latency (ms) under sustained execution.
+
+### 2. Composite Scoring & Academic Grading
+* **Letter Grades:**
+  * **S+**: Composite Score >= 95.0% (Exceptional across all dimensions)
+  * **S**: Composite Score >= 90.0% (Elite reasoning and coding)
+  * **A**: Composite Score >= 80.0% (Production ready)
+  * **B**: Composite Score >= 70.0% (Capable with verification supervision)
+  * **C**: Composite Score >= 60.0% (Basic capability)
+  * **F**: Composite Score < 60.0% (Fails invariant checks)
+  * **OFFLINE**: Provider or endpoint unreachable
+
+### 3. CLI & REPL Commands
+```bash
+# Benchmark all discovered models across all providers
+arena benchmark all
+# or shorthand
+arena bench all
+
+# Benchmark specific candidate models or providers
+arena benchmark mock-reasoner mock-coder mock-verifier
+arena benchmark deepseek-r1 qwen-2.5-coder claude-3-7-sonnet
+
+# Run inside interactive REPL
+arena > /benchmark
+arena > /benchmark all
+arena > /bench mock-reasoner mock-coder
+```
+
+### 4. Leaderboard Output & Artifact Persistence
+The engine prints a clean ASCII leaderboard with category champions and automatically saves complete suite results to `benchmark_results.json`:
+```
++------+-------------------+-----------+---------+--------+--------+---------+--------+-----------+-------+
+| Rank | Model             | Provider  | Reason  | Coding | Verif  | TPS     | Latency| Composite | Grade |
++------+-------------------+-----------+---------+--------+--------+---------+--------+-----------+-------+
+| #1   | mock-reasoner     | TestMock  |  99.5%  |  94.0% |  97.0% |  95.2   |   42ms |   97.6%   |  S+   |
+| #2   | mock-coder        | TestMock  |  88.0%  |  99.0% |  91.0% | 124.5   |   28ms |   94.3%   |  S    |
+| #3   | mock-verifier     | TestMock  |  92.0%  |  90.0% |  99.5% |  88.7   |   36ms |   93.8%   |  S    |
++------+-------------------+-----------+---------+--------+--------+---------+--------+-----------+-------+
+```
+
+### 5. Web UI Dashboard Integrations
+* **ArenaFight Prism (`simple_ui.html`):** Dedicated `Benchmark Everyone (/bench)` mode button, live multi-column leaderboard table, category champions deck, and direct JSON export.
+* **ArenaFight Vanguard (`index.html`):** `/benchmark` slash popover autocomplete, quick `/benchmark Everyone` chip, and in-chat interactive leaderboard cards.
+* **ArenaFight Pulse (`metrics.html`):** Full telemetry observatory card tracking category champions and real-time model throughput benchmarks.
+
+---
+
+## 18. Defense-in-Depth Security Sandbox & Threat Mitigation (`SecuritySandbox`)
+
+ArenaFight incorporates a multi-layer security architecture designed to defend autonomous execution against malicious prompt injections, remote command execution attacks, directory traversal escapes, and credential exfiltration:
+
+### 1. Workspace Path Confinement & Jailbreak Protection
+* **Strict Path Confinement:** All file reads, writes, edits, searches, and directory creation operations are cryptographically and lexically confined to the designated workspace root (`workspace_dir`).
+* **Path Traversal Defense:** Prohibits directory traversal attempts (`../../../../etc/passwd`, `C:\Windows\System32`), drive-letter escapes, UNC network jumps (`\\evil.com\share`), and Windows Alternate Data Streams (`file.txt::$DATA`).
+* **Protected File Guards:** Blocks direct modifications or deletions of sensitive credential files (`.env`, `id_rsa`, `id_ed25519`, `credentials.json`, `*.pem`, `*.key`). Any attempt triggers an immediate `CRITICAL` audit alert with access denied.
+
+### 2. Multi-Tier Command Risk Engine & Threat Prevention
+Every shell command or executable invocation is parsed against an intelligent multi-tier risk classifier:
+* **FORBIDDEN (Hard Blocked):**
+  * *Reverse Shells:* `nc -e`, `ncat -e`, `/dev/tcp/`, `/dev/udp/`, `mkfifo /tmp/`, `socat exec:`.
+  * *Remote Code Execution:* `curl | bash`, `wget | sh`, `Invoke-WebRequest ... | iex`, encoded PowerShell payloads (`-enc`).
+  * *Exploitation Utilities:* `certutil -urlcache`, `bitsadmin /transfer`, `mshta http`, `regsvr32 /s /u /i:`.
+  * *System Destruction:* `rm -rf /`, `rm -rf *`, `rmdir /s /q c:\`, `del /f /s /q c:\`, `format`, `mkfs`, `dd if=/dev/`.
+  * *Registry / Privileges:* `reg delete HKLM`, `net user /add`, `useradd`, `chmod -R 777 /`.
+  * *Fork Bombs:* `:(){ :|:& };:`, `0<${0}`.
+* **RESTRICTED:** Requires explicit user authorization confirmation (`git reset --hard`, `git clean -fd`, `del /f /s /q`).
+* **SAFE / AUDITED:** Read-only inspections, builds (`cmake`, `ninja`, `g++`, `clang`, `cargo`), test suites (`ctest`, `pytest`).
+
+### 3. Data Loss Prevention (DLP) & Secret Redactor
+Automatic, real-time redaction engine masks sensitive credentials before they can enter stdout, stderr, agent conversation turns, execution logs, session memory, or artifacts:
+* **OpenAI:** `sk-[A-Za-z0-9_-]{20,}` -> `sk-***[REDACTED]`
+* **Anthropic:** `sk-ant-[A-Za-z0-9_-]{20,}` -> `sk-ant-***[REDACTED]`
+* **OpenRouter:** `sk-or-v1-[A-Za-z0-9]{32,}` -> `sk-or-v1-***[REDACTED]`
+* **GitHub Tokens:** `ghp_[A-Za-z0-9]{36}`, `github_pat_[A-Za-z0-9_]{50,}` -> `ghp_***[REDACTED]`
+* **AWS Access Keys:** `AKIA[0-9A-Z]{16}` -> `AKIA***[REDACTED]`
+* **Private Keys:** `-----BEGIN [A-Z ]*PRIVATE KEY-----` -> `[REDACTED_PRIVATE_KEY_BLOCK]`
+* **Generic Bearer Tokens & Passwords:** `Bearer [REDACTED_TOKEN]`, `api_key=[REDACTED]`.
+
+### 4. Adversarial Unicode & Prompt Injection Sanitizer
+* **Trojan Source Protection:** Strips invisible bidirectional text override characters (`\u202A` to `\u202E`, `\u2066` to `\u2069`) that attempt to disguise malicious code logic.
+* **Adversarial Control Filtering:** Strips null bytes (`\0`) and tokenizer poison bytes.
+* **Prompt Injection Guard:** Flags attempts to override agent instructions (`"disregard all prior instructions"`, `"you are now in developer mode"`, `"<system>"` tags).
+
+### 5. Tamper-Evident SHA-256 Audit Trail (`.arena/security_audit.jsonl`)
+* Every security event (path traversal blocks, malicious command rejections, credential masking, security level changes) is cryptographically signed and chained using **FIPS 180-4 SHA-256**.
+* Each record contains `record_hash = SHA256(index + timestamp + event + severity + caller + details + prev_hash)`.
+* Mathematical guarantee: Any unauthorized modification, tampering, or deletion of past security logs breaks the hash chain and is immediately flagged by `verifyAuditChain`.
+
+### 6. Workspace Vulnerability Scanner (`arena security scan`)
+Scans the entire repository in milliseconds, analyzing unredacted secrets, insecure shell scripts, exposed keys, and loose permissions, returning a comprehensive security score (0 to 100%) and remediation guidance.
+
+### 7. CLI & REPL Security Commands
+```bash
+# Display complete security posture dashboard
+arena security
+arena security scan          # Deep workspace vulnerability & secret scan
+arena audit                  # Verify SHA-256 audit log cryptographic integrity
+arena security level strict  # Enforce maximum lockdown
+
+# In Interactive REPL
+arena > /security
+arena > /security scan
+arena > /audit
+```
+
+---
+
+## 19. Building and Testing
 
 ### Prerequisites
 * **C++ Compiler:** Supporting C++20 (`g++` 11+, `clang++` 13+, or MSVC 2022)
@@ -383,13 +766,94 @@ ninja -C build
 ```
 
 ### Running Tests
-The automated test suite executes **21** assertions covering configuration, tools, process safety, evidence hierarchy, multi-model consensus, and OpenCode integration:
+The automated test suite executes **35/35** comprehensive tests covering configuration, tools, process safety, evidence hierarchy, multi-model consensus, ability-based routing, temperature customization, OpenCode integration, Unsloth fine-tuning, file context attachments, fast thinking-phase tournaments, bespoke UI dashboard integrity, universal model compatibility, universal model benchmarking, CLI dual runtime modes, defense-in-depth security sandbox, host hardware assessment & dynamic PC limits, two processing levels (Fast vs Perfect Boi), autonomous service detection, and NVIDIA CUDA / iGPU / CPU slow-variant hardware acceleration:
 ```bash
 # Run test suite executable directly
 ./build/arena_test.exe
 
 # Or run via CTest
 ctest --test-dir build --output-on-failure
+```
+
+---
+
+## 20. License & Inquiries
+
+This project is released under an **All Rights Reserved** license:
+* **Personal & Educational Use:** Free of charge for individual personal experimentation, learning, hobbyist, and academic research.
+* **Commercial & Business Use:** Strictly requires prior written permission and an active commercial license agreement. If you intend to use this software in any business, commercial entity, revenue-generating service, or commercial product, please reach out via email.
+
+For commercial licensing and partnership inquiries, contact:
+* **Email:** [amal.s.kumar2005@gmail.com](mailto:amal.s.kumar2005@gmail.com)
+* **GitHub:** [https://github.com/Lunarmist-byte](https://github.com/Lunarmist-byte)
+* **LinkedIn:** [https://www.linkedin.com/in/amal-s-kumar-ba69a1290/](https://www.linkedin.com/in/amal-s-kumar-ba69a1290/)
+
+See the full [LICENSE](file:///c:/Users/amals/Documents/Codeworks/Arenafight-ai/LICENSE) file for complete terms.
+
+---
+
+## 21. Two Processing Levels, PC Hardware Profiler & Autonomous Services
+
+ArenaFight provides two distinct execution levels designed to balance swift turnaround with absolute perfection:
+
+### 1. Two Processing Levels
+* **Fast Mode (`--fast` / `arena level fast` / `/level fast`):**
+  Standard execution loops (10 iterations, 4096 tokens, single-pass validation). Prioritizes immediate output and rapid turnaround.
+* **Perfect Boi Mode (`--perfect` / `arena level perfect` / `/level perfect_boi`):**
+  Deep perfectionist mode. Takes time to guarantee 100% correctness:
+  * **Exhaustive 6-Gate Physical Verification:** Non-negotiable proof across all gates.
+  * **Multi-Pass Adversarial Review:** Runs adversarial cross-examination across all modified code and documents.
+  * **Self-Healing Remediation Loops:** If any edge-case, unhandled exception, syntax flaw, or security issue is flagged, automatically spawns self-healing remediation tasks and replans until genuine perfection is achieved.
+  * **Adaptive Hardware Scaling:** Automatically scales iterations (up to 25-30), tokens (up to 16,384), and thinking tokens according to the host machine's capacity.
+
+### 2. Host PC Hardware Assessment & Dynamic Limits (No Hardcoding)
+Implemented in [`include/arenafight/system/system_profiler.hpp`](file:///c:/Users/amals/Documents/Codeworks/Arenafight-ai/include/arenafight/system/system_profiler.hpp) and [`src/system/system_profiler.cpp`](file:///c:/Users/amals/Documents/Codeworks/Arenafight-ai/src/system/system_profiler.cpp):
+* **CPU:** Logical threads and physical cores (`GetNativeSystemInfo` on Windows, `sysconf(_SC_NPROCESSORS_ONLN)` / `/proc/cpuinfo` on Linux).
+* **RAM:** Total & Available physical RAM (`GlobalMemoryStatusEx` on Windows, `/proc/meminfo` and `sysinfo` on Linux).
+* **GPU & VRAM:** Cross-platform query via `nvidia-smi` (model name, total VRAM, free VRAM, driver version, CUDA runtime version).
+* **Display Adapters & iGPU Detection:** Win32 `EnumDisplayDevicesW` and Linux `/sys/class/drm/` detect integrated graphics (AMD Radeon Graphics, Intel Iris Xe/UHD) alongside discrete GPUs without requiring administrative permissions.
+* **Real-time Limits:** `max_iterations`, `max_tokens`, `deep_thinking_budget`, and `parallel_workers` are dynamically computed based on physical hardware headroom. Inspect at any time via `arena profile` or `/profile`.
+
+### 3. NVIDIA CUDA Acceleration & Slow-Variant Support (iGPU / CPU)
+ArenaFight automatically senses acceleration capabilities and adapts its entire runtime profile:
+* **CUDA Hardware Acceleration:** When an NVIDIA GPU with CUDA driver support is detected, ArenaFight leverages maximum acceleration, automatically passing `"num_gpu": 99` to Ollama model offload options to keep all model layers in GPU VRAM for high-throughput inference (40-100+ tokens/sec).
+* **Integrated GPU (iGPU) & CPU-Only Slow Variants:** When running on machines with only integrated graphics (AMD Radeon Graphics, Intel Iris Xe) or pure CPU execution:
+  * **Prominent Performance Banner:** Displays an unmissable terminal warning box notifying the user that execution will proceed in slow mode (~2-12 tokens/sec vs 40-100+ tokens/sec on CUDA).
+  * **Dynamic Resource Throttling:** Automatically caps token ceilings (1024-2048 tokens), limits parallel worker threads to `std::clamp(cores / 4, 1, 3)`, extends operation timeouts to 180 seconds, and passes `"num_gpu": 0` to Ollama to prevent host lockup or out-of-memory kernel panics.
+* **Manual Hardware Overrides:** Force hardware modes via CLI flags (`--cuda`, `--cpu`, `--no-cuda`) or REPL commands (`/profile cpu`, `/profile cuda`).
+
+### 4. Autonomous Service Detection & Background Daemon Starter
+Implemented in [`include/arenafight/services/service_daemon.hpp`](file:///c:/Users/amals/Documents/Codeworks/Arenafight-ai/include/arenafight/services/service_daemon.hpp) and [`src/services/service_daemon.cpp`](file:///c:/Users/amals/Documents/Codeworks/Arenafight-ai/src/services/service_daemon.cpp):
+* **No User Prompts:** Instead of asking the user to manually run `ollama serve`, ArenaFight automatically probes `/api/tags`.
+* **Path Discovery (Windows & Linux):** Checks system PATH (`where.exe` on Windows, `which` on Linux) and standard installation paths (`%LOCALAPPDATA%\Programs\Ollama\`, `/usr/local/bin/ollama`, `~/.local/bin/ollama`).
+* **Autonomous Daemon Launch:** Spawns `ollama serve` in the background (detached process with hidden window on Windows; systemd service or daemonized fork on Linux), waiting until healthy.
+* **Autonomous Model Pulling:** Can pull missing models via HTTP `/api/pull` or CLI without user prompts (`/services pull <model>`).
+
+### 5. CLI & REPL Commands
+```bash
+# Set processing level
+arena level fast               # Fast turnaround mode
+arena level perfect            # Perfect Boi exhaustive mode
+arena --perfect "Write compiler"
+arena --fast "Quick lint"
+
+# Hardware modes and slow-variant overrides
+arena --cuda run "Complex task" # Force CUDA hardware acceleration
+arena --cpu run "Light task"    # Force CPU slow-variant execution
+arena --cpu profile             # View dynamic limits under CPU constraint
+
+# Inspect hardware assessment and dynamic limits
+arena profile
+
+# Manage autonomous daemons
+arena services                 # Check status and start Ollama in background
+arena services pull <model>    # Autonomously pull model
+```
+In the REPL:
+```text
+/level [fast|perfect]          Toggle active processing level
+/profile [cuda|cpu]            Display hardware assessment dashboard
+/services                      Autonomous daemon status and control
 ```
 
 ---

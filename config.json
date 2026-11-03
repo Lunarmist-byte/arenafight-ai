@@ -19,6 +19,8 @@
     "max_tool_calls": 100,
     "max_retries": 3,
     "context_limit": 32000,
+    "default_temperature": 0.2,
+    "default_max_tokens": 4096,
     "parallel_models": false,
     "require_confirmation_for_destructive_commands": true,
     "default_provider": "auto",

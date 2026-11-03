@@ -86,6 +86,8 @@ struct Task {
     std::string result;
     std::string failureReason;
     std::string assignedModel;
+    std::string plannedModel;
+    std::string abilityReason;
     int64_t createdAtMs = 0;
     int64_t completedAtMs = 0;
 
@@ -100,6 +102,8 @@ struct Task {
             {"result", result},
             {"failureReason", failureReason},
             {"assignedModel", assignedModel},
+            {"plannedModel", plannedModel},
+            {"abilityReason", abilityReason},
             {"createdAtMs", createdAtMs},
             {"completedAtMs", completedAtMs}
         };
@@ -116,6 +120,8 @@ struct Task {
         t.result = j.value("result", "");
         t.failureReason = j.value("failureReason", "");
         t.assignedModel = j.value("assignedModel", "");
+        t.plannedModel = j.value("plannedModel", "");
+        t.abilityReason = j.value("abilityReason", "");
         t.createdAtMs = j.value("createdAtMs", static_cast<int64_t>(0));
         t.completedAtMs = j.value("completedAtMs", static_cast<int64_t>(0));
         return t;
@@ -270,6 +276,144 @@ struct ExecutionRecord {
     }
 };
 
+struct ModelAbilities {
+    float coding = 0.5f;        // 0.0 to 1.0: C++, Python, algorithms, syntax precision
+    float reasoning = 0.5f;     // 0.0 to 1.0: Multi-step logic, architectural planning, math
+    float planning = 0.5f;      // 0.0 to 1.0: Task decomposition, dependency graphs, roadmaps
+    float verification = 0.5f;  // 0.0 to 1.0: Bug detection, adversarial testing, edge cases
+    float hardware = 0.5f;      // 0.0 to 1.0: Embedded C/C++, pinout registers, Wokwi, circuits
+    float speed = 0.5f;         // 0.0 to 1.0: Token throughput, low latency
+    float context = 0.5f;       // 0.0 to 1.0: Large context processing capability
+
+    float scoreForTask(TaskType type) const {
+        switch (type) {
+            case TaskType::PLANNING:     return planning * 0.6f + reasoning * 0.4f;
+            case TaskType::CODING:       return coding * 0.7f + reasoning * 0.3f;
+            case TaskType::DEBUGGING:    return reasoning * 0.4f + coding * 0.4f + verification * 0.2f;
+            case TaskType::RESEARCH:     return context * 0.5f + reasoning * 0.3f + speed * 0.2f;
+            case TaskType::REVIEW:       return verification * 0.6f + coding * 0.4f;
+            case TaskType::VERIFICATION: return verification * 0.7f + reasoning * 0.3f;
+            case TaskType::HARDWARE:     return hardware * 0.6f + coding * 0.4f;
+            default:                     return (coding + reasoning + speed) / 3.0f;
+        }
+    }
+
+    std::string primaryStrength() const {
+        float maxVal = coding;
+        std::string best = "Coding";
+        if (reasoning > maxVal) { maxVal = reasoning; best = "Reasoning"; }
+        if (planning > maxVal) { maxVal = planning; best = "Planning"; }
+        if (verification > maxVal) { maxVal = verification; best = "Verification"; }
+        if (hardware > maxVal) { maxVal = hardware; best = "Embedded/Hardware"; }
+        if (speed > maxVal) { maxVal = speed; best = "Speed/Latency"; }
+        if (context > maxVal) { maxVal = context; best = "Large Context"; }
+        return best;
+    }
+
+    nlohmann::json toJson() const {
+        return {
+            {"coding", coding},
+            {"reasoning", reasoning},
+            {"planning", planning},
+            {"verification", verification},
+            {"hardware", hardware},
+            {"speed", speed},
+            {"context", context},
+            {"primaryStrength", primaryStrength()}
+        };
+    }
+
+    static ModelAbilities fromJson(const nlohmann::json& j) {
+        ModelAbilities a;
+        a.coding = j.value("coding", 0.5f);
+        a.reasoning = j.value("reasoning", 0.5f);
+        a.planning = j.value("planning", 0.5f);
+        a.verification = j.value("verification", 0.5f);
+        a.hardware = j.value("hardware", 0.5f);
+        a.speed = j.value("speed", 0.5f);
+        a.context = j.value("context", 0.5f);
+        return a;
+    }
+
+    static ModelAbilities infer(const std::string& id, const std::string& desc = "") {
+        ModelAbilities a;
+        // Strong universal baseline for any model
+        a.coding = 0.82f;
+        a.reasoning = 0.82f;
+        a.planning = 0.80f;
+        a.verification = 0.80f;
+        a.hardware = 0.78f;
+        a.speed = 0.82f;
+        a.context = 0.80f;
+
+        std::string s = id + " " + desc;
+        for (char& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+
+        // Domain-specific roles
+        if (s.find("coder") != std::string::npos || s.find("code") != std::string::npos || s.find("dev") != std::string::npos) {
+            a.coding = 0.96f; a.hardware = std::max(a.hardware, 0.92f);
+        }
+        if (s.find("r1") != std::string::npos || s.find("reason") != std::string::npos ||
+            s.find("o1") != std::string::npos || s.find("o3") != std::string::npos || s.find("think") != std::string::npos) {
+            a.reasoning = 0.98f; a.planning = 0.95f; a.verification = 0.94f;
+        }
+        if (s.find("sonnet") != std::string::npos || s.find("claude") != std::string::npos || s.find("opus") != std::string::npos) {
+            a.coding = 0.96f; a.reasoning = 0.97f; a.planning = 0.96f; a.verification = 0.95f; a.context = 0.98f;
+        }
+        if (s.find("verifier") != std::string::npos || s.find("audit") != std::string::npos || s.find("review") != std::string::npos) {
+            a.verification = 0.98f; a.reasoning = 0.92f;
+        }
+        if (s.find("deepseek") != std::string::npos) {
+            a.reasoning = std::max(a.reasoning, 0.96f); a.coding = std::max(a.coding, 0.95f);
+        }
+        if (s.find("qwen") != std::string::npos || s.find("qwq") != std::string::npos) {
+            a.coding = std::max(a.coding, 0.94f); a.speed = std::max(a.speed, 0.90f);
+            if (s.find("qwq") != std::string::npos) { a.reasoning = 0.98f; a.planning = 0.96f; }
+        }
+        if (s.find("gpt-4") != std::string::npos || s.find("openai") != std::string::npos || s.find("chatgpt") != std::string::npos) {
+            a.reasoning = std::max(a.reasoning, 0.95f); a.planning = std::max(a.planning, 0.94f); a.coding = std::max(a.coding, 0.94f);
+        }
+        if (s.find("llama") != std::string::npos) {
+            a.reasoning = std::max(a.reasoning, 0.90f); a.speed = std::max(a.speed, 0.90f);
+        }
+        if (s.find("mistral") != std::string::npos || s.find("mixtral") != std::string::npos || s.find("codestral") != std::string::npos) {
+            a.coding = std::max(a.coding, 0.94f); a.speed = std::max(a.speed, 0.92f);
+            if (s.find("codestral") != std::string::npos) { a.coding = 0.97f; a.hardware = 0.93f; }
+        }
+        if (s.find("gemini") != std::string::npos) {
+            a.context = 0.99f; a.planning = 0.94f;
+        }
+        if (s.find("phi") != std::string::npos) {
+            a.reasoning = std::max(a.reasoning, 0.91f); a.speed = std::max(a.speed, 0.93f);
+        }
+        if (s.find("gemma") != std::string::npos) {
+            a.coding = std::max(a.coding, 0.91f); a.speed = std::max(a.speed, 0.92f);
+        }
+
+        // Parameter scale multipliers
+        if (s.find("405b") != std::string::npos) {
+            a.reasoning = 0.99f; a.planning = 0.98f; a.coding = std::max(a.coding, 0.97f); a.context = 0.98f;
+        } else if (s.find("70b") != std::string::npos || s.find("72b") != std::string::npos) {
+            a.reasoning = std::max(a.reasoning, 0.96f); a.planning = std::max(a.planning, 0.95f); a.coding = std::max(a.coding, 0.95f);
+        } else if (s.find("32b") != std::string::npos || s.find("34b") != std::string::npos) {
+            a.coding = std::max(a.coding, 0.96f); a.hardware = std::max(a.hardware, 0.94f);
+        } else if (s.find("flash") != std::string::npos || s.find("mini") != std::string::npos || s.find("haiku") != std::string::npos || s.find("1b") != std::string::npos || s.find("3b") != std::string::npos) {
+            a.speed = 0.98f;
+        }
+
+        // Fine-tuned / LoRA / Unsloth adapters
+        if (s.find("unsloth") != std::string::npos || s.find("lora") != std::string::npos || s.find("finetun") != std::string::npos || s.find("dpo") != std::string::npos) {
+            a.coding = std::max(a.coding, 0.96f); a.hardware = std::max(a.hardware, 0.95f); a.speed = std::max(a.speed, 0.95f);
+        }
+
+        // Hardware & embedded constraints
+        if (s.find("embedded") != std::string::npos || s.find("hardware") != std::string::npos || s.find("esp32") != std::string::npos || s.find("firmware") != std::string::npos || s.find("pico") != std::string::npos) {
+            a.hardware = 0.98f; a.coding = std::max(a.coding, 0.94f);
+        }
+        return a;
+    }
+};
+
 struct ModelInfo {
     std::string id;
     std::string name;
@@ -278,6 +422,13 @@ struct ModelInfo {
     bool isLocal = false;
     std::string description;
     float capabilityScore = 1.0f; // estimated capability
+    ModelAbilities abilities;
+
+    ModelInfo() = default;
+    ModelInfo(std::string id_, std::string name_, std::string prov_, size_t ctx_, bool local_, std::string desc_, float cap_, ModelAbilities ab_ = {})
+        : id(std::move(id_)), name(std::move(name_)), provider(std::move(prov_)),
+          contextWindow(ctx_), isLocal(local_), description(std::move(desc_)),
+          capabilityScore(cap_), abilities(std::move(ab_)) {}
 
     nlohmann::json toJson() const {
         return {
@@ -287,7 +438,8 @@ struct ModelInfo {
             {"contextWindow", contextWindow},
             {"isLocal", isLocal},
             {"description", description},
-            {"capabilityScore", capabilityScore}
+            {"capabilityScore", capabilityScore},
+            {"abilities", abilities.toJson()}
         };
     }
 };
@@ -363,11 +515,98 @@ struct AgentRequest {
 struct AgentResponse {
     bool success = false;
     std::string content;
+    std::string thinking;
     std::vector<ToolCall> toolCalls;
     std::string finishReason;
     std::string errorMessage;
     int promptTokens = 0;
     int completionTokens = 0;
+};
+
+struct ThinkingEvaluation {
+    std::string model;
+    std::string thinking;
+    float edgeCaseScore = 0.0f;       // 0.0 to 1.0: Anticipation of boundary conditions, nulls, race conditions
+    float invariantScore = 0.0f;      // 0.0 to 1.0: RAII, memory bounds, hardware constraints, safety
+    float efficiencyScore = 0.0f;     // 0.0 to 1.0: Time/space complexity, modularity, algorithmic elegance
+    float codeDisciplineScore = 0.0f; // 0.0 to 1.0: Strictly reasoning/planning without premature output
+    float compositeScore = 0.0f;      // Weighted overall score
+    int thinkingTokens = 0;
+    int latencyMs = 0;
+    std::vector<std::string> strengths;
+    std::vector<std::string> edgeCasesIdentified;
+
+    nlohmann::json toJson() const {
+        return {
+            {"model", model},
+            {"thinking", thinking},
+            {"edgeCaseScore", edgeCaseScore},
+            {"invariantScore", invariantScore},
+            {"efficiencyScore", efficiencyScore},
+            {"codeDisciplineScore", codeDisciplineScore},
+            {"compositeScore", compositeScore},
+            {"thinkingTokens", thinkingTokens},
+            {"latencyMs", latencyMs},
+            {"strengths", strengths},
+            {"edgeCasesIdentified", edgeCasesIdentified}
+        };
+    }
+
+    static ThinkingEvaluation fromJson(const nlohmann::json& j) {
+        ThinkingEvaluation te;
+        te.model = j.value("model", "");
+        te.thinking = j.value("thinking", "");
+        te.edgeCaseScore = j.value("edgeCaseScore", 0.0f);
+        te.invariantScore = j.value("invariantScore", 0.0f);
+        te.efficiencyScore = j.value("efficiencyScore", 0.0f);
+        te.codeDisciplineScore = j.value("codeDisciplineScore", 0.0f);
+        te.compositeScore = j.value("compositeScore", 0.0f);
+        te.thinkingTokens = j.value("thinkingTokens", 0);
+        te.latencyMs = j.value("latencyMs", 0);
+        te.strengths = j.value("strengths", std::vector<std::string>{});
+        te.edgeCasesIdentified = j.value("edgeCasesIdentified", std::vector<std::string>{});
+        return te;
+    }
+};
+
+struct ThinkingDuelResult {
+    std::string taskObjective;
+    std::string winningModel;
+    std::string losingModel;
+    std::string winningRationale;
+    ThinkingEvaluation candidateA;
+    ThinkingEvaluation candidateB;
+    int tokensSaved = 0;              // Tokens avoided by disallowing full generation
+    int estimatedMsSaved = 0;         // Latency saved by early stopping
+    bool earlyTermination = true;     // Disallowed full code generation
+
+    nlohmann::json toJson() const {
+        return {
+            {"taskObjective", taskObjective},
+            {"winningModel", winningModel},
+            {"losingModel", losingModel},
+            {"winningRationale", winningRationale},
+            {"candidateA", candidateA.toJson()},
+            {"candidateB", candidateB.toJson()},
+            {"tokensSaved", tokensSaved},
+            {"estimatedMsSaved", estimatedMsSaved},
+            {"earlyTermination", earlyTermination}
+        };
+    }
+
+    static ThinkingDuelResult fromJson(const nlohmann::json& j) {
+        ThinkingDuelResult res;
+        res.taskObjective = j.value("taskObjective", "");
+        res.winningModel = j.value("winningModel", "");
+        res.losingModel = j.value("losingModel", "");
+        res.winningRationale = j.value("winningRationale", "");
+        if (j.contains("candidateA")) res.candidateA = ThinkingEvaluation::fromJson(j["candidateA"]);
+        if (j.contains("candidateB")) res.candidateB = ThinkingEvaluation::fromJson(j["candidateB"]);
+        res.tokensSaved = j.value("tokensSaved", 0);
+        res.estimatedMsSaved = j.value("estimatedMsSaved", 0);
+        res.earlyTermination = j.value("earlyTermination", true);
+        return res;
+    }
 };
 
 struct VerificationResult {

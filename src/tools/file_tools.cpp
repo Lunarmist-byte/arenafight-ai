@@ -1,4 +1,5 @@
 #include "arenafight/tools/file_tools.hpp"
+#include "arenafight/security/security_sandbox.hpp"
 #include <fstream>
 #include <sstream>
 #include <filesystem>
@@ -8,10 +9,8 @@ namespace arenafight {
 
 namespace {
 
-std::string resolvePath(const std::string& path, const std::string& workingDir) {
-    std::filesystem::path p(path);
-    if (p.is_absolute()) return p.string();
-    return (std::filesystem::path(workingDir) / p).lexically_normal().string();
+std::string resolvePath(const std::string& path, const std::string& workingDir, std::string* violation = nullptr) {
+    return SecuritySandbox::resolveSafePath(path, workingDir, violation);
 }
 
 } // namespace
@@ -38,7 +37,19 @@ ToolResult ReadFileTool::execute(const nlohmann::json& arguments, const std::str
         return res;
     }
 
-    std::string fullPath = resolvePath(relPath, workingDir);
+    std::string violation;
+    std::string fullPath = resolvePath(relPath, workingDir, &violation);
+    if (fullPath.empty()) {
+        res.success = false;
+        res.error = "ACCESS DENIED: " + (violation.empty() ? "Path traversal detected outside workspace sandbox: " + relPath : violation);
+        SecuritySandbox::logAuditEvent("PATH_TRAVERSAL_BLOCKED", "CRITICAL", "ReadFileTool", relPath + " -> " + res.error, workingDir);
+        return res;
+    }
+
+    if (SecuritySandbox::isProtectedFile(relPath)) {
+        SecuritySandbox::logAuditEvent("PROTECTED_FILE_READ_ATTEMPT", "WARN", "ReadFileTool", relPath, workingDir);
+    }
+
     if (!std::filesystem::exists(fullPath)) {
         res.success = false;
         res.error = "File does not exist: " + relPath;
@@ -69,7 +80,7 @@ ToolResult ReadFileTool::execute(const nlohmann::json& arguments, const std::str
     }
 
     res.success = true;
-    res.output = ss.str();
+    res.output = SecuritySandbox::redactSecrets(ss.str());
     if (linesRead == 0) {
         res.output = "(Empty file or specified line range is empty)";
     }
@@ -101,7 +112,31 @@ ToolResult WriteFileTool::execute(const nlohmann::json& arguments, const std::st
         return res;
     }
 
-    std::string fullPath = resolvePath(relPath, workingDir);
+    std::string violation;
+    std::string fullPath = resolvePath(relPath, workingDir, &violation);
+    if (fullPath.empty()) {
+        res.success = false;
+        res.error = "ACCESS DENIED: " + (violation.empty() ? "Path traversal detected outside workspace sandbox: " + relPath : violation);
+        SecuritySandbox::logAuditEvent("PATH_TRAVERSAL_BLOCKED", "CRITICAL", "WriteFileTool", relPath + " -> " + res.error, workingDir);
+        return res;
+    }
+
+    if (SecuritySandbox::isProtectedFile(relPath)) {
+        res.success = false;
+        res.error = "ACCESS DENIED: Modification of protected security credential file is forbidden: " + relPath;
+        SecuritySandbox::logAuditEvent("PROTECTED_FILE_MODIFICATION_BLOCKED", "CRITICAL", "WriteFileTool", relPath, workingDir);
+        return res;
+    }
+
+    // Sanitize any Trojan Source BiDi unicode or hidden control characters
+    content = SecuritySandbox::sanitizeAdversarialContent(content);
+
+    // Scan for unmasked secrets being written to files
+    std::string secretType;
+    if (SecuritySandbox::containsUnmaskedSecret(content, &secretType)) {
+        SecuritySandbox::logAuditEvent("SECRET_DETECTED_IN_FILE_WRITE", "WARN", "WriteFileTool", "File: " + relPath + " (" + secretType + ")", workingDir);
+    }
+
     std::filesystem::path p(fullPath);
 
     if (std::filesystem::exists(fullPath) && !overwrite) {
@@ -165,7 +200,24 @@ ToolResult EditFileTool::execute(const nlohmann::json& arguments, const std::str
         return res;
     }
 
-    std::string fullPath = resolvePath(relPath, workingDir);
+    std::string violation;
+    std::string fullPath = resolvePath(relPath, workingDir, &violation);
+    if (fullPath.empty()) {
+        res.success = false;
+        res.error = "ACCESS DENIED: " + (violation.empty() ? "Path traversal detected outside workspace sandbox: " + relPath : violation);
+        SecuritySandbox::logAuditEvent("PATH_TRAVERSAL_BLOCKED", "CRITICAL", "EditFileTool", relPath + " -> " + res.error, workingDir);
+        return res;
+    }
+
+    if (SecuritySandbox::isProtectedFile(relPath)) {
+        res.success = false;
+        res.error = "ACCESS DENIED: Direct modification of protected security credential file is forbidden: " + relPath;
+        SecuritySandbox::logAuditEvent("PROTECTED_FILE_MODIFICATION_BLOCKED", "CRITICAL", "EditFileTool", relPath, workingDir);
+        return res;
+    }
+
+    replacementContent = SecuritySandbox::sanitizeAdversarialContent(replacementContent);
+
     if (!std::filesystem::exists(fullPath)) {
         res.success = false;
         res.error = "File does not exist: " + relPath;
@@ -241,7 +293,15 @@ ToolResult CreateDirectoryTool::execute(const nlohmann::json& arguments, const s
         return res;
     }
 
-    std::string fullPath = resolvePath(relPath, workingDir);
+    std::string violation;
+    std::string fullPath = resolvePath(relPath, workingDir, &violation);
+    if (fullPath.empty()) {
+        res.success = false;
+        res.error = "ACCESS DENIED: " + (violation.empty() ? "Path traversal detected outside workspace sandbox: " + relPath : violation);
+        SecuritySandbox::logAuditEvent("PATH_TRAVERSAL_BLOCKED", "CRITICAL", "CreateDirectoryTool", relPath + " -> " + res.error, workingDir);
+        return res;
+    }
+
     try {
         std::filesystem::create_directories(fullPath);
         res.success = true;
@@ -273,7 +333,22 @@ ToolResult DeleteFileTool::execute(const nlohmann::json& arguments, const std::s
         return res;
     }
 
-    std::string fullPath = resolvePath(relPath, workingDir);
+    std::string violation;
+    std::string fullPath = resolvePath(relPath, workingDir, &violation);
+    if (fullPath.empty()) {
+        res.success = false;
+        res.error = "ACCESS DENIED: " + (violation.empty() ? "Path traversal detected outside workspace sandbox: " + relPath : violation);
+        SecuritySandbox::logAuditEvent("PATH_TRAVERSAL_BLOCKED", "CRITICAL", "DeleteFileTool", relPath + " -> " + res.error, workingDir);
+        return res;
+    }
+
+    if (SecuritySandbox::isProtectedFile(relPath)) {
+        res.success = false;
+        res.error = "ACCESS DENIED: Deletion of protected security credential file is forbidden: " + relPath;
+        SecuritySandbox::logAuditEvent("PROTECTED_FILE_DELETION_BLOCKED", "CRITICAL", "DeleteFileTool", relPath, workingDir);
+        return res;
+    }
+
     if (!std::filesystem::exists(fullPath)) {
         res.success = false;
         res.error = "File does not exist: " + relPath;

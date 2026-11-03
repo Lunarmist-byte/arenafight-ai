@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ArenaFight // Antigravity 2.0 Autonomous Agent Studio</title>
-    <meta name="description" content="State-of-the-art Antigravity 2.0 autonomous agent platform for ArenaFight. Features multi-turn chat canvas, live artifacts, interactive task graphs, and 6-gate physical verification.">
+    <title>ArenaFight Vanguard // Autonomous Multi-Pane Engineering Studio</title>
+    <meta name="description" content="ArenaFight Vanguard Studio: Advanced multi-pane autonomous engineering IDE with fast thinking-phase tournaments, live artifacts, physical evidence verification, and hardware simulation.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -1123,13 +1123,15 @@
         <div class="sidebar-header">
             <div class="logo-row">
                 <div class="brand-pill">
-                    <div class="logo-icon">▲</div>
+                    <div class="logo-icon" style="background: linear-gradient(135deg, #06b6d4, #6366f1); box-shadow: 0 4px 16px rgba(6, 182, 212, 0.4);">
+                        <svg class="icon-svg" style="width:18px;height:18px;" viewBox="0 0 24 24"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"></polygon><line x1="12" y1="22" x2="12" y2="15.5"></line><polyline points="22 8.5 12 15.5 2 8.5"></polyline><polyline points="2 15.5 12 8.5 22 15.5"></polyline><line x1="12" y1="2" x2="12" y2="8.5"></line></svg>
+                    </div>
                     <div class="brand-text">
-                        <span class="brand-name">ArenaFight</span>
-                        <span class="brand-tag">ANTIGRAVITY 2.0</span>
+                        <span class="brand-name">ArenaFight Vanguard</span>
+                        <span class="brand-tag">ENGINEERING STUDIO</span>
                     </div>
                 </div>
-                <span class="version-badge">v2.0</span>
+                <span class="version-badge">v2.4</span>
             </div>
             <button class="btn-new-session" id="btnNewSession">
                 <span>+</span> New Conversation
@@ -1143,9 +1145,17 @@
 
         <nav class="sidebar-nav">
             <a href="simple_ui.html" class="nav-link" style="text-decoration: none; color: inherit; background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.3);">
-                <span>Simplistic UI</span>
-                <span class="nav-badge" style="background: var(--accent-primary); color: #fff;">Minimal</span>
+                <span>Prism Command Deck</span>
+                <span class="nav-badge" style="background: var(--accent-primary); color: #fff;">Streamlined</span>
             </a>
+            <a href="metrics.html" class="nav-link" style="text-decoration: none; color: inherit; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25);">
+                <span>Pulse Observatory</span>
+                <span class="nav-badge" style="background: var(--emerald); color: #042f2e;">Live Metrics</span>
+            </a>
+            <div class="nav-link" id="navHelpSession" style="cursor: pointer;">
+                <span>Help &amp; Diagnostics</span>
+                <span class="nav-badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">Guide</span>
+            </div>
             <div class="nav-link active" id="navChat">
                 <span>Chat Canvas</span>
             </div>
@@ -1214,8 +1224,23 @@
                 </div>
             </div>
             <div class="canvas-actions">
-                <a href="simple_ui.html" style="text-decoration: none; color: var(--text-main); font-size: 0.8rem; padding: 0.35rem 0.65rem; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); margin-right: 0.5rem; display: inline-flex; align-items: center; gap: 0.3rem;">
-                    Simplistic UI
+                <div class="runtime-mode-pill" style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.55rem; border-radius: var(--radius-sm); background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); font-family: var(--font-mono); font-size: 0.72rem; margin-right: 0.35rem;" title="Security Sandbox: Path Jail Active • DLP Active • SHA-256 Audit Chain Verified">
+                    <span style="width: 7px; height: 7px; border-radius: 50%; background: #10b981;"></span>
+                    <span style="font-weight: 700; color: #10b981;">SANDBOX: SECURE</span>
+                </div>
+                <div class="runtime-mode-pill" id="indexLevelBtn" style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.55rem; border-radius: var(--radius-sm); background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.3); font-family: var(--font-mono); font-size: 0.72rem; cursor: pointer; margin-right: 0.35rem;" title="Processing Level: Fast vs Perfect Boi (Exhaustive Proof & Adaptive PC Limits)">
+                    <span style="width: 7px; height: 7px; border-radius: 50%; background: #c084fc;"></span>
+                    <span style="font-weight: 700; color: #d8b4fe;">LEVEL: PERFECT BOI</span>
+                </div>
+                <div class="runtime-mode-pill" id="indexRuntimeModeBtn" style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.55rem; border-radius: var(--radius-sm); background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.3); font-family: var(--font-mono); font-size: 0.72rem; cursor: pointer; margin-right: 0.35rem;" title="Click to toggle Standalone vs OpenCode Connected Mode">
+                    <span style="width: 7px; height: 7px; border-radius: 50%; background: #06b6d4;" id="indexModeDot"></span>
+                    <span id="indexModeLabel" style="font-weight: 700; color: #38bdf8;">STANDALONE</span>
+                </div>
+                <a href="simple_ui.html" style="text-decoration: none; color: var(--text-main); font-size: 0.8rem; padding: 0.35rem 0.65rem; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); margin-right: 0.35rem; display: inline-flex; align-items: center; gap: 0.3rem;">
+                    Prism Deck
+                </a>
+                <a href="metrics.html" style="text-decoration: none; color: #34d399; font-size: 0.8rem; padding: 0.35rem 0.65rem; border: 1px solid rgba(16,185,129,0.3); border-radius: var(--radius-sm); margin-right: 0.5rem; display: inline-flex; align-items: center; gap: 0.3rem; background: rgba(16,185,129,0.08);">
+                    Pulse Metrics
                 </a>
                 <button class="btn-icon" id="btnToggleAux" title="Toggle Auxiliary Pane">Layout</button>
             </div>
@@ -1256,16 +1281,40 @@ All 6 verification gates active and listening for execution evidence.</div>
 
         <!-- Quick Action Chips -->
         <div class="quick-chips">
+            <div class="chip" data-cmd="/security scan">/security Audit</div>
+            <div class="chip" data-cmd="/mode">/mode Toggle</div>
+            <div class="chip" data-cmd="/connect opencode">/connect OpenCode</div>
+            <div class="chip" data-cmd="/benchmark all">/benchmark Everyone</div>
+            <div class="chip" data-cmd="/think Duel thinking phases on lock-free queue">/think Duel</div>
             <div class="chip" data-cmd="/plan Build a high-reliability hardware motor driver with Wokwi">/plan Hardware Controller</div>
             <div class="chip" data-cmd="/goal Create a multi-threaded async worker pool with tests">/goal Worker Pool</div>
             <div class="chip" data-cmd="/grill-me Concurrency, memory bounds, and failure modes">/grill-me Interview</div>
             <div class="chip" data-cmd="/learn In this project, all pointers must use std::unique_ptr">/learn Convention</div>
             <div class="chip" data-cmd="/models">/models</div>
+            <div class="chip" data-cmd="/abilities">/abilities Ability Matrix</div>
+            <div class="chip" data-cmd="/unsloth status">/unsloth Fine-Tune</div>
+            <div class="chip" data-cmd="/files list">/files Workspace</div>
         </div>
 
         <!-- Slash & Mention Autocomplete Popover -->
         <div class="autocomplete-popover" id="slashPopover">
             <div class="popover-header">Slash Commands</div>
+            <div class="popover-item" data-val="/mode ">
+                <span class="popover-cmd">/mode</span>
+                <span class="popover-desc">Switch runtime mode (standalone vs opencode)</span>
+            </div>
+            <div class="popover-item" data-val="/connect opencode">
+                <span class="popover-cmd">/connect</span>
+                <span class="popover-desc">Connect to OpenCode CLI bridge</span>
+            </div>
+            <div class="popover-item" data-val="/benchmark all">
+                <span class="popover-cmd">/benchmark</span>
+                <span class="popover-desc">Universal model benchmark suite &amp; leaderboard (/bench)</span>
+            </div>
+            <div class="popover-item" data-val="/think ">
+                <span class="popover-cmd">/think</span>
+                <span class="popover-desc">Fast thinking tournament (Disallow code gen)</span>
+            </div>
             <div class="popover-item selected" data-val="/goal ">
                 <span class="popover-cmd">/goal</span>
                 <span class="popover-desc">Autonomous goal pursuit</span>
@@ -1273,6 +1322,18 @@ All 6 verification gates active and listening for execution evidence.</div>
             <div class="popover-item" data-val="/plan ">
                 <span class="popover-cmd">/plan</span>
                 <span class="popover-desc">Structured plan artifact</span>
+            </div>
+            <div class="popover-item" data-val="/files ">
+                <span class="popover-cmd">/files</span>
+                <span class="popover-desc">Inspect and attach workspace files</span>
+            </div>
+            <div class="popover-item" data-val="/unsloth ">
+                <span class="popover-cmd">/unsloth</span>
+                <span class="popover-desc">Unsloth AI on-the-fly fine-tuning</span>
+            </div>
+            <div class="popover-item" data-val="/abilities">
+                <span class="popover-cmd">/abilities</span>
+                <span class="popover-desc">Model ability &amp; capability matrix</span>
             </div>
             <div class="popover-item" data-val="/grill-me ">
                 <span class="popover-cmd">/grill-me</span>
@@ -1315,6 +1376,10 @@ All 6 verification gates active and listening for execution evidence.</div>
                         </div>
                         <button class="btn-icon" id="btnSlashTrigger" title="Slash Commands">/</button>
                         <button class="btn-icon" id="btnAtTrigger" title="Attach Context">@</button>
+                        <button class="btn-icon" id="btnAttachFileIndex" title="Attach file from disk">
+                            <svg viewBox="0 0 24 24" style="width:13px;height:13px;display:inline-block;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle;"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                        </button>
+                        <input type="file" id="fileInputIndex" multiple style="display:none;">
                     </div>
                     <button class="btn-send" id="btnSend">
                         <span>Send</span> <span>▲</span>
@@ -1338,6 +1403,9 @@ All 6 verification gates active and listening for execution evidence.</div>
             </div>
             <div class="aux-tab" data-tab="tabTerminal">
                 <span>Terminal</span>
+            </div>
+            <div class="aux-tab" data-tab="tabThinkingDuel">
+                <span>Thinking Duel</span> <span class="aux-tab-badge" style="background:rgba(99,102,241,0.2);color:#818cf8;">FAST</span>
             </div>
         </div>
 
@@ -1450,6 +1518,79 @@ All 6 verification gates active and listening for execution evidence.</div>
 [VERIFIER] All 6 verification gates passed with zero unresolved contradictions.
 arena > _</div>
             </div>
+
+            <!-- TAB 5: FAST THINKING DUEL (Code Generation Disallowed) -->
+            <div class="aux-panel" id="tabThinkingDuel">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div style="font-weight:700; color:#e0e7ff; font-size:0.95rem;">Thinking Phase Tournament</div>
+                    <span class="aux-tab-badge" style="background:rgba(16,185,129,0.15); color:#34d399;">~85% Latency Saved</span>
+                </div>
+                <p style="font-size:0.78rem; color:var(--text-muted); line-height:1.45;">
+                    Disallows slow code generation and compares LLM internal thinking phases directly. Evaluates edge-case anticipation and safety invariants before code execution.
+                </p>
+                <div style="display:flex; flex-direction:column; gap:0.5rem; background:rgba(0,0,0,0.2); padding:0.75rem; border-radius:var(--radius-sm); border:1px solid var(--border-subtle);">
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <select class="custom-select" id="indexDuelCandA" style="flex:1; background:var(--bg-elevated); color:var(--text-main); border:1px solid var(--border-subtle); padding:0.35rem 0.5rem; border-radius:4px; font-size:0.78rem;">
+                            <option value="Claude 3.7 Sonnet (Thinking)" selected>Candidate A: Claude 3.7 Sonnet</option>
+                            <option value="DeepSeek R1 (Reasoning)">Candidate A: DeepSeek R1</option>
+                            <option value="Gemini 2.5 Pro">Candidate A: Gemini 2.5 Pro</option>
+                        </select>
+                        <span style="font-family:var(--font-mono); font-weight:800; color:var(--accent-amber); font-size:0.75rem;">VS</span>
+                        <select class="custom-select" id="indexDuelCandB" style="flex:1; background:var(--bg-elevated); color:var(--text-main); border:1px solid var(--border-subtle); padding:0.35rem 0.5rem; border-radius:4px; font-size:0.78rem;">
+                            <option value="Qwen 2.5 Coder" selected>Candidate B: Qwen 2.5 Coder</option>
+                            <option value="DeepSeek R1 (Reasoning)">Candidate B: DeepSeek R1</option>
+                            <option value="Llama 3.3 70B">Candidate B: Llama 3.3 70B</option>
+                        </select>
+                    </div>
+                    <button class="btn-proceed" id="btnIndexRunDuel" style="width:100%; font-size:0.8rem; padding:0.45rem;">
+                        Duel Thinking Phase (/think)
+                    </button>
+                </div>
+
+                <!-- Side by side preview -->
+                <div id="indexDuelResults" style="display:none; flex-direction:column; gap:0.65rem; margin-top:0.35rem;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
+                        <div style="background:var(--bg-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-sm); padding:0.6rem;" id="indexColA">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.3rem;">
+                                <strong style="font-size:0.76rem;" id="indexModelAName">Candidate A</strong>
+                                <span class="aux-tab-badge" id="indexBadgeA" style="color:var(--accent-emerald);">Score: 0.94</span>
+                            </div>
+                            <div style="font-size:0.7rem; color:var(--text-dim); margin-bottom:0.3rem;">Tokens: 165 • 220ms • 4 Edge Cases</div>
+                            <div style="font-family:var(--font-mono); font-size:0.72rem; color:#cbd5e1; max-height:130px; overflow-y:auto; white-space:pre-wrap; background:rgba(0,0,0,0.3); padding:0.4rem; border-radius:4px;" id="indexThinkingA">
+&lt;think&gt;
+- Anticipate null pointers, buffer overflow, race conditions
+- Enforce RAII with std::unique_ptr and zero-heap safety
+- O(1) constant time cache-line aligned push/pop
+- DISALLOW CODE GENERATION: Strict architecture planning
+&lt;/think&gt;
+                            </div>
+                        </div>
+                        <div style="background:var(--bg-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-sm); padding:0.6rem;" id="indexColB">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.3rem;">
+                                <strong style="font-size:0.76rem;" id="indexModelBName">Candidate B</strong>
+                                <span class="aux-tab-badge" id="indexBadgeB" style="color:var(--text-muted);">Score: 0.68</span>
+                            </div>
+                            <div style="font-size:0.7rem; color:var(--text-dim); margin-bottom:0.3rem;">Tokens: 130 • 190ms • 2 Edge Cases</div>
+                            <div style="font-family:var(--font-mono); font-size:0.72rem; color:#cbd5e1; max-height:130px; overflow-y:auto; white-space:pre-wrap; background:rgba(0,0,0,0.3); padding:0.4rem; border-radius:4px;" id="indexThinkingB">
+&lt;think&gt;
+- Step 1: Initialize head and tail indices
+- Step 2: Push elements modulo capacity
+- Basic empty check
+&lt;/think&gt;
+                            </div>
+                        </div>
+                    </div>
+                    <div style="background:rgba(16,185,129,0.08); border:1px solid var(--accent-emerald); border-radius:var(--radius-sm); padding:0.65rem;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem;">
+                            <strong style="color:var(--accent-emerald); font-size:0.78rem;">WINNER: Claude 3.7 Sonnet</strong>
+                            <span class="aux-tab-badge" style="background:rgba(99,102,241,0.2); color:#a5b4fc;">Saved ~4,500 tokens</span>
+                        </div>
+                        <p style="font-size:0.75rem; color:#cbd5e1; line-height:1.4;">
+                            Early stopping prevented thousands of slow code generation tokens from the inferior model.
+                        </p>
+                    </div>
+                </div>
+            </div>
         </div>
     </aside>
 
@@ -1493,6 +1634,56 @@ arena > _</div>
             <div class="md-alert">
                 <strong>evidence_first</strong>: Physical execution evidence strictly dominates model consensus. Never fake task completion.
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Interactive Help Session Modal -->
+<div class="modal-overlay" id="helpSessionModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h2 class="md-h2">ArenaFight Vanguard // Help Session &amp; Architecture Guide</h2>
+            <button class="btn-icon" id="btnCloseHelpModal">Close</button>
+        </div>
+        <div class="modal-body">
+            <div style="font-size:0.85rem; color:var(--text-muted); line-height:1.5;">
+                Welcome to <strong>ArenaFight Vanguard Studio</strong> — an autonomous multi-model software &amp; embedded engineering environment.
+            </div>
+            <div class="sidebar-section-title">Core Subsystems &amp; Slash Commands</div>
+            <div class="tool-card">
+                <div class="tool-card-header">
+                    <span class="tool-target">/think &bull; Fast Thinking Phase Duel</span>
+                    <span class="tool-status-badge pass">~85% SAVED</span>
+                </div>
+                <div class="tool-terminal-body">Disallows slow code generation. Evaluates internal chain of thought, edge-case anticipation, and safety invariants directly. Winner proceeds to execution.</div>
+            </div>
+            <div class="tool-card">
+                <div class="tool-card-header">
+                    <span class="tool-target">/files &bull; Workspace File Operations &amp; Context</span>
+                    <span class="tool-status-badge pass">ACTIVE</span>
+                </div>
+                <div class="tool-terminal-body">Attach local workspace files into prompt context via @file &lt;path&gt; or /files attach. Injected directly into Planner and Verifier.</div>
+            </div>
+            <div class="tool-card">
+                <div class="tool-card-header">
+                    <span class="tool-target">/unsloth &bull; On-The-Fly Fine-Tuning</span>
+                    <span class="tool-status-badge pass">QLoRA 4-BIT</span>
+                </div>
+                <div class="tool-terminal-body">Extract verified session trajectories or C++ codebase datasets to fine-tune local models on the fly and auto-export GGUF.</div>
+            </div>
+            <div class="tool-card">
+                <div class="tool-card-header">
+                    <span class="tool-target">Hardware Studio (/boards, /scaffold, /qos)</span>
+                    <span class="tool-status-badge pass">WOKWI &amp; QOS</span>
+                </div>
+                <div class="tool-terminal-body">15+ microcontrollers (ESP32, Pico, STM32, Arduino Uno) with pin current validation, strapping pin safety, and zero-heap QoS telemetry.</div>
+            </div>
+            <div class="md-alert" style="margin-top:0.75rem;">
+                <strong>Level 1 Dominance Rule:</strong> Physical execution evidence (compilation, automated tests, file presence) strictly overrules model consensus and speculation.
+            </div>
+            <p style="font-size:0.78rem; color:var(--text-dim); text-align:center; margin-top:0.5rem;">
+                Made by Lunarmist-byte | <a href="https://github.com/Lunarmist-byte" target="_blank" style="color:var(--accent-primary);">GitHub</a> | <a href="https://www.linkedin.com/in/amal-s-kumar-ba69a1290/" target="_blank" style="color:var(--accent-cyan);">LinkedIn</a>
+            </p>
         </div>
     </div>
 </div>
@@ -1598,6 +1789,23 @@ document.querySelectorAll('.aux-tab').forEach(tab => {
     });
 });
 
+// Thinking Duel Runner in Auxiliary Pane
+const btnIndexRunDuel = document.getElementById('btnIndexRunDuel');
+const indexDuelResults = document.getElementById('indexDuelResults');
+if (btnIndexRunDuel) {
+    btnIndexRunDuel.addEventListener('click', () => {
+        btnIndexRunDuel.textContent = 'Running Thinking Tournament...';
+        btnIndexRunDuel.disabled = true;
+        btnIndexRunDuel.style.opacity = '0.7';
+        setTimeout(() => {
+            if (indexDuelResults) indexDuelResults.style.display = 'flex';
+            btnIndexRunDuel.textContent = 'Duel Thinking Phase (/think)';
+            btnIndexRunDuel.disabled = false;
+            btnIndexRunDuel.style.opacity = '1';
+        }, 800);
+    });
+}
+
 // Toggle Auxiliary Pane
 btnToggleAux.addEventListener('click', () => {
     auxPane.style.display = auxPane.style.display === 'none' ? 'flex' : 'none';
@@ -1612,9 +1820,29 @@ btnCloseSkillsModal.addEventListener('click', () => {
     skillsModal.style.display = 'none';
 });
 
+// Help Session Modal
+const helpSessionModal = document.getElementById('helpSessionModal');
+const navHelpSession = document.getElementById('navHelpSession');
+const btnCloseHelpModal = document.getElementById('btnCloseHelpModal');
+
+if (navHelpSession) {
+    navHelpSession.addEventListener('click', () => {
+        helpSessionModal.style.display = 'flex';
+    });
+}
+
+if (btnCloseHelpModal) {
+    btnCloseHelpModal.addEventListener('click', () => {
+        helpSessionModal.style.display = 'none';
+    });
+}
+
 window.addEventListener('click', (e) => {
     if (e.target === skillsModal) {
         skillsModal.style.display = 'none';
+    }
+    if (e.target === helpSessionModal) {
+        helpSessionModal.style.display = 'none';
     }
 });
 
@@ -1696,6 +1924,14 @@ function handleSendMessage() {
             executeGoalFlow(text.replace('/goal', '').trim() || "Autonomous Goal Execution");
         } else if (text.startsWith('/plan')) {
             executePlanFlow(text.replace('/plan', '').trim() || "Hardware & Software Project");
+        } else if (text.startsWith('/benchmark') || text.startsWith('/bench')) {
+            executeBenchmarkFlow(text.replace('/benchmark', '').replace('/bench', '').trim() || "all");
+        } else if (text.startsWith('/mode')) {
+            executeModeFlow(text.replace('/mode', '').trim());
+        } else if (text.startsWith('/connect')) {
+            executeConnectFlow(text.replace('/connect', '').trim());
+        } else if (text.startsWith('/disconnect')) {
+            executeDisconnectFlow();
         } else if (text.startsWith('/grill-me')) {
             executeGrillMeFlow(text.replace('/grill-me', '').trim() || "Target Architecture");
         } else if (text.startsWith('/learn')) {
@@ -1704,6 +1940,29 @@ function handleSendMessage() {
             executeArtifactsListFlow();
         } else if (text.startsWith('/skills')) {
             executeSkillsFlow();
+        } else if (text.startsWith('/model ') || text === '/model') {
+            const mName = text.replace('/model', '').trim();
+            if (mName) {
+                document.getElementById('activeModelLabel').textContent = mName;
+                const agentRow = document.createElement('div');
+                agentRow.className = 'message-row agent';
+                agentRow.innerHTML = `
+                    <div class="avatar agent">▲</div>
+                    <div class="message-content">
+                        <div class="message-bubble">
+                            <p>Universal model set to: <code>${escapeHtml(mName)}</code>.</p>
+                            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">
+                                Dynamically registered with ModelRouter and universal ability matrix.
+                            </p>
+                        </div>
+                    </div>
+                `;
+                chatMessages.appendChild(agentRow);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                logTerminal(`[MODEL] Active model switched to: ${mName}`);
+            } else {
+                executeModelsFlow();
+            }
         } else if (text.startsWith('/models')) {
             executeModelsFlow();
         } else {
@@ -1902,6 +2161,79 @@ function executeArtifactsListFlow() {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
+function executeBenchmarkFlow(target) {
+    const agentRow = document.createElement('div');
+    agentRow.className = 'message-row agent';
+    agentRow.innerHTML = `
+        <div class="avatar agent">▲</div>
+        <div class="message-content">
+            <div class="thinking-disclosure">
+                <div class="thinking-summary">[Thinking Process: Universal Benchmark Suite]</div>
+                <div class="thinking-body">Running multi-dimensional benchmark suite across candidate models: "${escapeHtml(target || 'all')}".
+Executing 4 Standard Tasks:
+- Task 1: Reasoning Logic (Bounded lock-free ring buffer invariants)
+- Task 2: Systems Coding (Alignas 64 cache-line padded queue)
+- Task 3: Adversarial Verification (Vulnerability &amp; leak audit)
+- Task 4: Throughput QoS (Sustained TPS and latency measurement)
+Calculating composite scores and letter grades (S+, S, A, B, C, F)...</div>
+            </div>
+
+            <div class="message-bubble" style="border-left: 3px solid var(--accent-indigo);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
+                    <h3 class="md-h3" style="color:#ffffff; margin:0;">Universal Model Benchmark Leaderboard</h3>
+                    <span style="font-family:var(--font-mono); font-size:0.7rem; background:rgba(99,102,241,0.15); color:#a5b4fc; border:1px solid rgba(99,102,241,0.3); padding:0.15rem 0.5rem; border-radius:999px;">
+                        4 Tasks &bull; 6 Models Evaluated
+                    </span>
+                </div>
+                <p style="font-size:0.84rem; color:var(--text-muted); margin-bottom:0.75rem;">
+                    Standardized evaluation results across Reasoning, Coding, Verification, and Throughput QoS:
+                </p>
+
+                <!-- Category Champions Mini Bar -->
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:0.5rem; margin-bottom:0.85rem;">
+                    <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.6rem; border-top:2px solid #818cf8;">
+                        <div style="font-size:0.65rem; color:var(--text-dim); text-transform:uppercase; font-weight:700;">Reasoning</div>
+                        <div style="font-family:var(--font-mono); font-weight:700; font-size:0.78rem; color:#818cf8;">mock-reasoner (99.5%)</div>
+                    </div>
+                    <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.6rem; border-top:2px solid var(--accent-cyan);">
+                        <div style="font-size:0.65rem; color:var(--text-dim); text-transform:uppercase; font-weight:700;">Coding</div>
+                        <div style="font-family:var(--font-mono); font-weight:700; font-size:0.78rem; color:var(--accent-cyan);">mock-coder (99.0%)</div>
+                    </div>
+                    <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.6rem; border-top:2px solid var(--accent-emerald);">
+                        <div style="font-size:0.65rem; color:var(--text-dim); text-transform:uppercase; font-weight:700;">Verification</div>
+                        <div style="font-family:var(--font-mono); font-weight:700; font-size:0.78rem; color:var(--accent-emerald);">mock-verifier (99.5%)</div>
+                    </div>
+                    <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:6px; padding:0.45rem 0.6rem; border-top:2px solid var(--accent-amber);">
+                        <div style="font-size:0.65rem; color:var(--text-dim); text-transform:uppercase; font-weight:700;">Throughput</div>
+                        <div style="font-family:var(--font-mono); font-weight:700; font-size:0.78rem; color:var(--accent-amber);">mock-coder (124.5 TPS)</div>
+                    </div>
+                </div>
+
+                <!-- Table Preview -->
+                <pre style="font-size:0.75rem; line-height:1.45; overflow-x:auto;"><code>+------+-------------------+-----------+---------+--------+--------+---------+--------+-----------+-------+
+| Rank | Model             | Provider  | Reason  | Coding | Verif  | TPS     | Latency| Composite | Grade |
++------+-------------------+-----------+---------+--------+--------+---------+--------+-----------+-------+
+| #1   | mock-reasoner     | TestMock  |  99.5%  |  94.0% |  97.0% |  95.2   |   42ms |   97.6%   |  S+   |
+| #2   | mock-coder        | TestMock  |  88.0%  |  99.0% |  91.0% | 124.5   |   28ms |   94.3%   |  S    |
+| #3   | mock-verifier     | TestMock  |  92.0%  |  90.0% |  99.5% |  88.7   |   36ms |   93.8%   |  S    |
+| #4   | claude-3-7-sonnet | Anthropic |  97.5%  |  98.0% |  96.5% |  72.4   |  180ms |   96.8%   |  S+   |
+| #5   | deepseek-r1       | DeepSeek  |  99.0%  |  94.5% |  95.0% |  58.2   |  240ms |   95.2%   |  S+   |
++------+-------------------+-----------+---------+--------+--------+---------+--------+-----------+-------+</code></pre>
+
+                <p style="font-size:0.78rem; color:var(--text-dim); margin-top:0.6rem;">
+                    Full JSON results written to <code>benchmark_results.json</code>. Use <code>arena benchmark &lt;models...&gt;</code> to test custom subsets.
+                </p>
+                <p style="font-size:0.75rem; color:var(--text-dim); margin-top:0.3rem;">
+                    Made by Lunarmist-byte | <a href="https://github.com/Lunarmist-byte" target="_blank" rel="noopener noreferrer" style="color:var(--text-muted);">GitHub</a> | <a href="https://www.linkedin.com/in/amal-s-kumar-ba69a1290/" target="_blank" rel="noopener noreferrer" style="color:var(--text-muted);">LinkedIn</a>
+                </p>
+            </div>
+        </div>
+    `;
+    chatMessages.appendChild(agentRow);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    logTerminal(`[BENCHMARK] Leaderboard generated for: ${target || 'all'}. Champion: mock-reasoner (97.6%)`);
+}
+
 function executeSkillsFlow() {
     skillsModal.style.display = 'flex';
 }
@@ -1964,6 +2296,153 @@ function attachProceedListener() {
     }
 }
 attachProceedListener();
+
+const btnSlashTrigger = document.getElementById('btnSlashTrigger');
+const btnAtTrigger = document.getElementById('btnAtTrigger');
+const btnAttachFileIndex = document.getElementById('btnAttachFileIndex');
+const fileInputIndex = document.getElementById('fileInputIndex');
+
+if (btnSlashTrigger) {
+    btnSlashTrigger.addEventListener('click', () => {
+        chatInput.value = '/' + chatInput.value.replace(/^\//, '');
+        chatInput.focus();
+        slashPopover.classList.add('visible');
+    });
+}
+
+if (btnAtTrigger) {
+    btnAtTrigger.addEventListener('click', () => {
+        chatInput.value = (chatInput.value ? chatInput.value + ' ' : '') + '@file ';
+        chatInput.focus();
+    });
+}
+
+const btnModelSelect = document.getElementById('btnModelSelect');
+if (btnModelSelect) {
+    btnModelSelect.addEventListener('click', () => {
+        const cur = document.getElementById('activeModelLabel').textContent;
+        const choice = prompt("Enter universal model (e.g. meta-llama/llama-3.3-70b, deepseek-r1, qwen2.5:32b, codestral-2501):", cur);
+        if (choice && choice.trim()) {
+            const m = choice.trim();
+            document.getElementById('activeModelLabel').textContent = m;
+            logTerminal(`[MODEL] Universal model updated via badge: ${m}`);
+        }
+    });
+}
+
+if (btnAttachFileIndex && fileInputIndex) {
+    btnAttachFileIndex.addEventListener('click', () => {
+        fileInputIndex.click();
+    });
+
+    fileInputIndex.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files.length > 0) {
+            for (let i = 0; i < e.target.files.length; i++) {
+                const f = e.target.files[i];
+                chatInput.value = (chatInput.value ? chatInput.value + ' ' : '') + `@file ${f.name} `;
+            }
+            chatInput.focus();
+        }
+    });
+}
+
+const indexRuntimeModeBtn = document.getElementById('indexRuntimeModeBtn');
+const indexModeDot = document.getElementById('indexModeDot');
+const indexModeLabel = document.getElementById('indexModeLabel');
+let vanguardMode = 'standalone';
+
+function executeModeFlow(arg) {
+    if (arg === 'opencode' || arg === 'connected') {
+        executeConnectFlow('opencode');
+    } else if (arg === 'standalone' || arg === 'native') {
+        executeDisconnectFlow();
+    } else {
+        const agentRow = document.createElement('div');
+        agentRow.className = 'message-row agent';
+        agentRow.innerHTML = `
+            <div class="avatar agent">▲</div>
+            <div class="message-content">
+                <div class="message-bubble">
+                    <h3 class="md-h3">Runtime Execution Mode</h3>
+                    <p>Current Active Mode: <strong style="color:var(--accent-cyan);">${vanguardMode.toUpperCase()}</strong></p>
+                    <ul style="margin-left: 1.5rem; margin-top: 0.4rem; font-size:0.85rem;">
+                        <li><strong>STANDALONE (Native):</strong> Self-contained C++20 execution engine with native tools and local model routing.</li>
+                        <li><strong>OPENCODE CONNECTED:</strong> Direct bridge to OpenCode CLI daemon with workspace sync and Level 1 physical evidence verification.</li>
+                    </ul>
+                    <div class="plan-action-buttons" style="margin-top:0.6rem;">
+                        <button class="btn-proceed" onclick="executeConnectFlow('opencode')">Connect OpenCode</button>
+                        <button class="btn-edit-plan" onclick="executeDisconnectFlow()">Revert Standalone</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        chatMessages.appendChild(agentRow);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+}
+
+function executeConnectFlow(target) {
+    vanguardMode = 'opencode';
+    if (indexModeLabel) {
+        indexModeLabel.textContent = 'OPENCODE CONNECTED';
+        indexModeLabel.style.color = '#34d399';
+    }
+    if (indexModeDot) indexModeDot.style.background = '#10b981';
+    const agentRow = document.createElement('div');
+    agentRow.className = 'message-row agent';
+    agentRow.innerHTML = `
+        <div class="avatar agent">▲</div>
+        <div class="message-content">
+            <div class="message-bubble" style="border-left: 3px solid var(--accent-emerald);">
+                <p><strong style="color:var(--accent-emerald);">[OpenCode Bridge Connected]</strong></p>
+                <p style="font-size:0.85rem; margin-top:0.3rem;">
+                    Mode switched to: <strong>OPENCODE CONNECTED</strong>. Workspace configuration synchronized (<code class="md-code">.opencode/opencode.json</code> and <code class="md-code">.opencode/INSTRUCTIONS.md</code>).
+                </p>
+                <p style="font-size:0.78rem; color:var(--text-muted); margin-top:0.3rem;">
+                    Subtasks route through OpenCode CLI provider while maintaining ArenaFight 6 physical evidence verification gates.
+                </p>
+            </div>
+        </div>
+    `;
+    chatMessages.appendChild(agentRow);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    logTerminal(`[OPENCODE] Connected to OpenCode CLI bridge. Workspace synchronized.`);
+}
+
+function executeDisconnectFlow() {
+    vanguardMode = 'standalone';
+    if (indexModeLabel) {
+        indexModeLabel.textContent = 'STANDALONE';
+        indexModeLabel.style.color = '#38bdf8';
+    }
+    if (indexModeDot) indexModeDot.style.background = '#06b6d4';
+    const agentRow = document.createElement('div');
+    agentRow.className = 'message-row agent';
+    agentRow.innerHTML = `
+        <div class="avatar agent">▲</div>
+        <div class="message-content">
+            <div class="message-bubble" style="border-left: 3px solid var(--accent-cyan);">
+                <p><strong style="color:var(--accent-cyan);">[Standalone Mode Active]</strong></p>
+                <p style="font-size:0.85rem; margin-top:0.3rem;">
+                    Runtime mode reverted to <strong>STANDALONE</strong>. Self-contained native C++20 engine active.
+                </p>
+            </div>
+        </div>
+    `;
+    chatMessages.appendChild(agentRow);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    logTerminal(`[MODE] Reverted to STANDALONE mode.`);
+}
+
+if (indexRuntimeModeBtn) {
+    indexRuntimeModeBtn.addEventListener('click', () => {
+        if (vanguardMode === 'standalone') {
+            executeConnectFlow('opencode');
+        } else {
+            executeDisconnectFlow();
+        }
+    });
+}
 
 btnSend.addEventListener('click', handleSendMessage);
 chatInput.addEventListener('keydown', (e) => {

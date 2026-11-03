@@ -42,10 +42,28 @@ public:
     void handleSkills(const std::string& args);
     void handleRules(const std::string& args);
     void handleModels(const std::string& args);
+    void handleModel(const std::string& args);
     void handleStatus(const std::string& args);
+    void handleMode(const std::string& args);
+    void handleConnect(const std::string& args);
+    void handleDisconnect(const std::string& args);
     void handleHelp(const std::string& args);
     void handleOpenCode(const std::string& args);
     void handleUI(const std::string& args);
+    void handleUnsloth(const std::string& args);
+    void handleAbilities(const std::string& args);
+    void handleTemperature(const std::string& args);
+    void handleTokens(const std::string& args);
+    void handleFiles(const std::string& args);
+    void handleThink(const std::string& args);
+    void handleDuel(const std::string& args);
+    void handleHelpSession(const std::string& args);
+    void handleBenchmark(const std::string& args);
+    void handleSecurity(const std::string& args);
+    void handleAudit(const std::string& args);
+    void handleLevel(const std::string& args);
+    void handleProfile(const std::string& args);
+    void handleServices(const std::string& args);
 
     // Hardware Studio handlers
     void handleBoards(const std::string& filter);
