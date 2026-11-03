@@ -1,8 +1,8 @@
 # ArenaFight Agent
 
-**Version:** 2.5.0 (Peak CLI & Autonomous Engine Edition)  
+**Version:** 2.5.0 
 **Build Status:** 35/35 Automated Tests Passing (100% Green)  
-**Architecture:** Pure C++20 Native Standard (Zero Web Bloat)  
+**Architecture:** Pure C++20 Native Standard  
 
 An autonomous, local-first multi-model AI agent orchestration runtime and execution system built in **C++20**.
 
