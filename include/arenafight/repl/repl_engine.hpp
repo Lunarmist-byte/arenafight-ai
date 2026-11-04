@@ -81,6 +81,9 @@ public:
     ArtifactManager& getArtifactManager() { return artifacts_; }
     CustomizationManager& getCustomizationManager() { return customizations_; }
 
+    bool isRunning() const { return running_; }
+    void stop() { running_ = false; }
+
 private:
     ArenaAgent& agent_;
     ArtifactManager artifacts_;

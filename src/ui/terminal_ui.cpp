@@ -486,18 +486,39 @@ void TerminalUI::printHelpSession(const Config& config, const std::vector<std::p
               << "  - arena profile:      Physical host profiling and dynamic limits\n"
               << "  - arena benchmark:    Benchmark all available models across 4 axes\n\n";
 
-    std::cout << "8. QUICK-START CHEAT SHEET:\n"
+    std::cout << "8. FUN INTERACTIVE CONVERSATION MODE (/chat, /talk, /banter):\n"
+              << "--------------------------------------------------------------------------------\n"
+              << "  A relaxed, multi-turn conversational mode decoupled from the strict verification\n"
+              << "  engine. Ideal for brainstorming, discussing ideas, quick Q&A, or simply hanging out:\n"
+              << "  - Personas: witty (default), pirate, cyberpunk, zen, nerd, coach, roast\n"
+              << "  - In-chat commands:\n"
+              << "      /persona <name>  Switch persona dynamically without losing context\n"
+              << "      /personas        List all 7 available personas and descriptions\n"
+              << "      /joke, /fact     Generate character-specific jokes and fascinating facts\n"
+              << "      /stats           Display turn count, estimated tokens, and history depth\n"
+              << "      /clear           Reset conversation history\n"
+              << "      /back            Return to the Arena menu (ArenaFight Agent mode)\n"
+              << "      /exit            Exit Arena completely\n"
+              << "  - CLI invocation:    arena chat [persona]   or   arena talk [persona]\n"
+              << "  - REPL invocation:   /chat [persona]        or   /talk [persona]\n\n";
+
+    std::cout << "9. QUICK-START CHEAT SHEET:\n"
               << "--------------------------------------------------------------------------------\n"
               << "  * /goal <task>       Pursue goal autonomously to completion\n"
               << "  * /plan <task>       Generate interactive plan artifact\n"
               << "  * /grill-me <idea>   Interactive requirements interview before writing code\n"
               << "  * /think <task>      Fast thinking duel (code gen disallowed)\n"
+              << "  * /chat [persona]    Fun interactive talk mode (witty, pirate, cyberpunk, zen)\n"
+              << "  * /help chat         Display interactive mode personas & commands guide\n"
+              << "  * /services          Autonomous daemon manager (llama.cpp server & Ollama)\n"
               << "  * /metrics           Display live telemetry & verification metrics observatory\n"
               << "  * /temp [float]      Adjust generation temperature (0.0 - 2.0)\n"
               << "  * /tokens [int]      Adjust max output token limit\n"
               << "  * /abilities         Display multi-dimensional model ability matrix\n"
               << "  * /status            View session telemetry and claim confidence\n"
-              << "  * /exit              Exit REPL\n";
+              << "  * /help [command]    Display slash command reference guide\n"
+              << "  * /back              Return to Arena main menu\n"
+              << "  * /exit              Exit Arena completely\n";
 
     printFooter();
 }

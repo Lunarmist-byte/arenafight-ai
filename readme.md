@@ -525,7 +525,8 @@ When you want to relax, brainstorm, ask questions, tell jokes, or just talk with
   * `/fact`: Ask the model to share a mindbending tech or science fact.
   * `/clear`: Clear conversation history to start a fresh topic.
   * `/stats`: Display turns exchanged, tokens used, and active persona.
-  * `/exit` or `/back`: Return gracefully to standard ArenaFight Agent mode.
+  * `/back`: Return to the Arena menu (ArenaFight Agent mode).
+  * `/exit`: Exit Arena completely.
 
 ---
 
@@ -646,11 +647,15 @@ Get comprehensive runtime guidance, system diagnostics, and cheat sheets at any 
 arena help-session
 # or
 arena guide
+# or inspect interactive chat mode guide directly
+arena help chat
 
 # Launch inside interactive REPL
 arena > /help session
 # or
 arena > /guide
+# or view dedicated interactive mode details
+arena > /help chat
 ```
 
 The help session displays:
@@ -658,6 +663,7 @@ The help session displays:
 * Online/offline status across all 5 providers (OpenCode, Claude Code, Ollama, OpenRouter, TestMock).
 * Explanation of thinking phase tournaments, file context injection, and Unsloth AI fine-tuning.
 * Summary of the 6 Physical Evidence Verification Gates and Hardware Studio commands.
+* Fun Interactive Talk Mode guide (`/chat`, `/talk`, `/banter`), all 7 personas, and in-chat commands.
 * Quick-start cheat sheet with copyable examples.
 
 ---

@@ -2043,10 +2043,25 @@ bool testFunInteractiveChatMode() {
         "/stats\n"
         "/personas\n"
         "/clear\n"
-        "/exit\n"
+        "/back\n"
     );
 
     repl.startChatSession("witty", &simulatedInput);
+    if (!repl.isRunning()) {
+        std::cout << "FAILED: /back should keep REPL running state active\n";
+        return false;
+    }
+
+    std::stringstream exitInput("/exit\n");
+    repl.startChatSession("witty", &exitInput);
+    if (repl.isRunning()) {
+        std::cout << "FAILED: /exit should set running state to false\n";
+        return false;
+    }
+
+    // 3. Test help documentation for interactive mode
+    repl.handleHelp("chat");
+    repl.handleHelp("interactive");
 
     std::cout << "PASSED\n";
     return true;

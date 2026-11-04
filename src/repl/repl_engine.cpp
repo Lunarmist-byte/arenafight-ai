@@ -288,10 +288,24 @@ void ReplEngine::registerCommands() {
 #endif
                               }};
 
-  slashCommands_["/exit"] = {"/exit", "Exit interactive REPL", "/exit",
+  slashCommands_["/back"] = {
+      "/back", "Return to Arena main menu", "/back",
+      [this](const std::string &) {
+        std::cout << "\n" << ANSI_GREEN << ANSI_BOLD << "ArenaFight Agent Main Menu" << ANSI_RESET << "\n"
+                  << "Already at the Arena main menu. Enter a task, /goal <task>, /chat to talk, /help for commands, or /exit to quit.\n\n";
+      }};
+
+  slashCommands_["/menu"] = {
+      "/menu", "Display Arena main menu and command overview", "/menu",
+      [this](const std::string &) {
+        printReplBanner();
+        printHelpTable();
+      }};
+
+  slashCommands_["/exit"] = {"/exit", "Exit Arena completely", "/exit",
                              [this](const std::string &) { running_ = false; }};
 
-  slashCommands_["/quit"] = {"/quit", "Exit interactive REPL", "/quit",
+  slashCommands_["/quit"] = {"/quit", "Exit Arena completely", "/quit",
                              [this](const std::string &) { running_ = false; }};
 }
 
@@ -335,7 +349,7 @@ void ReplEngine::printHelpTable() {
   };
 
   const std::vector<CommandGroup> groups = {
-      {"1. Autonomous Execution & Reasoning",
+      {"1. Autonomous Execution, Reasoning & Interactive Chat",
        {{"/goal", "",
          "Autonomous goal pursuit with self-healing until all 6 gates pass",
          "/goal <task description>"},
@@ -347,7 +361,10 @@ void ReplEngine::printHelpTable() {
          "/grill-me <project or feature idea>"},
         {"/think", "/duel",
          "Fast thinking-phase tournament: Compare reasoning without code gen",
-         "/think <task objective> [candidateA] [candidateB]"}}},
+         "/think <task objective> [candidateA] [candidateB]"},
+        {"/chat", "/talk, /banter",
+         "Fun interactive conversation mode just to talk (personas: witty, pirate, etc.)",
+         "/chat [witty|pirate|cyberpunk|zen|nerd|coach|roast]"}}},
 
       {"2. PC Hardware Profiling & Processing Levels",
        {{"/level", "/processing",
@@ -357,13 +374,16 @@ void ReplEngine::printHelpTable() {
          "Assess host hardware (CPU, RAM, GPU) and display dynamic limits",
          "/profile [cpu|cuda]"},
         {"/services", "/daemon",
-         "Autonomous service manager: detect & auto-start Ollama on Win/Linux",
-         "/services [start|status|pull <model>]"}}},
+         "Autonomous service daemon manager: native llama.cpp server and Ollama",
+         "/services [start|status|stop|pull <model>]"}}},
 
       {"3. AI Models, Abilities & Providers",
-       {{"/models", "/model",
-         "List discovered models across providers or switch active model",
-         "/models [set <model_name>]"},
+       {{"/models", "",
+         "List discovered models across backends with abilities and scores",
+         "/models"},
+        {"/model", "",
+         "View or set active model universally across any provider",
+         "/model [model_name]"},
         {"/abilities", "",
          "Display multidimensional model capability matrix and scores",
          "/abilities"},
@@ -401,9 +421,12 @@ void ReplEngine::printHelpTable() {
          "/audit"}}},
 
       {"5. Embedded & Hardware Engineering Studio",
-       {{"/boards", "/board",
-         "List or inspect microcontroller boards, architectures, and pinouts",
-         "/boards [filter] or /board <board-id>"},
+       {{"/boards", "",
+         "List supported microcontroller boards and target architectures",
+         "/boards [filter]"},
+        {"/board", "",
+         "Inspect microcontroller pinouts, strapping pins, and voltages",
+         "/board <board-id>"},
         {"/components", "",
          "List supported sensors, actuators, and communication ICs",
          "/components [filter]"},
@@ -445,11 +468,20 @@ void ReplEngine::printHelpTable() {
         {"/guide", "/help-session",
          "Launch interactive help session & runtime diagnostics",
          "/guide"},
+        {"/help", "",
+         "Display command reference table or specific command help",
+         "/help [command]"},
         {"/clear", "",
          "Clear console screen",
          "/clear"},
+        {"/back", "",
+         "Return to Arena main menu",
+         "/back"},
+        {"/menu", "",
+         "Display Arena main menu and slash command overview",
+         "/menu"},
         {"/exit", "/quit",
-         "Exit interactive REPL session",
+         "Exit Arena completely",
          "/exit"}}}};
 
   std::cout << "\n"
@@ -477,6 +509,30 @@ void ReplEngine::printHelpTable() {
                 << "\n";
     }
   }
+
+  std::cout << "\n"
+            << ANSI_BOLD << ANSI_YELLOW << "Interactive Chat Mode & Personas (/chat, /talk, /banter):" << ANSI_RESET << "\n"
+            << ANSI_DIM
+            << "--------------------------------------------------------------------------------\n"
+            << ANSI_RESET
+            << "  " << ANSI_CYAN << ANSI_BOLD << "witty" << ANSI_RESET
+            << "     : Sharp, playful developer buddy with clever analogies (Default)\n"
+            << "  " << ANSI_CYAN << ANSI_BOLD << "pirate" << ANSI_RESET
+            << "    : Capt'n Byte of the C++ High Seas (Ahoy matey! Shiver me pointers!)\n"
+            << "  " << ANSI_CYAN << ANSI_BOLD << "cyberpunk" << ANSI_RESET
+            << " : Neo-Tokyo Netrunner hacker with 2077 cyber-slang & street smarts\n"
+            << "  " << ANSI_CYAN << ANSI_BOLD << "zen" << ANSI_RESET
+            << "       : Mindful Zen Master & philosopher bringing calm to code & life\n"
+            << "  " << ANSI_CYAN << ANSI_BOLD << "nerd" << ANSI_RESET
+            << "      : Over-enthusiastic computer history, Turing, & assembly geek\n"
+            << "  " << ANSI_CYAN << ANSI_BOLD << "coach" << ANSI_RESET
+            << "     : High-energy motivational hype coach cheering you on\n"
+            << "  " << ANSI_CYAN << ANSI_BOLD << "roast" << ANSI_RESET
+            << "     : Playful code roaster with affectionate, hilarious teasing\n"
+            << "  " << ANSI_DIM << "In-Chat Commands: " << ANSI_RESET
+            << "/persona <name>, /personas, /joke, /fact, /stats, /clear, /back (to menu), /exit (to quit arena)\n"
+            << "  " << ANSI_DIM << "Detailed Guide:   " << ANSI_RESET
+            << "Type " << ANSI_YELLOW << "/help chat" << ANSI_RESET << " for full interactive mode reference\n";
 
   std::cout << "\n"
             << ANSI_BOLD << ANSI_YELLOW << "Context Mentions:" << ANSI_RESET << "\n"
@@ -1696,6 +1752,7 @@ void ReplEngine::handleDuel(const std::string &args) { handleThink(args); }
 
 void ReplEngine::handleHelpSession(const std::string & /*args*/) {
   auto router = agent_.getRouter();
+  auto llamacpp = router.getProviderByName("llama.cpp");
   auto oc = router.getProviderByName("OpenCode");
   auto claude = router.getProviderByName("ClaudeCode");
   auto ollama = router.getProviderByName("Ollama");
@@ -1703,6 +1760,7 @@ void ReplEngine::handleHelpSession(const std::string & /*args*/) {
   auto mock = router.getProviderByName("TestMock");
 
   std::vector<std::pair<std::string, bool>> statuses = {
+      {"llama.cpp (Native)", llamacpp && llamacpp->available()},
       {"OpenCode CLI", oc && oc->available()},
       {"Claude Code CLI", claude && claude->available()},
       {"Ollama (Local)", ollama && ollama->available()},
@@ -1723,6 +1781,65 @@ void ReplEngine::handleHelp(const std::string &args) {
     std::string cmd = args;
     if (cmd.front() != '/')
       cmd = "/" + cmd;
+
+    if (cmd == "/chat" || cmd == "/talk" || cmd == "/banter" ||
+        cmd == "/interactive" || cmd == "/persona" || cmd == "/personas") {
+      std::cout << "\n"
+                << ANSI_CYAN << ANSI_BOLD
+                << "================================================================================\n"
+                << "            ARENA CHAT -- FUN INTERACTIVE TALK & BANTER MODE                    \n"
+                << "================================================================================\n"
+                << ANSI_RESET
+                << ANSI_BOLD << "Overview:\n" << ANSI_RESET
+                << "  A relaxed, conversational interactive mode for casual talk, brainstorming, tech banter,\n"
+                << "  and jokes. Unlike /goal or /plan, it does not invoke the planner, task graph, or verifier,\n"
+                << "  allowing fluid, low-latency multi-turn conversations with full conversation memory.\n\n"
+                << ANSI_BOLD << "Commands & Aliases:\n" << ANSI_RESET
+                << "  * REPL Commands : " << ANSI_YELLOW << "/chat [persona]" << ANSI_RESET
+                << ", " << ANSI_YELLOW << "/talk [persona]" << ANSI_RESET
+                << ", " << ANSI_YELLOW << "/banter [persona]" << ANSI_RESET << "\n"
+                << "  * CLI Commands  : " << ANSI_YELLOW << "arena chat [persona]" << ANSI_RESET
+                << ", " << ANSI_YELLOW << "arena talk [persona]" << ANSI_RESET << "\n\n"
+                << ANSI_BOLD << "Available Personas:\n" << ANSI_RESET
+                << "  * " << ANSI_YELLOW << "witty" << ANSI_RESET
+                << "      - Sharp, playful developer buddy with clever analogies (Default)\n"
+                << "  * " << ANSI_YELLOW << "pirate" << ANSI_RESET
+                << "     - Capt'n Byte of the C++ High Seas (Ahoy matey! Shiver me pointers!)\n"
+                << "  * " << ANSI_YELLOW << "cyberpunk" << ANSI_RESET
+                << "  - Neo-Tokyo Netrunner hacker with 2077 cyber-slang & street smarts\n"
+                << "  * " << ANSI_YELLOW << "zen" << ANSI_RESET
+                << "        - Mindful Zen Master & philosopher bringing calm to code & life\n"
+                << "  * " << ANSI_YELLOW << "nerd" << ANSI_RESET
+                << "       - Over-enthusiastic computer history, Turing, & assembly geek\n"
+                << "  * " << ANSI_YELLOW << "coach" << ANSI_RESET
+                << "      - High-energy motivational hype coach cheering you on\n"
+                << "  * " << ANSI_YELLOW << "roast" << ANSI_RESET
+                << "      - Playful code roaster with affectionate, hilarious teasing\n\n"
+                << ANSI_BOLD << "In-Chat Interactive Commands (Available inside chat mode):\n" << ANSI_RESET
+                << "  * /persona <name>  Switch active persona on the fly (preserves conversation context)\n"
+                << "  * /personas        List all 7 available personas with descriptions\n"
+                << "  * /joke            Tell an in-character thematic joke\n"
+                << "  * /fact            Share a fascinating tech/historical fact in character\n"
+                << "  * /stats           Display chat statistics (turns exchanged, token estimate, persona)\n"
+                << "  * /clear           Reset conversation history for a fresh topic\n"
+                << "  * /back            Return to the Arena menu (ArenaFight Agent mode)\n"
+                << "  * /exit            Exit Arena completely (terminates the runtime)\n\n"
+                << ANSI_BOLD << "Natural Conversational Detection:\n" << ANSI_RESET
+                << "  Casual greetings in the main REPL (such as \"hi\", \"hello\", \"how are you\", \"tell me a joke\")\n"
+                << "  are automatically recognized and answered with conversational guidance to /chat.\n\n"
+                << ANSI_BOLD << "Examples:\n" << ANSI_RESET
+                << "  /chat              Launch interactive chat with default witty persona\n"
+                << "  /chat pirate       Start chatting immediately as Capt'n Byte\n"
+                << "  /chat cyberpunk    Start chatting with a 2077 Netrunner\n"
+                << "  /chat coach        Get pumped up with the motivational hype coach\n\n"
+                << ANSI_DIM
+                << "Made by Lunarmist-byte | https://github.com/Lunarmist-byte\n"
+                << "LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n"
+                << "================================================================================\n\n"
+                << ANSI_RESET;
+      return;
+    }
+
     auto it = slashCommands_.find(cmd);
     if (it != slashCommands_.end()) {
       std::cout << "\n"
@@ -1972,6 +2089,17 @@ void ReplEngine::processInput(const std::string &rawInput) {
   std::string line = trim(rawInput);
   if (line.empty())
     return;
+
+  // Direct bare exit, back, or menu commands
+  if (line == "exit" || line == "quit" || line == ":q") {
+    running_ = false;
+    return;
+  }
+  if (line == "back" || line == "menu") {
+    std::cout << "\n" << ANSI_GREEN << ANSI_BOLD << "ArenaFight Agent Main Menu" << ANSI_RESET << "\n"
+              << "You are at the main Arena menu. Enter a task, /goal <task>, /chat to talk, /help for commands, or /exit to quit.\n\n";
+    return;
+  }
 
   // Check slash command
   if (line.front() == '/') {
@@ -2358,7 +2486,8 @@ void ReplEngine::startChatSession(const std::string& initialPersona, std::istrea
               << "  /fact            Share a fascinating fact in character\n"
               << "  /clear           Start a fresh conversation topic\n"
               << "  /stats           Display conversation statistics\n"
-              << "  /exit, /back     Return to ArenaFight Agent mode\n"
+              << "  /back            Return to the Arena menu (ArenaFight Agent mode)\n"
+              << "  /exit            Exit Arena completely\n"
               << "----------------------------------------------------\n"
               << ANSI_DIM << "Made by Lunarmist-byte | https://github.com/Lunarmist-byte | https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n" << ANSI_RESET
               << "====================================================\n\n";
@@ -2376,8 +2505,14 @@ void ReplEngine::startChatSession(const std::string& initialPersona, std::istrea
         std::string line = trim(input);
         if (line.empty()) continue;
 
-        if (line == "/exit" || line == "/back" || line == "/agent" || line == "/quit" || line == "/bye") {
-            std::cout << ANSI_CYAN << "\nReturning to ArenaFight Agent Mode. Great chatting with you!\n\n" << ANSI_RESET;
+        if (line == "/back" || line == "back" || line == "/menu" || line == "menu" || line == "/agent") {
+            std::cout << ANSI_CYAN << "\nReturning to Arena menu. Great chatting with you!\n\n" << ANSI_RESET;
+            break;
+        }
+
+        if (line == "/exit" || line == "exit" || line == "/quit" || line == "quit" || line == "/bye") {
+            std::cout << ANSI_CYAN << "\nExiting Arena. Great chatting with you, goodbye!\n\n" << ANSI_RESET;
+            running_ = false;
             break;
         }
 

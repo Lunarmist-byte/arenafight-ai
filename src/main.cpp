@@ -41,7 +41,7 @@ void printUsage() {
       << "  arena mode [standalone|opencode] View or switch execution mode\n"
       << "  arena level [fast|perfect]     Set processing level: Fast (standard) or Perfect Boi (adaptive)\n"
       << "  arena profile                  Assess host machine hardware & dynamic limits (no hardcoding)\n"
-      << "  arena services, daemon         Autonomous background service starter (Ollama, etc.)\n"
+      << "  arena services, daemon         Autonomous background service manager (llama.cpp server & Ollama)\n"
       << "  arena connect [opencode]       Connect to OpenCode CLI bridge\n"
       << "  arena disconnect               Disconnect from OpenCode and revert to standalone\n"
       << "  arena status                   Display CLI status dashboard & backend health\n"
@@ -86,6 +86,7 @@ void printUsage() {
       << "  arena model <name>             Set active reasoning model for "
          "session execution\n"
       << "  arena config                   Display current configuration\n"
+      << "  arena help [command]           Display slash command or interactive mode guide (e.g. arena help chat)\n"
       << "  arena help-session, guide      Launch interactive guided help "
          "session\n"
       << "  arena mcp                      Launch Model Context Protocol (MCP) server for OpenCode\n"
@@ -229,12 +230,20 @@ int main(int argc, char *argv[]) {
       config.openai_api_key = argv[++i];
       config.openrouter_api_key = config.openai_api_key;
     } else if (arg == "--help" || arg == "-h" || arg == "help") {
-      if (i + 1 < argc && (std::string(argv[i + 1]) == "session" ||
-                           std::string(argv[i + 1]) == "guide")) {
-        ArenaAgent agent(config);
-        ReplEngine repl(agent);
-        repl.handleHelpSession("");
-        return 0;
+      if (i + 1 < argc) {
+        std::string sub = argv[i + 1];
+        if (sub == "session" || sub == "guide") {
+          ArenaAgent agent(config);
+          ReplEngine repl(agent);
+          repl.handleHelpSession("");
+          return 0;
+        } else if (sub == "chat" || sub == "talk" || sub == "banter" ||
+                   sub == "interactive") {
+          ArenaAgent agent(config);
+          ReplEngine repl(agent);
+          repl.handleHelp(sub);
+          return 0;
+        }
       }
       printUsage();
       return 0;
@@ -335,6 +344,9 @@ int main(int argc, char *argv[]) {
     ReplEngine repl(agent);
     std::string persona = (args.size() > 1) ? args[1] : "witty";
     repl.startChatSession(persona);
+    if (repl.isRunning()) {
+      repl.run();
+    }
     return 0;
   };
 
@@ -452,6 +464,13 @@ int main(int argc, char *argv[]) {
     return 0;
   };
   dispatchTable["guide"] = dispatchTable["help-session"];
+
+  dispatchTable["help"] = [&](const auto &args) {
+    ReplEngine repl(agent);
+    std::string subArgs = joinArgs(args, 1);
+    repl.handleHelp(subArgs);
+    return 0;
+  };
 
   dispatchTable["metrics"] = [&](const auto &args) {
     ReplEngine repl(agent);
