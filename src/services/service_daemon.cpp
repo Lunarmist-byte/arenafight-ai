@@ -79,17 +79,17 @@ bool isOllamaProcessRunning() {
 bool ServiceDaemon::isOllamaResponding(const std::string& baseUrl) {
     std::string url = normalizeUrl(baseUrl);
     try {
-        // Fast-path: On Windows, prefer direct IPv4 127.0.0.1 to avoid IPv6 [::1] timeout delays
+        // Fast-path: Direct IPv4 loopback to avoid IPv6 [::1] timeout delays on Windows
         if (url.find("localhost") != std::string::npos) {
             std::string alt = url;
             size_t pos = alt.find("localhost");
             alt.replace(pos, 9, "127.0.0.1");
             HttpResponse respFast = HttpClient::instance().get(alt + "/api/tags", {}, 1);
-            if (respFast.success) return true;
+            return respFast.success;
         }
 
         HttpResponse resp = HttpClient::instance().get(url + "/api/tags", {}, 1);
-        if (resp.success) return true;
+        return resp.success;
     } catch (...) {}
     return false;
 }
@@ -177,28 +177,66 @@ bool ServiceDaemon::launchOllamaBackground(const std::string& exePath) {
     }
 
 #if defined(_WIN32)
-    // Windows: Use Win32 CreateProcessW with DETACHED_PROCESS and CREATE_NO_WINDOW
+    // Windows: Use Win32 CreateProcessW with CREATE_NEW_PROCESS_GROUP, CREATE_NO_WINDOW and real log handles
     std::wstring cmdLine = L"\"" + s2ws(targetExe) + L"\" serve";
+    std::filesystem::path exeFsPath(targetExe);
+    std::wstring workDir = s2ws(exeFsPath.parent_path().string());
+
+    SECURITY_ATTRIBUTES sa;
+    sa.nLength = sizeof(sa);
+    sa.lpSecurityDescriptor = NULL;
+    sa.bInheritHandle = TRUE;
+
+    std::filesystem::path logPath;
+    const char* tempEnv = std::getenv("TEMP");
+    if (tempEnv && std::filesystem::exists(tempEnv)) {
+        logPath = std::filesystem::path(tempEnv) / "ollama_daemon.log";
+    } else {
+        logPath = exeFsPath.parent_path() / "ollama_daemon.log";
+    }
+
+    std::wstring wLogPath = s2ws(logPath.string());
+    HANDLE hLog = CreateFileW(
+        wLogPath.c_str(),
+        FILE_APPEND_DATA | GENERIC_WRITE,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        &sa,
+        OPEN_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
+
     STARTUPINFOW si;
     PROCESS_INFORMATION pi;
     ZeroMemory(&si, sizeof(si));
     si.cb = sizeof(si);
     si.dwFlags = STARTF_USESHOWWINDOW;
     si.wShowWindow = SW_HIDE;
+    if (hLog != INVALID_HANDLE_VALUE) {
+        si.dwFlags |= STARTF_USESTDHANDLES;
+        si.hStdInput = INVALID_HANDLE_VALUE;
+        si.hStdOutput = hLog;
+        si.hStdError = hLog;
+    }
     ZeroMemory(&pi, sizeof(pi));
 
+    DWORD createFlags = CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW;
     BOOL success = CreateProcessW(
         NULL,
         &cmdLine[0],
         NULL,
         NULL,
-        FALSE,
-        CREATE_NO_WINDOW | DETACHED_PROCESS,
+        (hLog != INVALID_HANDLE_VALUE) ? TRUE : FALSE,
+        createFlags,
         NULL,
-        NULL,
+        workDir.empty() ? NULL : workDir.c_str(),
         &si,
         &pi
     );
+
+    if (hLog != INVALID_HANDLE_VALUE) {
+        CloseHandle(hLog);
+    }
 
     if (success) {
         CloseHandle(pi.hProcess);
@@ -209,7 +247,7 @@ bool ServiceDaemon::launchOllamaBackground(const std::string& exePath) {
 
     // Fallback on Windows to PowerShell Start-Process
     std::string psCmd = "Start-Process -FilePath '" + targetExe + "' -ArgumentList 'serve' -WindowStyle Hidden";
-    ProcessResult psRes = ProcessExecutor::executeShell(psCmd, ".", 3000);
+    ProcessResult psRes = ProcessExecutor::executeShell(psCmd, workDir.empty() ? "." : exeFsPath.parent_path().string(), 3000);
     return psRes.exitCode == 0;
 
 #else
@@ -254,7 +292,7 @@ bool ServiceDaemon::ensureOllamaRunning(const std::string& baseUrl, int timeoutS
         return true;
     }
 
-    // 2. Thread-safe rate limiting: at most 1 launch attempt every 45 seconds
+    // 2. Thread-safe rate limiting: at most 1 launch attempt every 8 seconds
     static std::mutex s_launchMutex;
     std::lock_guard<std::mutex> lock(s_launchMutex);
 
@@ -263,23 +301,32 @@ bool ServiceDaemon::ensureOllamaRunning(const std::string& baseUrl, int timeoutS
         return true;
     }
 
-    static auto s_lastAttempt = std::chrono::steady_clock::time_point::min();
-    auto now = std::chrono::steady_clock::now();
-    auto elapsedSec = std::chrono::duration_cast<std::chrono::seconds>(now - s_lastAttempt).count();
-    if (elapsedSec < 45) {
-        // Cooldown active - do not spam new launch attempts
-        return false;
+    static bool s_hasAttempted = false;
+    static auto s_lastAttempt = std::chrono::steady_clock::now();
+    if (s_hasAttempted) {
+        auto now = std::chrono::steady_clock::now();
+        auto elapsedSec = std::chrono::duration_cast<std::chrono::seconds>(now - s_lastAttempt).count();
+        if (elapsedSec < 8) {
+            // A launch was already triggered in the last 8 seconds; wait for readiness rather than failing immediately
+            int attempts = (timeoutSeconds <= 0 ? 25 : timeoutSeconds) * 2;
+            for (int i = 0; i < attempts; ++i) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                if (isOllamaResponding(url)) return true;
+            }
+            return isOllamaResponding(url);
+        }
     }
-    s_lastAttempt = now;
+    s_hasAttempted = true;
+    s_lastAttempt = std::chrono::steady_clock::now();
 
     // 3. Check if an Ollama process is already running on the OS
     if (isOllamaProcessRunning()) {
-        Logger::instance().info("[SERVICE] Ollama process already active on system; waiting for port readiness...");
-        for (int i = 0; i < 6; ++i) {
+        Logger::instance().info("[SERVICE] Ollama process found on system; checking port readiness...");
+        for (int i = 0; i < 4; ++i) {
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
             if (isOllamaResponding(url)) return true;
         }
-        return isOllamaResponding(url);
+        Logger::instance().info("[SERVICE] Ollama process active but server port not responding; initiating background serve daemon...");
     }
 
     // 4. Locate Ollama executable
@@ -298,7 +345,7 @@ bool ServiceDaemon::ensureOllamaRunning(const std::string& baseUrl, int timeoutS
     }
 
     // 6. Actively poll for readiness
-    int maxAttempts = (timeoutSeconds <= 0 ? 6 : timeoutSeconds) * 2; // Check every 500ms
+    int maxAttempts = (timeoutSeconds <= 0 ? 25 : timeoutSeconds) * 2; // Check every 500ms
     for (int i = 0; i < maxAttempts; ++i) {
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
         if (isOllamaResponding(url)) {

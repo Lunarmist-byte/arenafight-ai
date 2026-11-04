@@ -6,6 +6,7 @@
 #include "arenafight/hardware/circuit_calculator.hpp"
 #include "arenafight/hardware/hardware_manager.hpp"
 #include "arenafight/tools/hardware_tools.hpp"
+#include "arenafight/tools/media_tools.hpp"
 #include "arenafight/planner/planner.hpp"
 #include "arenafight/security/security_sandbox.hpp"
 #include "arenafight/system/system_profiler.hpp"
@@ -239,6 +240,49 @@ nlohmann::json MCPServer::getToolsSchema() const {
                 }},
                 {"required", nlohmann::json::array({"task"})}
             }}
+        },
+        {
+            {"name", "arena_generate_image"},
+            {"description", "Generate visual assets using Fooocus SDXL, local diffusion, or remote neural endpoints with magic bytes physical verification."},
+            {"inputSchema", {
+                {"type", "object"},
+                {"properties", {
+                    {"prompt", {{"type", "string"}, {"description", "Visual prompt"}}},
+                    {"negative_prompt", {{"type", "string"}, {"description", "Negative prompt"}}},
+                    {"output_path", {{"type", "string"}, {"description", "Destination file path (.png or .jpg)"}}},
+                    {"engine", {{"type", "string"}, {"description", "Diffusion engine (auto, fooocus, comfyui, mock)"}}},
+                    {"width", {{"type", "integer"}, {"description", "Image width in pixels"}}},
+                    {"height", {{"type", "integer"}, {"description", "Image height in pixels"}}}
+                }},
+                {"required", nlohmann::json::array({"prompt", "output_path"})}
+            }}
+        },
+        {
+            {"name", "arena_generate_video"},
+            {"description", "Generate motion video clips using Wan AI 2.1 or ComfyUI Video with container and duration verification."},
+            {"inputSchema", {
+                {"type", "object"},
+                {"properties", {
+                    {"prompt", {{"type", "string"}, {"description", "Scene motion prompt"}}},
+                    {"output_path", {{"type", "string"}, {"description", "Destination MP4 file path"}}},
+                    {"engine", {{"type", "string"}, {"description", "Video engine (auto, wan_ai, comfyui, mock)"}}},
+                    {"mode", {{"type", "string"}, {"description", "Mode: t2v or i2v"}}},
+                    {"frames", {{"type", "integer"}, {"description", "Total frames"}}},
+                    {"fps", {{"type", "integer"}, {"description", "Frames per second"}}}
+                }},
+                {"required", nlohmann::json::array({"prompt", "output_path"})}
+            }}
+        },
+        {
+            {"name", "arena_media_inspect"},
+            {"description", "Inspect physical evidence of media files: header magic bytes, resolution, container boxes, and SHA-256 fingerprint."},
+            {"inputSchema", {
+                {"type", "object"},
+                {"properties", {
+                    {"path", {{"type", "string"}, {"description", "Path to media file on disk"}}}
+                }},
+                {"required", nlohmann::json::array({"path"})}
+            }}
         }
     });
 }
@@ -277,6 +321,12 @@ nlohmann::json MCPServer::handleToolsCall(const nlohmann::json& id, const nlohma
         contentResult = executeSecurity(args);
     } else if (toolName == "arena_think") {
         contentResult = executeThink(args);
+    } else if (toolName == "arena_generate_image") {
+        contentResult = executeGenerateImage(args);
+    } else if (toolName == "arena_generate_video") {
+        contentResult = executeGenerateVideo(args);
+    } else if (toolName == "arena_media_inspect") {
+        contentResult = executeMediaInspect(args);
     } else {
         return {
             {"jsonrpc", "2.0"},
@@ -560,6 +610,36 @@ nlohmann::json MCPServer::executeThink(const nlohmann::json& args) {
     return {
         {"content", nlohmann::json::array({{{"type", "text"}, {"text", ss.str()}}})},
         {"isError", false}
+    };
+}
+
+nlohmann::json MCPServer::executeGenerateImage(const nlohmann::json& args) {
+    MediaGenerateImageTool tool;
+    std::string ws = agent_.getConfig().workspace_dir;
+    auto res = tool.execute(args, ws);
+    return {
+        {"content", nlohmann::json::array({{{"type", "text"}, {"text", res.success ? res.output : ("Error: " + res.error)}}})},
+        {"isError", !res.success}
+    };
+}
+
+nlohmann::json MCPServer::executeGenerateVideo(const nlohmann::json& args) {
+    MediaGenerateVideoTool tool;
+    std::string ws = agent_.getConfig().workspace_dir;
+    auto res = tool.execute(args, ws);
+    return {
+        {"content", nlohmann::json::array({{{"type", "text"}, {"text", res.success ? res.output : ("Error: " + res.error)}}})},
+        {"isError", !res.success}
+    };
+}
+
+nlohmann::json MCPServer::executeMediaInspect(const nlohmann::json& args) {
+    MediaInspectTool tool;
+    std::string ws = agent_.getConfig().workspace_dir;
+    auto res = tool.execute(args, ws);
+    return {
+        {"content", nlohmann::json::array({{{"type", "text"}, {"text", res.success ? res.output : ("Error: " + res.error)}}})},
+        {"isError", !res.success}
     };
 }
 

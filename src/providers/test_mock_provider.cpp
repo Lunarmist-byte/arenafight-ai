@@ -26,6 +26,37 @@ AgentResponse TestMockProvider::generate(const AgentRequest& request) {
 
     step_++;
 
+    // 0.05 Fun Interactive Chat Mode / Conversational requests
+    if (request.systemPrompt.find("Capt'n Byte") != std::string::npos ||
+        request.systemPrompt.find("Netrunner") != std::string::npos ||
+        request.systemPrompt.find("Zen Master") != std::string::npos ||
+        request.systemPrompt.find("nerd") != std::string::npos ||
+        request.systemPrompt.find("Motivational") != std::string::npos ||
+        request.systemPrompt.find("Code Roaster") != std::string::npos ||
+        request.systemPrompt.find("witty, fun") != std::string::npos ||
+        request.systemPrompt.find("AI companion") != std::string::npos ||
+        prompt.find("Tell me a hilarious") != std::string::npos ||
+        prompt.find("fascinating and mind-bending fact") != std::string::npos) {
+        response.promptTokens = 45;
+        response.completionTokens = 65;
+        if (request.systemPrompt.find("Capt'n Byte") != std::string::npos) {
+            response.content = "Ahoy matey! Shiver me pointers, 'tis a glorious day to sail the C++ high seas! What treasure of code shall we plunder today?";
+        } else if (request.systemPrompt.find("Netrunner") != std::string::npos) {
+            response.content = "Jacked into the subnet, choom. The ICE is clear and the cyber-deck is humming. What's the run?";
+        } else if (request.systemPrompt.find("Zen Master") != std::string::npos) {
+            response.content = "A single clean breath clears the mind as a clean free() clears the heap. What weighs upon your mind, traveler?";
+        } else if (request.systemPrompt.find("nerd") != std::string::npos) {
+            response.content = "Did you know that the Apollo 11 guidance computer only had 4 kilobytes of RAM and ran at 1.024 MHz?! Incredible! What shall we explore?";
+        } else if (request.systemPrompt.find("Motivational") != std::string::npos) {
+            response.content = "You are an absolute powerhouse! No bug can stand in our way today! Let's conquer this together!";
+        } else if (request.systemPrompt.find("Code Roaster") != std::string::npos) {
+            response.content = "I saw your last commit message was 'fixed stuff'. Truly Shakespearean. But don't worry, we'll make it shine!";
+        } else {
+            response.content = "Always a pleasure to chat! Grab a coffee, relax, and tell me what's on your mind. I'm all ears!";
+        }
+        return response;
+    }
+
     // 0. Fast Thinking Phase Duel (Code generation disallowed)
     if (prompt.find("FAST THINKING PHASE") != std::string::npos ||
         prompt.find("CODE GENERATION DISALLOWED") != std::string::npos) {

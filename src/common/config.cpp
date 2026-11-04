@@ -9,6 +9,9 @@ namespace arenafight {
 nlohmann::json Config::toJson() const {
   return {
       {"ollama_url", ollama_url},
+      {"llama_server_url", llama_server_url},
+      {"llama_gpu_layers", llama_gpu_layers},
+      {"llama_threads", llama_threads},
       {"openrouter_api_key", openrouter_api_key.empty() ? "" : "[REDACTED]"},
       {"openrouter_base_url", openrouter_base_url},
       {"openrouter_models", openrouter_models},
@@ -46,6 +49,9 @@ nlohmann::json Config::toJson() const {
 Config Config::fromJson(const nlohmann::json &j) {
   Config cfg;
   cfg.ollama_url = j.value("ollama_url", cfg.ollama_url);
+  cfg.llama_server_url = j.value("llama_server_url", cfg.llama_server_url);
+  cfg.llama_gpu_layers = j.value("llama_gpu_layers", cfg.llama_gpu_layers);
+  cfg.llama_threads = j.value("llama_threads", cfg.llama_threads);
   if (j.contains("openrouter_api_key")) {
     std::string key = j["openrouter_api_key"].get<std::string>();
     if (key != "[REDACTED]") {
@@ -281,6 +287,19 @@ void Config::applyEnvOverrides() {
   if (const char *cpuEnv = std::getenv("ARENA_CPU")) {
     if (std::string(cpuEnv) == "1" || std::string(cpuEnv) == "true") {
       setForceCpu(true);
+    }
+  }
+  if (const char *llamaUrl = std::getenv("LLAMA_SERVER_URL")) {
+    if (llamaUrl[0] != '\0') {
+      llama_server_url = llamaUrl;
+    }
+  }
+  if (const char *layersEnv = std::getenv("LLAMA_GPU_LAYERS")) {
+    if (layersEnv[0] != '\0') {
+      try {
+        llama_gpu_layers = std::stoi(layersEnv);
+      } catch (...) {
+      }
     }
   }
 }

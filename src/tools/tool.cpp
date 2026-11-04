@@ -5,6 +5,7 @@
 #include "arenafight/tools/git_tools.hpp"
 #include "arenafight/tools/user_tools.hpp"
 #include "arenafight/tools/hardware_tools.hpp"
+#include "arenafight/tools/media_tools.hpp"
 #include <iostream>
 
 namespace arenafight {
@@ -87,6 +88,11 @@ ToolRegistry ToolRegistry::createStandardRegistry(const Config& config) {
     reg.registerTool(std::make_shared<HardwareCalculateTool>());
     reg.registerTool(std::make_shared<HardwareScaffoldTool>());
     reg.registerTool(std::make_shared<HardwareVerifyQoSTool>());
+
+    // Multimodal generative media tools (Fooocus, Wan AI 2.1, ComfyUI)
+    reg.registerTool(std::make_shared<MediaGenerateImageTool>());
+    reg.registerTool(std::make_shared<MediaGenerateVideoTool>());
+    reg.registerTool(std::make_shared<MediaInspectTool>());
 
     return reg;
 }

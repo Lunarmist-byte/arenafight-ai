@@ -94,8 +94,11 @@ ModelSelection ModelRouter::getOrRegisterDynamicModel(const std::string& modelNa
         }
     } else if (lowerTarget.find("/") != std::string::npos) {
         matchedProvider = getProviderByName("OpenRouter");
-    } else if (lowerTarget.find(":") != std::string::npos) {
-        matchedProvider = getProviderByName("Ollama");
+    } else if (lowerTarget.find(":") != std::string::npos || lowerTarget.find(".gguf") != std::string::npos) {
+        matchedProvider = getProviderByName("llama.cpp");
+        if (!matchedProvider || !matchedProvider->available()) {
+            matchedProvider = getProviderByName("Ollama");
+        }
     }
 
     if (!matchedProvider || !matchedProvider->available()) {
@@ -115,7 +118,7 @@ ModelSelection ModelRouter::getOrRegisterDynamicModel(const std::string& modelNa
     dynamicModel.name = modelName;
     dynamicModel.provider = matchedProvider ? matchedProvider->name() : "Dynamic";
     dynamicModel.contextWindow = 32768;
-    dynamicModel.isLocal = (matchedProvider && matchedProvider->name() == "Ollama");
+    dynamicModel.isLocal = (matchedProvider && (matchedProvider->name() == "llama.cpp" || matchedProvider->name() == "Ollama"));
     dynamicModel.description = "Dynamically configured model: " + modelName;
     dynamicModel.abilities = ModelAbilities::infer(modelName);
     dynamicModel.capabilityScore = dynamicModel.abilities.scoreForTask(TaskType::CODING);

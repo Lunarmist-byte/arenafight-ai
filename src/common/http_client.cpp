@@ -51,6 +51,12 @@ struct CurlStringDeleter {
 };
 using UniqueCurlString = std::unique_ptr<char, CurlStringDeleter>;
 
+bool isLoopbackUrl(const std::string& url) {
+    return url.find("localhost") != std::string::npos ||
+           url.find("127.0.0.1") != std::string::npos ||
+           url.find("::1") != std::string::npos;
+}
+
 } // namespace
 
 HttpClient& HttpClient::instance() {
@@ -92,6 +98,11 @@ HttpResponse HttpClient::get(
     curl_easy_setopt(curl.get(), CURLOPT_CONNECTTIMEOUT, 10L);
     curl_easy_setopt(curl.get(), CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl.get(), CURLOPT_NOSIGNAL, 1L);
+
+    if (isLoopbackUrl(url)) {
+        curl_easy_setopt(curl.get(), CURLOPT_NOPROXY, "localhost,127.0.0.1,::1");
+        curl_easy_setopt(curl.get(), CURLOPT_PROXY, "");
+    }
 
     // SSL options
     curl_easy_setopt(curl.get(), CURLOPT_SSL_VERIFYPEER, 1L);
@@ -150,6 +161,11 @@ HttpResponse HttpClient::post(
     curl_easy_setopt(curl.get(), CURLOPT_CONNECTTIMEOUT, 15L);
     curl_easy_setopt(curl.get(), CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl.get(), CURLOPT_NOSIGNAL, 1L);
+
+    if (isLoopbackUrl(url)) {
+        curl_easy_setopt(curl.get(), CURLOPT_NOPROXY, "localhost,127.0.0.1,::1");
+        curl_easy_setopt(curl.get(), CURLOPT_PROXY, "");
+    }
 
     // SSL options
     curl_easy_setopt(curl.get(), CURLOPT_SSL_VERIFYPEER, 1L);

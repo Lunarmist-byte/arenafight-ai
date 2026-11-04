@@ -4,6 +4,10 @@
 #include "arenafight/mcp/mcp_server.hpp"
 #include "arenafight/providers/opencode_provider.hpp"
 #include "arenafight/repl/repl_engine.hpp"
+#include "arenafight/services/service_daemon.hpp"
+#include "arenafight/services/llama_server_daemon.hpp"
+#include "arenafight/services/service_daemon.hpp"
+#include "arenafight/services/llama_server_daemon.hpp"
 #include "arenafight/ui/terminal_ui.hpp"
 #include <filesystem>
 #include <functional>
@@ -28,6 +32,8 @@ void printUsage() {
          "REPL\n"
       << "  arena \"<task>\"                  Execute a task autonomously "
          "(/goal)\n"
+      << "  arena chat [persona]           Launch fun interactive conversation mode (witty, pirate, zen, etc.)\n"
+      << "  arena talk [persona]           Alias for arena chat\n"
       << "  arena goal \"<task>\"             Autonomous goal pursuit with "
          "verification\n"
       << "  arena plan \"<task>\"             Generate structured plan "
@@ -114,6 +120,7 @@ void printUsage() {
          "provider\n"
       << "  --claude                       Select Claude Code CLI as primary "
          "provider\n"
+      << "  --llama, --llamacpp            Select native llama.cpp server as primary provider\n"
       << "  --ollama                       Select Ollama as primary provider\n"
       << "  --openrouter                   Select OpenRouter as primary "
          "provider\n"
@@ -182,6 +189,8 @@ int main(int argc, char *argv[]) {
       }
     } else if (arg == "--claude") {
       config.default_provider = "ClaudeCode";
+    } else if (arg == "--llama" || arg == "--llamacpp") {
+      config.default_provider = "llama.cpp";
     } else if (arg == "--ollama") {
       config.default_provider = "Ollama";
     } else if (arg == "--openrouter") {
@@ -239,6 +248,16 @@ int main(int argc, char *argv[]) {
   ArenaAgent agent(config);
   for (const auto &f : attachedCliFiles) {
     agent.attachFile(f);
+  }
+
+  // Autonomously index models across llama.cpp GGUF and providers
+  if (!config.test_mock_enabled && !config.isOpenCodeConnected()) {
+    agent.getRouter().refreshModels();
+  }
+
+  // Autonomously index models across llama.cpp GGUF and providers
+  if (!config.test_mock_enabled && !config.isOpenCodeConnected()) {
+    agent.getRouter().refreshModels();
   }
 
   if (rawArgs.empty()) {
@@ -312,6 +331,16 @@ int main(int argc, char *argv[]) {
 
   dispatchTable["daemon"] = dispatchTable["services"];
 
+  dispatchTable["chat"] = [&](const auto &args) {
+    ReplEngine repl(agent);
+    std::string persona = (args.size() > 1) ? args[1] : "witty";
+    repl.startChatSession(persona);
+    return 0;
+  };
+
+  dispatchTable["talk"] = dispatchTable["chat"];
+  dispatchTable["banter"] = dispatchTable["chat"];
+
   dispatchTable["connect"] = [&](const auto &args) {
     ReplEngine repl(agent);
     std::string target = (args.size() > 1) ? args[1] : "opencode";
@@ -330,6 +359,8 @@ int main(int argc, char *argv[]) {
     if (args.size() > 1) {
       repl.handleModel(joinArgs(args, 1));
     } else {
+      agent.getRouter().refreshModels();
+      agent.getRouter().refreshModels();
       auto models = agent.getRouter().getAllAvailableModels();
       TerminalUI::printModelsList(models);
     }
@@ -346,7 +377,10 @@ int main(int argc, char *argv[]) {
     std::cout << "\n====================================================\n"
               << "              AI MODEL PROVIDERS STATUS              \n"
               << "====================================================\n";
+    agent.getRouter().refreshModels();
+    agent.getRouter().refreshModels();
     auto router = agent.getRouter();
+    auto llamacpp = router.getProviderByName("llama.cpp");
     auto oc = router.getProviderByName("OpenCode");
     auto claude = router.getProviderByName("ClaudeCode");
     auto ollama = router.getProviderByName("Ollama");
@@ -356,12 +390,13 @@ int main(int argc, char *argv[]) {
     auto printStatus = [](const std::string &name, auto prov) {
       bool ok = prov && prov->available();
       std::cout << "  * " << std::left;
-      std::cout.width(16);
+      std::cout.width(18);
       std::cout << name << ": "
                 << (ok ? "\033[32mONLINE\033[0m" : "\033[33mOFFLINE\033[0m")
                 << "\n";
     };
 
+    printStatus("llama.cpp (Native)", llamacpp);
     printStatus("OpenCode CLI", oc);
     printStatus("Claude Code CLI", claude);
     printStatus("Ollama (Local)", ollama);

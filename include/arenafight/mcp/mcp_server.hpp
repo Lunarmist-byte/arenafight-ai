@@ -52,6 +52,9 @@ private:
     nlohmann::json executeCalculate(const nlohmann::json& args);
     nlohmann::json executeSecurity(const nlohmann::json& args);
     nlohmann::json executeThink(const nlohmann::json& args);
+    nlohmann::json executeGenerateImage(const nlohmann::json& args);
+    nlohmann::json executeGenerateVideo(const nlohmann::json& args);
+    nlohmann::json executeMediaInspect(const nlohmann::json& args);
 };
 
 } // namespace arenafight

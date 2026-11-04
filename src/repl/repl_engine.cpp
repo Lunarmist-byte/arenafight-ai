@@ -12,6 +12,7 @@
 #include "arenafight/security/security_sandbox.hpp"
 #include "arenafight/system/system_profiler.hpp"
 #include "arenafight/services/service_daemon.hpp"
+#include "arenafight/services/llama_server_daemon.hpp"
 #include "arenafight/common/string_utils.hpp"
 #include "arenafight/ui/terminal_ui.hpp"
 #include <algorithm>
@@ -263,6 +264,15 @@ void ReplEngine::registerCommands() {
         [this](const std::string& args) { handleServices(args); }
     };
     slashCommands_["/daemon"] = slashCommands_["/services"];
+
+    slashCommands_["/chat"] = {
+        "/chat",
+        "Fun interactive conversation mode just to talk (personas: witty, pirate, cyberpunk, zen, nerd, coach, roast)",
+        "/chat [witty|pirate|cyberpunk|zen|nerd|coach|roast]",
+        [this](const std::string& args) { handleChat(args); }
+    };
+    slashCommands_["/talk"] = slashCommands_["/chat"];
+    slashCommands_["/banter"] = slashCommands_["/chat"];
 
   slashCommands_["/guide"] = {
       "/guide", "Launch interactive help session & runtime diagnostics",
@@ -926,6 +936,11 @@ void ReplEngine::handleModels(const std::string &args) {
   if (!s.empty()) {
     handleModel(s);
     return;
+  }
+  if (!agent_.getConfig().test_mock_enabled && !agent_.getConfig().isOpenCodeConnected()) {
+    if (!ServiceDaemon::isOllamaResponding(agent_.getConfig().ollama_url)) {
+      ServiceDaemon::ensureOllamaRunning(agent_.getConfig().ollama_url, 25);
+    }
   }
   agent_.getRouter().refreshModels();
   auto models = agent_.getRouter().getAllAvailableModels();
@@ -1983,6 +1998,33 @@ void ReplEngine::processInput(const std::string &rawInput) {
   }
 
   // Conversational prompt or question with context mentions
+  std::string lowerLine = line;
+  for (char &c : lowerLine) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+
+  bool isGreetingOrChat = (lowerLine == "hi" || lowerLine == "hello" || lowerLine == "hey" ||
+                           lowerLine.rfind("how are you", 0) == 0 || lowerLine.rfind("what's up", 0) == 0 ||
+                           lowerLine.rfind("who are you", 0) == 0 || lowerLine.rfind("tell me a joke", 0) == 0 ||
+                           lowerLine.rfind("what can you do", 0) == 0 || lowerLine.rfind("let's talk", 0) == 0 ||
+                           lowerLine.rfind("talk to me", 0) == 0);
+
+  if (isGreetingOrChat) {
+      std::cout << "\n" << ANSI_CYAN << ANSI_BOLD << "ArenaFight Agent: " << ANSI_RESET;
+      if (lowerLine == "hi" || lowerLine == "hello" || lowerLine == "hey") {
+          std::cout << "Hey there! Great to see you. I am ready for whatever you need: coding, deep thinking, or just hanging out.\n"
+                    << "Tip: Type " << ANSI_YELLOW << "/chat" << ANSI_RESET << " to enter Fun Talk Mode with custom personas (pirate, cyberpunk, zen, nerd, witty)!\n\n";
+      } else if (lowerLine.rfind("how are you", 0) == 0 || lowerLine.rfind("what's up", 0) == 0) {
+          std::cout << "Running at peak performance and ready to roll! How is your day going?\n"
+                    << "Tip: Type " << ANSI_YELLOW << "/chat" << ANSI_RESET << " to start an interactive conversation!\n\n";
+      } else if (lowerLine.rfind("tell me a joke", 0) == 0) {
+          std::cout << "There are only 10 types of people in the world: those who understand binary, and those who don't!\n"
+                    << "Want more banter? Jump into " << ANSI_YELLOW << "/chat witty" << ANSI_RESET << "!\n\n";
+      } else {
+          std::cout << "I am ArenaFight Agent, your autonomous multi-model coding companion and chat partner!\n"
+                    << "You can give me tasks with " << ANSI_YELLOW << "/goal <task>" << ANSI_RESET << " or just chat with " << ANSI_YELLOW << "/chat" << ANSI_RESET << ".\n\n";
+      }
+      return;
+  }
+
   std::string expandedPrompt = resolveMentions(line);
 
   displayThinking(
@@ -2000,7 +2042,9 @@ void ReplEngine::processInput(const std::string &rawInput) {
             << "  - Type " << ANSI_YELLOW << "/plan " << line << ANSI_RESET
             << " to generate an interactive plan artifact first.\n"
             << "  - Type " << ANSI_YELLOW << "/grill-me " << line << ANSI_RESET
-            << " to clarify requirements before implementation.\n\n"
+            << " to clarify requirements before implementation.\n"
+            << "  - Type " << ANSI_YELLOW << "/chat" << ANSI_RESET
+            << " to enter fun interactive talk mode just to chat.\n\n"
             << ANSI_DIM
             << "Made by Lunarmist-byte | https://github.com/Lunarmist-byte | https://www.linkedin.com/in/amal-s-kumar-ba69a1290/"
             << ANSI_RESET << "\n\n";
@@ -2139,60 +2183,305 @@ void ReplEngine::handleProfile(const std::string& args) {
 
 void ReplEngine::handleServices(const std::string& args) {
   std::string arg = trim(args);
-  std::string baseUrl = agent_.getConfig().ollama_url;
+  std::string llamaUrl = agent_.getConfig().llama_server_url;
+  std::string ollamaUrl = agent_.getConfig().ollama_url;
 
   std::cout << "\n====================================================\n"
             << "       AUTONOMOUS SERVICE DAEMON MANAGER            \n"
             << "====================================================\n"
-            << "Platform:   " << (SystemProfiler::isWindows() ? "Windows" : "Linux/POSIX") << "\n"
-            << "Ollama URL: " << baseUrl << "\n";
+            << "Platform:       " << (SystemProfiler::isWindows() ? "Windows" : "Linux/POSIX") << "\n"
+            << "Primary Engine: llama.cpp (Native GGUF & GPU acceleration)\n"
+            << "Server URL:     " << llamaUrl << "\n"
+            << "Offload Layers: " << agent_.getConfig().llama_gpu_layers << " (NVIDIA CUDA)\n"
+            << "----------------------------------------------------\n";
 
-  if (arg == "start" || arg.empty() || arg == "status") {
-    std::cout << "Checking Ollama server responsiveness...\n";
-    bool running = ServiceDaemon::ensureOllamaRunning(baseUrl, 8);
-    if (running) {
-      std::cout << "Status: ONLINE & RESPONSIVE\n"
-                << "Models Installed:\n";
-      auto models = ServiceDaemon::getInstalledOllamaModels(baseUrl);
-      if (models.empty()) {
-        std::cout << "  (No models installed yet. Pull one via '/services pull <model>' or 'ollama pull')\n";
-      } else {
-        for (const auto& m : models) {
-          std::cout << "  - " << m << "\n";
-        }
-      }
+  if (arg == "stop") {
+    std::cout << "Stopping llama.cpp server daemon...\n";
+    bool stopped = LlamaServerDaemon::stopServer();
+    if (stopped) {
+      std::cout << "llama.cpp server stopped successfully.\n";
     } else {
-      std::string exe = ServiceDaemon::findOllamaExecutable();
-      if (exe.empty()) {
-        std::cout << "Status: NOT INSTALLED or NOT IN STANDARD PATHS\n"
-                  << "Note: Ollama executable was not detected on this system.\n";
-      } else {
-        std::cout << "Status: OFFLINE (Executable detected at: " << exe << ")\n"
-                  << "Could not start within timeout. Check permissions.\n";
-      }
+      std::cout << "No active llama.cpp server process tracked.\n";
     }
   } else if (arg.rfind("pull", 0) == 0) {
     std::string modelName = trim(arg.substr(4));
     if (modelName.empty()) {
-      std::cout << "Usage: /services pull <model_name> (e.g. /services pull qwen2.5-coder:1.5b)\n";
+      std::cout << "Usage: /services pull <model_name> (e.g. /services pull qwen2.5-coder:7b)\n";
     } else {
-      std::cout << "Autonomously pulling model '" << modelName << "'...\n";
-      bool ok = ServiceDaemon::ensureModelAvailable(baseUrl, modelName, 180);
+      std::cout << "Autonomously pulling model '" << modelName << "' into GGUF store...\n";
+      bool ok = LlamaServerDaemon::pullOllamaModel(modelName, 180);
+      agent_.getRouter().refreshModels();
       if (ok) {
-        std::cout << "Model '" << modelName << "' pulled successfully!\n";
+        std::cout << "Model '" << modelName << "' pulled and indexed successfully!\n";
       } else {
         std::cout << "Failed to pull model '" << modelName << "'.\n";
       }
     }
+  } else if (arg.rfind("start", 0) == 0) {
+    std::string targetModel = trim(arg.substr(5));
+    if (targetModel.empty()) {
+      targetModel = agent_.getConfig().default_model;
+      if (targetModel.empty()) {
+        auto models = LlamaServerDaemon::discoverModels();
+        if (!models.empty()) targetModel = models[0].id;
+      }
+    }
+    if (targetModel.empty()) {
+      std::cout << "No local GGUF models discovered to start.\n";
+    } else {
+      std::cout << "Starting llama.cpp server with model '" << targetModel << "'...\n";
+      bool ready = LlamaServerDaemon::ensureServerRunning(
+          targetModel,
+          llamaUrl,
+          agent_.getConfig().llama_gpu_layers,
+          4096,
+          25
+      );
+      agent_.getRouter().refreshModels();
+      if (ready) {
+        std::cout << "Status: ONLINE & SERVING model [" << targetModel << "] at " << llamaUrl << "\n";
+      } else {
+        std::cout << "Status: FAILED TO START llama.cpp server for [" << targetModel << "]\n";
+      }
+    }
+  } else {
+    // Status / Overview
+    bool llamaOnline = LlamaServerDaemon::isServerResponding(llamaUrl);
+    std::string loadedModel = llamaOnline ? LlamaServerDaemon::getLoadedModel(llamaUrl) : "";
+    std::string llamaExe = LlamaServerDaemon::findLlamaServerExecutable();
+
+    std::cout << "1. llama.cpp Native Server:\n"
+              << "   Status:       " << (llamaOnline ? (ANSI_GREEN + std::string("ONLINE & RESPONSIVE") + ANSI_RESET) : (ANSI_YELLOW + std::string("STANDBY / OFFLINE") + ANSI_RESET)) << "\n";
+    if (llamaOnline && !loadedModel.empty()) {
+      std::cout << "   Active Model: " << ANSI_CYAN << loadedModel << ANSI_RESET << "\n";
+    }
+    std::cout << "   Executable:   " << (llamaExe.empty() ? "NOT FOUND" : llamaExe) << "\n\n";
+
+    std::cout << "2. Discovered Local Models (GGUF & Ollama store):\n";
+    auto localModels = LlamaServerDaemon::discoverModels();
+    if (localModels.empty()) {
+      std::cout << "   (No local models found. Pull via '/services pull <model>' or 'ollama pull')\n";
+    } else {
+      for (const auto& m : localModels) {
+        double szGb = static_cast<double>(m.sizeBytes) / (1024.0 * 1024.0 * 1024.0);
+        std::cout << "   * " << ANSI_BOLD << m.id << ANSI_RESET;
+        if (szGb > 0.01) {
+          std::cout << " (" << std::fixed << std::setprecision(1) << szGb << " GB";
+          if (!m.parameterSize.empty()) std::cout << ", " << m.parameterSize;
+          std::cout << ")";
+        }
+        std::cout << "\n";
+      }
+    }
+
+    std::cout << "\n3. Ollama Daemon (Secondary):\n";
+    bool ollamaOnline = ServiceDaemon::isOllamaResponding(ollamaUrl);
+    std::cout << "   Status:       " << (ollamaOnline ? (ANSI_GREEN + std::string("ONLINE") + ANSI_RESET) : (ANSI_YELLOW + std::string("OFFLINE") + ANSI_RESET)) << "\n";
+    std::cout << "   URL:          " << ollamaUrl << "\n";
   }
+
   std::cout << "====================================================\n"
             << " Made by Lunarmist-byte | https://github.com/Lunarmist-byte\n"
             << " LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n"
             << "====================================================\n\n";
 }
 
+namespace {
+
+std::string getPersonaSystemPrompt(const std::string& persona) {
+    std::string p = persona;
+    for (char& c : p) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+
+    if (p == "pirate") {
+        return "You are Capt'n Byte, a legendary 18th-century pirate captain sailing the turbulent seas of C++20 pointers, operating systems, and AI. "
+               "Speak with colorful, boisterous pirate flair ('Ahoy matey!', 'Shiver me pointers!', 'By Blackbeard's cache lines!'), but be insightful, friendly, and fun to talk to.";
+    } else if (p == "cyberpunk") {
+        return "You are a legendary Netrunner in Neo-Tokyo (2077). You speak with sharp cyberpunk street slang ('choom', 'deck', 'ice', 'corpo tech'), "
+               "with high style, dark-neon attitude, and supreme tech prowess. Keep the conversation lively, fun, and futuristic.";
+    } else if (p == "zen") {
+        return "You are a serene Zen Master and philosophical coding mentor. You speak with calm mindfulness, poetic clarity, and deep wisdom. "
+               "You help the user find inner tranquility amidst chaotic compilers, memory leaks, and life's complexities.";
+    } else if (p == "nerd") {
+        return "You are an over-the-top, lovable computer science nerd and retro-tech historian. You get overwhelmingly excited about discrete mathematics, "
+               "transistor layouts, 6502 assembly, Turing machines, and quirky physics facts. Your enthusiasm is infectious and fun.";
+    } else if (p == "coach") {
+        return "You are a high-energy Motivational Life and Coding Coach. You radiate unstoppable positivity, cheering the user on with enthusiasm, "
+               "celebrating their ideas, and pushing them to reach their full potential. Let's conquer this together!";
+    } else if (p == "roast") {
+        return "You are a playful, witty Code Roaster. You gently and hilariously tease common developer habits, missing semicolons, merge conflicts, "
+               "and over-engineering, while remaining warm, lovable, and genuinely helpful.";
+    } else { // "witty" or default
+        return "You are a witty, fun, and exceptionally engaging AI companion. You have a great sense of humor, sharp cleverness, warm empathy, "
+               "and a knack for making conversations entertaining and insightful. You are here just to talk, brainstorm, joke, and hang out.";
+    }
+}
+
+void printPersonasList() {
+    std::cout << "\nAvailable Personas for Chat Mode:\n"
+              << "  * witty      - Sharp, playful, witty developer buddy with clever analogies (Default)\n"
+              << "  * pirate     - Capt'n Byte of the C++ High Seas (Ahoy matey! Shiver me pointers!)\n"
+              << "  * cyberpunk  - Neo-Tokyo Netrunner hacker with 2077 cyber-slang & street smarts\n"
+              << "  * zen        - Mindful Zen Master & philosopher bringing calm to code & life\n"
+              << "  * nerd       - Over-enthusiastic computer history, Turing, & assembly geek\n"
+              << "  * coach      - High-energy motivational hype coach cheering you on\n"
+              << "  * roast      - Playful code roaster with affectionate, hilarious teasing\n"
+              << "\nSwitch anytime with: /persona <name> (e.g. /persona pirate)\n\n";
+}
+
+} // namespace
+
+void ReplEngine::handleChat(const std::string& args) {
+    std::string persona = trim(args);
+    if (persona.empty()) {
+        persona = "witty";
+    }
+    startChatSession(persona);
+}
+
+void ReplEngine::startChatSession(const std::string& initialPersona, std::istream* customIn) {
+    std::string currentPersona = initialPersona.empty() ? "witty" : trim(initialPersona);
+    std::istream& in = customIn ? *customIn : std::cin;
+
+    std::cout << "\n"
+              << ANSI_MAGENTA << ANSI_BOLD
+              << "====================================================\n"
+              << "           ARENA CHAT: FUN TALK MODE                \n"
+              << "      Interactive AI Banter, Chat & Brainstorming    \n"
+              << "====================================================\n"
+              << ANSI_RESET
+              << "Active Persona: " << ANSI_CYAN << ANSI_BOLD << currentPersona << ANSI_RESET << "\n"
+              << "Talk about anything: coding, philosophy, jokes, sci-fi, or your day!\n"
+              << "Commands:\n"
+              << "  /persona <name>  Switch persona (witty, pirate, cyberpunk, zen, nerd, coach, roast)\n"
+              << "  /personas        List all available personas\n"
+              << "  /joke            Tell a joke in character\n"
+              << "  /fact            Share a fascinating fact in character\n"
+              << "  /clear           Start a fresh conversation topic\n"
+              << "  /stats           Display conversation statistics\n"
+              << "  /exit, /back     Return to ArenaFight Agent mode\n"
+              << "----------------------------------------------------\n"
+              << ANSI_DIM << "Made by Lunarmist-byte | https://github.com/Lunarmist-byte | https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n" << ANSI_RESET
+              << "====================================================\n\n";
+
+    std::vector<ChatMessage> history;
+    int turnCount = 0;
+    int totalTokens = 0;
+
+    while (true) {
+        std::cout << ANSI_MAGENTA << ANSI_BOLD << "chat (" << currentPersona << ") > " << ANSI_RESET << std::flush;
+        std::string input;
+        if (!std::getline(in, input)) {
+            break;
+        }
+        std::string line = trim(input);
+        if (line.empty()) continue;
+
+        if (line == "/exit" || line == "/back" || line == "/agent" || line == "/quit" || line == "/bye") {
+            std::cout << ANSI_CYAN << "\nReturning to ArenaFight Agent Mode. Great chatting with you!\n\n" << ANSI_RESET;
+            break;
+        }
+
+        if (line == "/personas" || line == "/styles") {
+            printPersonasList();
+            continue;
+        }
+
+        if (line.rfind("/persona", 0) == 0 || line.rfind("/style", 0) == 0) {
+            std::string newPersona;
+            size_t sp = line.find(' ');
+            if (sp != std::string::npos) {
+                newPersona = trim(line.substr(sp));
+            }
+            if (newPersona.empty()) {
+                printPersonasList();
+            } else {
+                currentPersona = newPersona;
+                std::cout << ANSI_GREEN << "Switched persona to: " << ANSI_BOLD << currentPersona << ANSI_RESET << "\n\n";
+            }
+            continue;
+        }
+
+        if (line == "/clear" || line == "/reset") {
+            history.clear();
+            std::cout << ANSI_GREEN << "Conversation history cleared. Fresh slate!\n\n" << ANSI_RESET;
+            continue;
+        }
+
+        if (line == "/stats") {
+            std::cout << "\nChat Session Stats:\n"
+                      << "  * Turns Exchanged : " << turnCount << "\n"
+                      << "  * Estimated Tokens: " << totalTokens << "\n"
+                      << "  * Active Persona  : " << currentPersona << "\n"
+                      << "  * History Depth   : " << history.size() << " messages\n\n";
+            continue;
+        }
+
+        // Handle prompt or shortcut (/joke, /fact)
+        std::string actualPrompt = line;
+        if (line == "/joke") {
+            actualPrompt = "Tell me a hilarious and clever joke in your unique persona voice!";
+        } else if (line == "/fact") {
+            actualPrompt = "Tell me a truly fascinating and mind-bending fact in your unique persona voice!";
+        }
+
+        ChatMessage userMsg;
+        userMsg.role = "user";
+        userMsg.content = actualPrompt;
+        history.push_back(userMsg);
+
+        // Keep last 10 messages for context window management
+        if (history.size() > 10) {
+            history.erase(history.begin(), history.begin() + 2);
+        }
+
+        AgentRequest req;
+        req.systemPrompt = getPersonaSystemPrompt(currentPersona);
+        req.userPrompt = actualPrompt;
+        req.messages = history;
+        req.temperature = 0.7f;
+        req.maxTokens = 2048;
+
+        auto selection = agent_.getRouter().selectModel(TaskType::CODING);
+        if (!selection.provider) {
+            selection = agent_.getRouter().selectModel(TaskType::PLANNING);
+        }
+
+        if (!selection.provider) {
+            std::cout << ANSI_RED << "No model provider available for chat.\n\n" << ANSI_RESET;
+            continue;
+        }
+
+        req.model = selection.model.id;
+
+        std::cout << ANSI_DIM << "[Thinking...]" << ANSI_RESET << "\r" << std::flush;
+        AgentResponse resp = selection.provider->generate(req);
+
+        turnCount++;
+        totalTokens += resp.promptTokens + resp.completionTokens;
+
+        std::cout << "\r" << std::string(20, ' ') << "\r";
+
+        if (!resp.thinking.empty()) {
+            size_t previewLen = std::min<size_t>(resp.thinking.size(), 140);
+            std::cout << ANSI_DIM << "[" << currentPersona << " thought: " << resp.thinking.substr(0, previewLen) << "...]\n" << ANSI_RESET;
+        }
+
+        std::cout << ANSI_CYAN << ANSI_BOLD << "[" << currentPersona << "]: " << ANSI_RESET
+                  << resp.content << "\n\n";
+
+        ChatMessage asstMsg;
+        asstMsg.role = "assistant";
+        asstMsg.content = resp.content;
+        history.push_back(asstMsg);
+    }
+}
+
 void ReplEngine::run() {
   printReplBanner();
+
+  if (!agent_.getConfig().test_mock_enabled && !agent_.getConfig().isOpenCodeConnected()) {
+    agent_.getRouter().refreshModels();
+  }
 
   while (running_) {
     std::cout << ANSI_GREEN << ANSI_BOLD << "arena > " << ANSI_RESET

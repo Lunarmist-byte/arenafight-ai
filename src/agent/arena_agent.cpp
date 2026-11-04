@@ -164,8 +164,9 @@ bool ArenaAgent::run() {
     }
 
     // 1. Autonomous Daemon & Service Detection (Windows & Linux)
-    // Autonomously detect and launch Ollama without asking the user
-    ServiceDaemon::ensureOllamaRunning(config_.ollama_url, 4);
+    if (config_.default_provider == "Ollama") {
+        ServiceDaemon::ensureOllamaRunning(config_.ollama_url, 4);
+    }
 
     // 2. Physical Hardware Assessment & Dynamic Limits (No hardcoding)
     hostSpec_ = SystemProfiler::profileHostMachine(config_.force_cpu);

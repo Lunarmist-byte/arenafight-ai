@@ -64,6 +64,8 @@ public:
     void handleLevel(const std::string& args);
     void handleProfile(const std::string& args);
     void handleServices(const std::string& args);
+    void handleChat(const std::string& args);
+    void startChatSession(const std::string& initialPersona = "witty", std::istream* customIn = nullptr);
 
     // Hardware Studio handlers
     void handleBoards(const std::string& filter);

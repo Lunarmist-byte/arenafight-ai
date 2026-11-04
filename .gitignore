@@ -226,6 +226,7 @@ build/
 build_*/
 bin/
 out/
+generated_media/
 *.exe
 *.dll
 *.so

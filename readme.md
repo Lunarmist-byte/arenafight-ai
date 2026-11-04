@@ -19,6 +19,12 @@ As a pure CLI tool, ArenaFight delivers all telemetry, gate verifications, hardw
 * **GitHub:** [https://github.com/Lunarmist-byte](https://github.com/Lunarmist-byte)
 * **LinkedIn:** [https://www.linkedin.com/in/amal-s-kumar-ba69a1290/](https://www.linkedin.com/in/amal-s-kumar-ba69a1290/)
 
+### Key Documentation & Guides
+* **Architecture Specification:** [`docs/ArenaFight_Architecture_Report.md`](file:///c:/Users/amals/Documents/Codeworks/Arenafight-ai/docs/ArenaFight_Architecture_Report.md)
+* **Wan AI + Fooocus + Ollama Integration:** [`docs/WAN_AI_FOOOCUS_OLLAMA_INTEGRATION.md`](file:///c:/Users/amals/Documents/Codeworks/Arenafight-ai/docs/WAN_AI_FOOOCUS_OLLAMA_INTEGRATION.md)
+* **Media Pipeline Quickstart:** [`WAN_AI_FOOOCUS_README.md`](file:///c:/Users/amals/Documents/Codeworks/Arenafight-ai/WAN_AI_FOOOCUS_README.md)
+* **Developer Tutorial:** [`docs/DEV_TUTORIAL.md`](file:///c:/Users/amals/Documents/Codeworks/Arenafight-ai/docs/DEV_TUTORIAL.md)
+
 ---
 
 ## 1. CLI Tool Architecture & Dual-Mode Runtime (Standalone vs OpenCode Connected)
@@ -463,6 +469,8 @@ Options:
 ```
 
 ### REPL Slash Commands (inside `arena > `)
+* `/chat [persona]`: Launch fun interactive conversation mode just to talk (personas: witty, pirate, cyberpunk, zen, nerd, coach, roast).
+* `/talk [persona]`: Alias for `/chat`.
 * `/mode [standalone|opencode]`: Switch runtime mode dynamically on the fly.
 * `/connect [opencode]`: Connect and synchronize OpenCode workspace bridge.
 * `/disconnect`: Disconnect OpenCode bridge and revert to standalone mode.
@@ -496,6 +504,28 @@ Options:
 * `@git`: Injects git working tree status and diff.
 * `@claims`: Injects physical facts from ClaimRegistry.
 * `@memory`: Injects discoveries and persistent memory items.
+
+### Fun Interactive Talk Mode (`arena chat` / `/chat`)
+When you want to relax, brainstorm, ask questions, tell jokes, or just talk without formal task planning or evidence gates, ArenaFight provides **Fun Interactive Talk Mode**:
+* **CLI Launch:** `arena chat [persona]` or `arena talk [persona]`
+* **REPL Launch:** `/chat [persona]` or `/talk [persona]`
+* **Multi-Turn Conversational Memory:** Preserves multi-turn context across turns so conversations flow naturally.
+* **Available Personas:**
+  * `witty` (Default): Sharp, playful, witty developer buddy with clever analogies and positive banter.
+  * `pirate`: Capt'n Byte of the C++ High Seas (Ahoy matey! Shiver me pointers!).
+  * `cyberpunk`: Neo-Tokyo Netrunner hacker (2077) with cyber-slang and street smarts.
+  * `zen`: Mindful Zen Master & philosopher bringing calm and insight to code and life.
+  * `nerd`: Enthusiastic computer history, Turing, and low-level assembly geek.
+  * `coach`: High-energy motivational hype coach cheering you on to reach your goals.
+  * `roast`: Playful code roaster with hilarious, affectionate teasing.
+* **In-Chat Commands:**
+  * `/persona <name>`: Switch personas on the fly.
+  * `/personas`: Display list of all available personas and styles.
+  * `/joke`: Ask the model to tell a joke in character.
+  * `/fact`: Ask the model to share a mindbending tech or science fact.
+  * `/clear`: Clear conversation history to start a fresh topic.
+  * `/stats`: Display turns exchanged, tokens used, and active persona.
+  * `/exit` or `/back`: Return gracefully to standard ArenaFight Agent mode.
 
 ---
 
@@ -829,6 +859,12 @@ For commercial licensing and partnership inquiries, contact:
 * **GitHub:** [https://github.com/Lunarmist-byte](https://github.com/Lunarmist-byte)
 * **LinkedIn:** [https://www.linkedin.com/in/amal-s-kumar-ba69a1290/](https://www.linkedin.com/in/amal-s-kumar-ba69a1290/)
 
+### Key Documentation & Guides
+* **Architecture Specification:** [`docs/ArenaFight_Architecture_Report.md`](file:///c:/Users/amals/Documents/Codeworks/Arenafight-ai/docs/ArenaFight_Architecture_Report.md)
+* **Wan AI + Fooocus + Ollama Integration:** [`docs/WAN_AI_FOOOCUS_OLLAMA_INTEGRATION.md`](file:///c:/Users/amals/Documents/Codeworks/Arenafight-ai/docs/WAN_AI_FOOOCUS_OLLAMA_INTEGRATION.md)
+* **Media Pipeline Quickstart:** [`WAN_AI_FOOOCUS_README.md`](file:///c:/Users/amals/Documents/Codeworks/Arenafight-ai/WAN_AI_FOOOCUS_README.md)
+* **Developer Tutorial:** [`docs/DEV_TUTORIAL.md`](file:///c:/Users/amals/Documents/Codeworks/Arenafight-ai/docs/DEV_TUTORIAL.md)
+
 See the full [LICENSE](file:///c:/Users/amals/Documents/Codeworks/Arenafight-ai/LICENSE) file for complete terms.
 
 ---
@@ -863,12 +899,17 @@ ArenaFight automatically senses acceleration capabilities and adapts its entire 
   * **Dynamic Resource Throttling:** Automatically caps token ceilings (1024-2048 tokens), limits parallel worker threads to `std::clamp(cores / 4, 1, 3)`, extends operation timeouts to 180 seconds, and passes `"num_gpu": 0` to Ollama to prevent host lockup or out-of-memory kernel panics.
 * **Manual Hardware Overrides:** Force hardware modes via CLI flags (`--cuda`, `--cpu`, `--no-cuda`) or REPL commands (`/profile cpu`, `/profile cuda`).
 
-### 4. Autonomous Service Detection & Background Daemon Starter
-Implemented in [`include/arenafight/services/service_daemon.hpp`](file:///c:/Users/amals/Documents/Codeworks/Arenafight-ai/include/arenafight/services/service_daemon.hpp) and [`src/services/service_daemon.cpp`](file:///c:/Users/amals/Documents/Codeworks/Arenafight-ai/src/services/service_daemon.cpp):
-* **No User Prompts:** Instead of asking the user to manually run `ollama serve`, ArenaFight automatically probes `/api/tags`.
-* **Path Discovery (Windows & Linux):** Checks system PATH (`where.exe` on Windows, `which` on Linux) and standard installation paths (`%LOCALAPPDATA%\Programs\Ollama\`, `/usr/local/bin/ollama`, `~/.local/bin/ollama`).
-* **Autonomous Daemon Launch:** Spawns `ollama serve` in the background (detached process with hidden window on Windows; systemd service or daemonized fork on Linux), waiting until healthy.
-* **Autonomous Model Pulling:** Can pull missing models via HTTP `/api/pull` or CLI without user prompts (`/services pull <model>`).
+### 4. Native llama.cpp Inference Engine & Autonomous Service Daemon
+Implemented in [`include/arenafight/services/llama_server_daemon.hpp`](file:///c:/Users/amals/Documents/Codeworks/Arenafight-ai/include/arenafight/services/llama_server_daemon.hpp), [`src/services/llama_server_daemon.cpp`](file:///c:/Users/amals/Documents/Codeworks/Arenafight-ai/src/services/llama_server_daemon.cpp), [`include/arenafight/providers/llama_cpp_provider.hpp`](file:///c:/Users/amals/Documents/Codeworks/Arenafight-ai/include/arenafight/providers/llama_cpp_provider.hpp), and [`src/providers/llama_cpp_provider.cpp`](file:///c:/Users/amals/Documents/Codeworks/Arenafight-ai/src/providers/llama_cpp_provider.cpp):
+* **Native llama.cpp Primary Engine:** Transitions local inference from Ollama to native `llama.cpp` (`llama-server`), offloading all model layers directly to NVIDIA GPU VRAM (`-ngl 99`) using bundled CUDA runtimes for sub-second start times and maximum inference throughput.
+* **100% Ollama Model Compatibility:** Automatically scans Ollama manifests (`~/.ollama/models/manifests/registry.ollama.ai/library/`) and maps model tags directly to raw GGUF blobs (`~/.ollama/models/blobs/sha256-<digest>`). All models pulled via Ollama (`deepseek-r1:8b`, `qwen2.5-coder:7b`, `gemma3:4b`, `qwen3:8b`) load natively into `llama.cpp` with zero conversion and zero daemon dependency.
+* **OpenAI-Compatible Chat Completion:** Connects to `llama-server` via standard `POST /v1/chat/completions` with reasoning token (`<think>...</think>`) parsing, streaming support, and function/tool calling.
+* **Dynamic Model Switching:** Automatically terminates and restarts `llama-server` in the background when transitioning between models, polling `/health` until ready.
+* **Autonomous Model Pulling:** Missing models can be pulled using `/services pull <model>` or `arena services pull <model>`, which downloads the GGUF blob into the local store and instantly indexes it for `llama.cpp`.
+* **Secondary Ollama Fallback:** Ollama daemon management is retained as a secondary fallback if desired.
+
+
+
 
 ### 5. CLI & REPL Commands
 ```bash
@@ -933,11 +974,16 @@ In the REPL:
 * **Universal Benchmarking Engine:**
   * Automated 4-axis benchmark suite across Reasoning, Coding, Verification, and Throughput (`arena benchmark all`).
 * **OpenCode Bi-Directional MCP Server & Slash Commands:**
-  * Native Model Context Protocol (MCP) server (rena mcp / rena --mcp) running over stdio JSON-RPC 2.0 with 9 integrated tools (rena_verify, rena_goal, rena_plan, rena_profile, rena_benchmark, rena_qos, rena_calculate, rena_security, rena_think).
-  * Automated workspace export (rena opencode sync) creating root opencode.json, .opencode/opencode.json, .opencode/INSTRUCTIONS.md, and OpenCode custom slash commands in .opencode/commands/ (/arena, /verify, /profile, /benchmark, /qos).
-  * Dedicated standalone rena verify command to execute Level 1 physical evidence gates directly from terminal or OpenCode bash tool.
+  * Native Model Context Protocol (MCP) server (\arena mcp\ / \arena --mcp\) running over stdio JSON-RPC 2.0 with 12 integrated tools (\arena_verify\, \arena_goal\, \arena_plan\, \arena_profile\, \arena_benchmark\, \arena_qos\, \arena_calculate\, \arena_security\, \arena_think\, \arena_generate_image\, \arena_generate_video\, \arena_media_inspect\).
+  * Automated workspace export (\arena opencode sync\) creating root opencode.json, .opencode/opencode.json, .opencode/INSTRUCTIONS.md, and OpenCode custom slash commands in .opencode/commands/ (/arena, /verify, /profile, /benchmark, /qos).
+  * Dedicated standalone \arena verify\ command to execute Level 1 physical evidence gates directly from terminal or OpenCode bash tool.
+* **Multimodal Generative Media Engine (Wan AI 2.1 & Fooocus SDXL):**
+  * Integrated tools: \media_generate_image\ (Fooocus SDXL local/API), \media_generate_video\ (Wan AI 2.1 T2V/I2V), and \media_inspect\ (magic byte header validator).
+  * Level 1 physical evidence verification for all generated media assets: file presence on disk, format magic bytes (PNG: \89 50 4E 47\, JPEG: \FF D8 FF\, MP4: \typ\), dimension/duration confirmation, and SHA-256 cryptographic logging.
+* **Enterprise Customization & Skills System:**
+  * Complete operational doctrines in \.arena/skills/\: \generative-media\, \security-auditor\, \opencode-orchestrator\, \hardware-engineer\, \code-architect\, and \erifier\.
 * **Automated Verification:**
-  * 36/36 passing unit tests covering all subsystems including native MCP server and OpenCode workspace integration.
+  * 37/37 passing unit tests covering all subsystems including multimodal media tools, skills matching, native MCP server, and OpenCode workspace integration.
 
 ### Version 2.0.0
 * Dual-mode runtime architecture (Standalone native vs Connected OpenCode CLI bridge).
@@ -952,3 +998,9 @@ In the REPL:
 **Made by Lunarmist-byte**
 * **GitHub:** [https://github.com/Lunarmist-byte](https://github.com/Lunarmist-byte)
 * **LinkedIn:** [https://www.linkedin.com/in/amal-s-kumar-ba69a1290/](https://www.linkedin.com/in/amal-s-kumar-ba69a1290/)
+
+### Key Documentation & Guides
+* **Architecture Specification:** [`docs/ArenaFight_Architecture_Report.md`](file:///c:/Users/amals/Documents/Codeworks/Arenafight-ai/docs/ArenaFight_Architecture_Report.md)
+* **Wan AI + Fooocus + Ollama Integration:** [`docs/WAN_AI_FOOOCUS_OLLAMA_INTEGRATION.md`](file:///c:/Users/amals/Documents/Codeworks/Arenafight-ai/docs/WAN_AI_FOOOCUS_OLLAMA_INTEGRATION.md)
+* **Media Pipeline Quickstart:** [`WAN_AI_FOOOCUS_README.md`](file:///c:/Users/amals/Documents/Codeworks/Arenafight-ai/WAN_AI_FOOOCUS_README.md)
+* **Developer Tutorial:** [`docs/DEV_TUTORIAL.md`](file:///c:/Users/amals/Documents/Codeworks/Arenafight-ai/docs/DEV_TUTORIAL.md)

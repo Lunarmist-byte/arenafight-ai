@@ -613,6 +613,21 @@ def build_pdf(filename="docs/ArenaFight_Architecture_and_Capabilities.pdf"):
             Paragraph("arena_think", table_cell_bold),
             Paragraph("<code>task: string, candidateA, candidateB</code>", code_style),
             Paragraph("Fast thinking-phase tournament: Disallows code generation and pits pure chain-of-thought architectural reasoning trees against each other.", table_cell_style)
+        ],
+        [
+            Paragraph("arena_generate_image", table_cell_bold),
+            Paragraph("<code>prompt, output_path, engine, width, height</code>", code_style),
+            Paragraph("Generates visual assets via Fooocus SDXL, ComfyUI, or neural diffusion with physical magic byte header validation.", table_cell_style)
+        ],
+        [
+            Paragraph("arena_generate_video", table_cell_bold),
+            Paragraph("<code>prompt, output_path, engine, mode, frames, fps</code>", code_style),
+            Paragraph("Generates video sequences via Wan AI 2.1 or ComfyUI with container box and duration verification.", table_cell_style)
+        ],
+        [
+            Paragraph("arena_media_inspect", table_cell_bold),
+            Paragraph("<code>path: string (required)</code>", code_style),
+            Paragraph("Inspects physical evidence of media files: header magic bytes (PNG, JPEG, MP4), dimensions, container info, and SHA-256 hash.", table_cell_style)
         ]
     ]
     t_mcp = Table(mcp_data, colWidths=[80, 110, 314])
@@ -904,13 +919,13 @@ def build_pdf(filename="docs/ArenaFight_Architecture_and_Capabilities.pdf"):
     story.append(t_mentions)
 
     # =========================================================================
-    # PAGE 9: TEST SUITE VERIFICATION SCORECARD (36/36 TESTS)
+    # PAGE 9: TEST SUITE VERIFICATION SCORECARD (37/37 TESTS)
     # =========================================================================
     story.append(PageBreak())
 
-    story.append(Paragraph("9. Automated Verification Test Suite Scorecard (36/36 Passing)", h1_style))
+    story.append(Paragraph("9. Automated Verification Test Suite Scorecard (37/37 Passing)", h1_style))
     story.append(Paragraph(
-        "ArenaFight undergoes rigorous regression testing across all architectural components. All 36 automated unit tests pass 100% green:",
+        "ArenaFight undergoes rigorous regression testing across all architectural components. All 37 automated unit tests pass 100% green:",
         body_style
     ))
 
@@ -951,7 +966,8 @@ def build_pdf(filename="docs/ArenaFight_Architecture_and_Capabilities.pdf"):
         ("33", "Two processing levels (Fast vs Perfect Boi)", "Agent Engine", "PASSED"),
         ("34", "Autonomous service detection & background daemon", "Service Daemon", "PASSED"),
         ("35", "CUDA acceleration & slow variant (iGPU/CPU) handling", "System Profiler", "PASSED"),
-        ("36", "Native MCP server (stdio JSON-RPC) & OpenCode sync", "MCP Server", "PASSED")
+        ("36", "Native MCP server (stdio JSON-RPC) & OpenCode sync", "MCP Server", "PASSED"),
+        ("37", "Generalized Media Tools (Fooocus, Wan AI) & Skills", "Multimodal Media", "PASSED")
     ]
 
     t_score_data = [

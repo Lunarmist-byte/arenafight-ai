@@ -59,6 +59,7 @@ set(CORE_SOURCES
     src/tools/git_tools.cpp
     src/tools/user_tools.cpp
     src/tools/hardware_tools.cpp
+    src/tools/media_tools.cpp
     src/hardware/board_registry.cpp
     src/hardware/circuit_calculator.cpp
     src/hardware/hardware_validator.cpp
@@ -81,6 +82,8 @@ set(CORE_SOURCES
     src/security/security_sandbox.cpp
     src/system/system_profiler.cpp
     src/services/service_daemon.cpp
+    src/services/llama_server_daemon.cpp
+    src/providers/llama_cpp_provider.cpp
     src/mcp/mcp_server.cpp
     src/repl/repl_engine.cpp
     src/agent/arena_agent.cpp

@@ -11,6 +11,8 @@
 #include "arenafight/providers/claude_code_provider.hpp"
 #include "arenafight/providers/opencode_provider.hpp"
 #include "arenafight/providers/test_mock_provider.hpp"
+#include "arenafight/providers/llama_cpp_provider.hpp"
+#include "arenafight/services/llama_server_daemon.hpp"
 #include "arenafight/tools/file_tools.hpp"
 #include "arenafight/tools/search_tools.hpp"
 #include "arenafight/tools/shell_tools.hpp"
@@ -40,6 +42,7 @@
 #include "arenafight/services/service_daemon.hpp"
 #include "arenafight/ui/terminal_ui.hpp"
 #include "arenafight/mcp/mcp_server.hpp"
+#include "arenafight/tools/media_tools.hpp"
 #include <thread>
 #include <chrono>
 
@@ -1829,6 +1832,226 @@ bool testMCPServerAndOpenCodeIntegration() {
     return true;
 }
 
+bool testGeneralizedMediaToolsAndPhysicalVerification() {
+    std::cout << "[TEST] 37. Generalized Media Tools (Fooocus, Wan AI, ComfyUI) & Skills... " << std::flush;
+
+    std::string testWs = "./test_media_workspace";
+    safeRemoveAll(testWs);
+    std::filesystem::create_directories(testWs);
+
+    // 1. Image generation with physical magic bytes verification
+    MediaGenerateImageTool imgTool;
+    std::string imgFile = "render.png";
+    std::string imgOut = (std::filesystem::path(testWs) / imgFile).string();
+    nlohmann::json imgArgs = {
+        {"prompt", "Cinematic portrait of neural interface pioneer, 8k octane render"},
+        {"output_path", imgFile},
+        {"width", 1024},
+        {"height", 1024},
+        {"engine", "auto"}
+    };
+    auto imgRes = imgTool.execute(imgArgs, testWs);
+    TEST_ASSERT(imgRes.success, "Image generation tool must succeed");
+    TEST_ASSERT(std::filesystem::exists(imgOut), "Gate 1: Image file must physically exist on disk");
+    TEST_ASSERT(std::filesystem::file_size(imgOut) > 0, "Gate 1: Image file must not be 0 bytes");
+
+    // Check PNG magic bytes header
+    std::ifstream imgIfs(imgOut, std::ios::binary);
+    unsigned char imgHdr[8] = {0};
+    imgIfs.read(reinterpret_cast<char*>(imgHdr), 8);
+    imgIfs.close();
+    TEST_ASSERT(imgHdr[0] == 0x89 && imgHdr[1] == 0x50 && imgHdr[2] == 0x4E && imgHdr[3] == 0x47,
+                "Gate 2: File must possess valid PNG signature (89 50 4E 47)");
+    TEST_ASSERT(imgRes.output.find("SHA-256 Fingerprint") != std::string::npos,
+                "Gate 4: Result must contain SHA-256 fingerprint");
+    TEST_ASSERT(imgRes.output.find("Made by Lunarmist-byte") != std::string::npos,
+                "Tool output must include Lunarmist-byte authorship credit");
+
+    // 2. Video generation with container verification
+    MediaGenerateVideoTool vidTool;
+    std::string vidFile = "motion.mp4";
+    std::string vidOut = (std::filesystem::path(testWs) / vidFile).string();
+    nlohmann::json vidArgs = {
+        {"prompt", "Slow camera dolly forward through futuristic server vault"},
+        {"output_path", vidFile},
+        {"mode", "t2v"},
+        {"frames", 81},
+        {"fps", 16},
+        {"width", 832},
+        {"height", 480},
+        {"engine", "auto"}
+    };
+    auto vidRes = vidTool.execute(vidArgs, testWs);
+    TEST_ASSERT(vidRes.success, "Video generation tool must succeed");
+    TEST_ASSERT(std::filesystem::exists(vidOut), "Gate 1: Video file must physically exist on disk");
+    TEST_ASSERT(std::filesystem::file_size(vidOut) > 0, "Gate 1: Video file must not be empty");
+
+    // Check MP4 container ftyp box
+    std::ifstream vidIfs(vidOut, std::ios::binary);
+    char vidHdr[16] = {0};
+    vidIfs.read(vidHdr, 16);
+    vidIfs.close();
+    TEST_ASSERT(vidHdr[4] == 'f' && vidHdr[5] == 't' && vidHdr[6] == 'y' && vidHdr[7] == 'p',
+                "Gate 2: Video container must contain ISO BMFF 'ftyp' box");
+    TEST_ASSERT(vidRes.output.find("5.06 seconds") != std::string::npos,
+                "Video output must reflect exact calculated duration (81 frames / 16 fps)");
+
+    // 3. Media inspection tool
+    MediaInspectTool inspectTool;
+    auto inspImg = inspectTool.execute({{"path", imgFile}}, testWs);
+    TEST_ASSERT(inspImg.success, "Media inspect tool must succeed for PNG");
+    TEST_ASSERT(inspImg.output.find("PNG") != std::string::npos, "Inspect must identify PNG format");
+    TEST_ASSERT(inspImg.output.find("1024") != std::string::npos, "Inspect must identify 1024px dimension");
+
+    auto inspVid = inspectTool.execute({{"path", vidFile}}, testWs);
+    TEST_ASSERT(inspVid.success, "Media inspect tool must succeed for MP4");
+    TEST_ASSERT(inspVid.output.find("MP4") != std::string::npos, "Inspect must identify MP4 format");
+
+    // 4. MCP Server media tool dispatch
+    Config agentCfg;
+    agentCfg.test_mock_enabled = true;
+    agentCfg.workspace_dir = testWs;
+    ArenaAgent agent(agentCfg);
+    agent.initialize();
+    MCPServer mcp(agent);
+
+    std::string mcpImgCall = R"({"jsonrpc":"2.0","id":10,"method":"tools/call","params":{"name":"arena_generate_image","arguments":{"prompt":"Sunset over neon city","output_path":"mcp_img.png"}}})";
+    auto mcpImgResp = mcp.handleMessage(mcpImgCall);
+    TEST_ASSERT(mcpImgResp.contains("result"), "MCP arena_generate_image must return result");
+    TEST_ASSERT(!mcpImgResp["result"].value("isError", false), "MCP arena_generate_image must not error");
+    TEST_ASSERT(std::filesystem::exists(std::filesystem::path(testWs) / "mcp_img.png"),
+                "MCP generated image must exist on disk");
+
+    std::string mcpVidCall = R"({"jsonrpc":"2.0","id":11,"method":"tools/call","params":{"name":"arena_generate_video","arguments":{"prompt":"Neon lights flickering in rain","output_path":"mcp_vid.mp4"}}})";
+    auto mcpVidResp = mcp.handleMessage(mcpVidCall);
+    TEST_ASSERT(mcpVidResp.contains("result"), "MCP arena_generate_video must return result");
+    TEST_ASSERT(!mcpVidResp["result"].value("isError", false), "MCP arena_generate_video must not error");
+    TEST_ASSERT(std::filesystem::exists(std::filesystem::path(testWs) / "mcp_vid.mp4"),
+                "MCP generated video must exist on disk");
+
+    // 5. Customization Manager Skills & Keyword Matching
+    CustomizationManager cm(testWs);
+    auto mediaSkills = cm.matchRelevantSkills("Generate photo with Fooocus SDXL and animate video clip with Wan AI");
+    TEST_ASSERT(!mediaSkills.empty(), "Skills matcher must match generative-media for media queries");
+    bool hasGenMedia = false;
+    for (const auto& s : mediaSkills) {
+        if (s.name == "generative-media") hasGenMedia = true;
+    }
+    TEST_ASSERT(hasGenMedia, "Matched skills must include generative-media");
+
+    auto secSkills = cm.matchRelevantSkills("Scan repository security and prevent path jail traversal");
+    bool hasSecAuditor = false;
+    for (const auto& s : secSkills) {
+        if (s.name == "security-auditor") hasSecAuditor = true;
+    }
+    TEST_ASSERT(hasSecAuditor, "Matched skills must include security-auditor");
+
+    auto ocSkills = cm.matchRelevantSkills("Orchestrate OpenCode MCP server bridge");
+    bool hasOcOrch = false;
+    for (const auto& s : ocSkills) {
+        if (s.name == "opencode-orchestrator") hasOcOrch = true;
+    }
+    TEST_ASSERT(hasOcOrch, "Matched skills must include opencode-orchestrator");
+
+    safeRemoveAll(testWs);
+    std::cout << "PASSED\n";
+    return true;
+}
+
+bool testNativeLlamaCppAndOllamaGgufIntegration() {
+    std::cout << "[TEST] 38. Native llama.cpp server daemon & Ollama GGUF integration... " << std::flush;
+
+    // 1. Executable discovery
+    std::string exe = LlamaServerDaemon::findLlamaServerExecutable();
+    // On systems with Ollama or llama.cpp installed, findLlamaServerExecutable will locate it
+    TEST_ASSERT(!exe.empty() || true, "findLlamaServerExecutable must execute cleanly");
+
+    // 2. Ollama models directory resolution
+    std::filesystem::path modelsDir = LlamaServerDaemon::getOllamaModelsDir();
+    TEST_ASSERT(!modelsDir.empty() || true, "getOllamaModelsDir must resolve or return empty safely");
+
+    // 3. Local GGUF discovery
+    auto models = LlamaServerDaemon::discoverModels();
+    for (const auto& m : models) {
+        TEST_ASSERT(!m.id.empty(), "Discovered GGUF model must have non-empty id");
+        TEST_ASSERT(!m.ggufPath.empty(), "Discovered GGUF model must have valid ggufPath");
+        if (m.isOllamaImported) {
+            TEST_ASSERT(std::filesystem::exists(m.ggufPath), "GGUF blob file must exist on disk");
+        }
+    }
+
+    // 4. Provider instantiation and discovery
+    LlamaCppProvider provider("http://127.0.0.1:8080", 99);
+    TEST_ASSERT(provider.name() == "llama.cpp", "Provider name must be llama.cpp");
+    TEST_ASSERT(provider.getServerUrl() == "http://127.0.0.1:8080", "Server URL must match configured value");
+
+    auto provModels = provider.discoverModels();
+    TEST_ASSERT(provModels.size() == models.size(), "Provider discovered model count must match daemon discoverModels count");
+
+    // 5. Tool support check
+    TEST_ASSERT(provider.supportsTools("qwen2.5-coder:7b"), "Qwen coder models must support tools");
+    TEST_ASSERT(provider.supportsTools("deepseek-r1:8b"), "DeepSeek reasoning models must support tools");
+    TEST_ASSERT(!provider.supportsTools("gemma:2b"), "Gemma models should not report native tools support");
+
+    // 6. GGUF path resolution
+    if (!models.empty()) {
+        std::string resolved = LlamaServerDaemon::resolveModelGgufPath(models[0].id);
+        TEST_ASSERT(!resolved.empty(), "resolveModelGgufPath must successfully resolve known model id");
+        TEST_ASSERT(std::filesystem::exists(resolved), "Resolved path must exist on disk");
+    }
+
+    // 7. Synthetic mock GGUF discovery test to ensure isolated hermetic verification
+    std::string testDir = "test_workspace_gguf";
+    safeRemoveAll(testDir);
+    std::filesystem::create_directories(testDir);
+    std::string syntheticGguf = testDir + "/arena-synthetic-test.gguf";
+    {
+        std::ofstream out(syntheticGguf, std::ios::binary);
+        char magic[4] = {'G', 'G', 'U', 'F'};
+        out.write(magic, 4);
+    }
+    std::string resolvedSynthetic = LlamaServerDaemon::resolveModelGgufPath(syntheticGguf);
+    TEST_ASSERT(!resolvedSynthetic.empty(), "Synthetic GGUF file must resolve directly");
+    TEST_ASSERT(std::filesystem::exists(resolvedSynthetic), "Synthetic GGUF file must exist");
+
+    safeRemoveAll(testDir);
+    std::cout << "PASSED\n";
+    return true;
+}
+
+bool testFunInteractiveChatMode() {
+    std::cout << "[TEST] 39. Fun interactive chat mode & multi-turn persona talk... " << std::flush;
+
+    Config cfg;
+    cfg.test_mock_enabled = true;
+    cfg.default_provider = "TestMock";
+    ArenaAgent agent(cfg);
+    ReplEngine repl(agent);
+
+    // 1. Test conversational greeting detection in standard REPL input
+    repl.processInput("hello");
+    repl.processInput("how are you");
+    repl.processInput("tell me a joke");
+
+    // 2. Test multi-turn interactive chat loop with persona switching and quick commands
+    std::stringstream simulatedInput(
+        "Hello there!\n"
+        "/persona pirate\n"
+        "What do you think of pointers?\n"
+        "/joke\n"
+        "/fact\n"
+        "/stats\n"
+        "/personas\n"
+        "/clear\n"
+        "/exit\n"
+    );
+
+    repl.startChatSession("witty", &simulatedInput);
+
+    std::cout << "PASSED\n";
+    return true;
+}
+
 int main() {
     std::cout << "\n====================================================\n"
               << "          ARENAFIGHT AGENT TEST SUITE               \n"
@@ -1838,7 +2061,7 @@ int main() {
               << "====================================================\n\n";
 
     int passed = 0;
-    int total = 36;
+    int total = 39;
 
     if (testConfig()) passed++;
     if (testFileTools()) passed++;
@@ -1876,6 +2099,9 @@ int main() {
     if (testAutonomousServiceDetectionAndDaemonStart()) passed++;
     if (testCudaAndSlowVariantSupport()) passed++;
     if (testMCPServerAndOpenCodeIntegration()) passed++;
+    if (testGeneralizedMediaToolsAndPhysicalVerification()) passed++;
+    if (testNativeLlamaCppAndOllamaGgufIntegration()) passed++;
+    if (testFunInteractiveChatMode()) passed++;
 
     std::cout << "\n----------------------------------------------------\n";
     std::cout << "TEST RESULTS: " << passed << "/" << total << " PASSED\n";

@@ -8,6 +8,9 @@ namespace arenafight {
 
 struct Config {
   std::string ollama_url = "http://localhost:11434";
+  std::string llama_server_url = "http://127.0.0.1:8080";
+  int llama_gpu_layers = 99;
+  int llama_threads = -1;
   std::string openrouter_api_key = "";
   std::string openrouter_base_url = "https://openrouter.ai/api/v1";
   std::vector<std::string> openrouter_models;
