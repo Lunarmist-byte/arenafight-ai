@@ -365,6 +365,44 @@ ModelSelection ModelRouter::selectModel(
             }
             break;
         }
+        case TaskType::CHAT: {
+            for (const auto& entry : candidates) {
+                const auto& id = entry.second.id;
+                if (id.find("flash") != std::string::npos ||
+                    id.find("gemini") != std::string::npos ||
+                    id.find("llama") != std::string::npos ||
+                    id.find("mistral") != std::string::npos ||
+                    id.find("chat") != std::string::npos ||
+                    id.find("gemma") != std::string::npos ||
+                    id.find("speedy") != std::string::npos ||
+                    id.find("fast") != std::string::npos) {
+                    selection.provider = entry.first;
+                    selection.model = entry.second;
+                    selection.reason = "Fast conversational chat model (" + entry.second.name + ") selected for Dialogue";
+                    return selection;
+                }
+            }
+            break;
+        }
+        case TaskType::RESEARCH:
+        case TaskType::GENERAL: {
+            for (const auto& entry : candidates) {
+                const auto& id = entry.second.id;
+                if (id.find("r1") != std::string::npos ||
+                    id.find("deepseek") != std::string::npos ||
+                    id.find("sonnet") != std::string::npos ||
+                    id.find("gemini") != std::string::npos ||
+                    id.find("3.7") != std::string::npos ||
+                    id.find("3.5") != std::string::npos ||
+                    id.find("reasoner") != std::string::npos) {
+                    selection.provider = entry.first;
+                    selection.model = entry.second;
+                    selection.reason = "High-depth analytical reasoning model (" + entry.second.name + ") selected for Information/Q&A";
+                    return selection;
+                }
+            }
+            break;
+        }
         default:
             break;
     }

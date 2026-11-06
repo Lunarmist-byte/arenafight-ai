@@ -49,7 +49,8 @@ enum class TaskType {
     REVIEW,
     VERIFICATION,
     HARDWARE,
-    GENERAL
+    GENERAL,
+    CHAT
 };
 
 [[nodiscard]] constexpr std::string_view taskTypeToString(TaskType type) noexcept {
@@ -61,6 +62,7 @@ enum class TaskType {
         case TaskType::REVIEW: return "REVIEW";
         case TaskType::VERIFICATION: return "VERIFICATION";
         case TaskType::HARDWARE: return "HARDWARE";
+        case TaskType::CHAT: return "CHAT";
         default: return "GENERAL";
     }
 }
@@ -73,7 +75,23 @@ enum class TaskType {
     if (str == "REVIEW") return TaskType::REVIEW;
     if (str == "VERIFICATION") return TaskType::VERIFICATION;
     if (str == "HARDWARE") return TaskType::HARDWARE;
+    if (str == "CHAT") return TaskType::CHAT;
     return TaskType::GENERAL;
+}
+
+enum class PromptCategory {
+    CHAT,          // Casual chat, greetings, banter, jokes, opinions
+    INFORMATIONAL, // Knowledge questions, explanations, comparisons, theory
+    CODING_TASK    // Project building, firmware scaffold, implementation, bug fixing
+};
+
+[[nodiscard]] constexpr std::string_view promptCategoryToString(PromptCategory cat) noexcept {
+    switch (cat) {
+        case PromptCategory::CHAT: return "CHAT";
+        case PromptCategory::INFORMATIONAL: return "INFORMATIONAL";
+        case PromptCategory::CODING_TASK: return "CODING_TASK";
+    }
+    return "UNKNOWN";
 }
 
 struct Task {

@@ -1,6 +1,7 @@
 #include "arenafight/agent/arena_agent.hpp"
 #include "arenafight/common/config.hpp"
 #include "arenafight/common/logger.hpp"
+#include "arenafight/common/process.hpp"
 #include "arenafight/mcp/mcp_server.hpp"
 #include "arenafight/providers/opencode_provider.hpp"
 #include "arenafight/repl/repl_engine.hpp"
@@ -27,10 +28,10 @@ void printUsage() {
   TerminalUI::printBanner();
   std::cout
       << "Usage:\n"
-      << "  arena                          Launch Interactive "
-         "REPL\n"
-      << "  arena \"<task>\"                  Execute a task autonomously "
-         "(/goal)\n"
+      << "  arena                          Launch Interactive REPL\n"
+      << "  arena \"<task or query>\"        Autonomously execute task, answer question, or chat\n"
+      << "  arena ask \"<question>\"         Ask a direct question or prompt (drop-in for claude/ollama)\n"
+      << "  arena run [model] \"<prompt>\"   Execute prompt with specific model or alias (drop-in for ollama run)\n"
       << "  arena chat [persona]           Launch fun interactive conversation mode (witty, pirate, zen, etc.)\n"
       << "  arena talk [persona]           Alias for arena chat\n"
       << "  arena media \"<concept>\"        Autonomous multimodal pipeline (Ollama -> Fooocus -> Wan AI 2.1)\n"
@@ -664,6 +665,52 @@ int main(int argc, char *argv[]) {
   dispatchTable["serve"] = dispatchTable["host"];
   dispatchTable["--host"] = dispatchTable["host"];
 
+  dispatchTable["ask"] = [&](const auto &args) {
+    if (args.size() < 2) {
+      std::cerr << "Usage: arena ask \"<question or prompt>\"\n";
+      return 1;
+    }
+    std::string query = joinArgs(args, 1);
+    ReplEngine repl(agent);
+    repl.handleAsk(query);
+    return 0;
+  };
+
+  dispatchTable["run"] = [&](const auto &args) {
+    if (args.size() < 2) {
+      std::cerr << "Usage: arena run [model] \"<prompt>\"\n";
+      return 1;
+    }
+    ReplEngine repl(agent);
+    if (args.size() >= 3 && args[1][0] != '-') {
+      std::string model = args[1];
+      std::string prompt = joinArgs(args, 2);
+      repl.handleAsk(prompt, model);
+    } else {
+      std::string prompt = joinArgs(args, 1);
+      repl.handleAsk(prompt);
+    }
+    return 0;
+  };
+
+  dispatchTable["pull"] = [&](const auto &args) {
+    if (args.size() < 2) {
+      std::cerr << "Usage: arena pull <model-name>\nExample: arena pull qwen2.5-coder:7b\n";
+      return 1;
+    }
+    std::string model = args[1];
+    std::cout << "\n[ARENA MODEL DOWNLOAD] Pulling model: " << model << "...\n";
+    std::string cmdStr = "ollama pull " + model;
+    ProcessResult res = ProcessExecutor::executeShell(cmdStr, ".", 600000);
+    if (res.exitCode == 0) {
+      std::cout << "[ARENA] Model " << model << " pulled successfully and ready for use!\n";
+      return 0;
+    } else {
+      std::cerr << "[ARENA] Failed to pull model: " << res.stdErr << "\n";
+      return 1;
+    }
+  };
+
   dispatchTable["test"] = [&](const auto &) {
     std::cout << "Executing self-test suite (run 'ctest' or 'arena_test' for "
                  "binary tests)...\n";
@@ -687,11 +734,25 @@ int main(int argc, char *argv[]) {
   }
 
   // If not a subcommand keyword and doesn't start with '-', treat all args as a
-  // direct task string
+  // direct task string, conversational chat, or direct reasoning query with autonomous classification
   if (cmd[0] != '-') {
-    std::string task = joinArgs(rawArgs, 0);
+    std::string input = joinArgs(rawArgs, 0);
     ReplEngine repl(agent);
-    repl.handleGoal(task);
+    PromptCategory cat = ReplEngine::classifyPrompt(input);
+
+    if (cat == PromptCategory::CHAT) {
+      std::cout << "\033[36m[AUTO-ROUTED: CHAT]\033[0m Selected conversational dialogue model.\n";
+      repl.handleChatTurn(input);
+      return 0;
+    }
+    if (cat == PromptCategory::INFORMATIONAL) {
+      std::cout << "\033[33m[AUTO-ROUTED: INFO / Q&A]\033[0m Selected analytical reasoning & knowledge model.\n";
+      repl.handleAsk(input);
+      return 0;
+    }
+
+    std::cout << "\033[32m[AUTO-ROUTED: CODE & ENGINEERING]\033[0m Selected specialized coding model & 7 verification gates.\n";
+    repl.handleGoal(input);
     return 0;
   }
 

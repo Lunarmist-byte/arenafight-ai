@@ -472,7 +472,9 @@ The C++ codebase is refactored according to modern C++20 best practices:
 ```text
 Usage:
   arena                          Launch Interactive REPL
-  arena "<task>"                  Execute a task autonomously (/goal)
+  arena "<task or question>"     Execute task (/goal), answer question directly (/ask), or chat (/chat)
+  arena ask "<question>"         Ask a direct question or reasoning query (drop-in for claude/ollama)
+  arena run [model] "<prompt>"   Execute prompt with specific model or alias (drop-in for ollama run)
   arena chat [persona]           Launch fun interactive conversation mode (witty, pirate, zen, etc.)
   arena talk [persona]           Alias for arena chat
   arena media "<concept>"        Autonomous multimodal pipeline (Ollama -> Fooocus -> Wan AI 2.1)

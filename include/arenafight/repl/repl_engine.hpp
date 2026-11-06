@@ -70,6 +70,11 @@ public:
     void handleServices(const std::string& args);
     void handleChat(const std::string& args);
     void startChatSession(const std::string& initialPersona = "witty", std::istream* customIn = nullptr);
+    void handleChatTurn(const std::string& message, const std::string& persona = "witty");
+    void handleAsk(const std::string& query, const std::string& explicitModel = "");
+    static bool isConversational(const std::string& input);
+    static bool isQuestionOrQuery(const std::string& input);
+    static PromptCategory classifyPrompt(const std::string& input);
 
     // Hardware Studio handlers
     void handleBoards(const std::string& filter);
