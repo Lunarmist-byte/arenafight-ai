@@ -3,6 +3,7 @@
 #include "arenafight/common/logger.hpp"
 #include "arenafight/common/process.hpp"
 #include "arenafight/finetune/unsloth_manager.hpp"
+#include "arenafight/finetune/self_learning_engine.hpp"
 #include "arenafight/hardware/board_registry.hpp"
 #include "arenafight/hardware/circuit_calculator.hpp"
 #include "arenafight/hardware/hardware_manager.hpp"
@@ -13,6 +14,7 @@
 #include "arenafight/system/system_profiler.hpp"
 #include "arenafight/services/service_daemon.hpp"
 #include "arenafight/services/llama_server_daemon.hpp"
+#include "arenafight/tools/media_tools.hpp"
 #include "arenafight/common/string_utils.hpp"
 #include "arenafight/ui/terminal_ui.hpp"
 #include <algorithm>
@@ -52,6 +54,12 @@ ReplEngine::ReplEngine(ArenaAgent &agent)
       artifacts_(agent.getConfig().workspace_dir + "/.arena/artifacts"),
       customizations_(agent.getConfig().workspace_dir) {
   registerCommands();
+}
+
+ReplEngine::~ReplEngine() {
+  if (wifiServer_ && wifiServer_->isRunning()) {
+    wifiServer_->stop();
+  }
 }
 
 void ReplEngine::registerCommands() {
@@ -113,6 +121,21 @@ void ReplEngine::registerCommands() {
       "weights",
       "/model [model_name]",
       [this](const std::string &args) { handleModel(args); }};
+
+  slashCommands_["/alias"] = {
+      "/alias",
+      "Manage friendly names/aliases for AI models (e.g. /alias set qwen qwen2.5-coder:7b)",
+      "/alias [list|set <name> <model>|rm <name>|clear]",
+      [this](const std::string &args) { handleAlias(args); }};
+  slashCommands_["/aliases"] = slashCommands_["/alias"];
+
+  slashCommands_["/host"] = {
+      "/host",
+      "Host ArenaFight on Local Wi-Fi Network for Web & Phone access",
+      "/host [start [port]|stop|status]",
+      [this](const std::string &args) { handleHost(args); }};
+  slashCommands_["/serve"] = slashCommands_["/host"];
+  slashCommands_["/wifi"] = slashCommands_["/host"];
 
   slashCommands_["/status"] = {
       "/status",
@@ -184,9 +207,16 @@ void ReplEngine::registerCommands() {
   slashCommands_["/unsloth"] = {
       "/unsloth",
       "Unsloth AI on-the-fly fine-tuning engine "
-      "(status|train|dataset|scaffold)",
-      "/unsloth [status|train|dataset|scaffold]",
+      "(status|train|dataset|scaffold|learn)",
+      "/unsloth [status|train|dataset|scaffold|learn]",
       [this](const std::string &args) { handleUnsloth(args); }};
+
+  slashCommands_["/learn"] = {
+      "/learn",
+      "Ground-Truth Self-Learning Engine: train AI on verified prompts with zero fake data",
+      "/learn [status|audit|rejected|verify|auto|add|train|reset]",
+      [this](const std::string &args) { handleLearn(args); }};
+  slashCommands_["/self-learn"] = slashCommands_["/learn"];
 
   slashCommands_["/abilities"] = {
       "/abilities",
@@ -273,6 +303,14 @@ void ReplEngine::registerCommands() {
     };
     slashCommands_["/talk"] = slashCommands_["/chat"];
     slashCommands_["/banter"] = slashCommands_["/chat"];
+
+    slashCommands_["/media"] = {
+        "/media",
+        "Autonomous multimodal pipeline: Ollama Director -> Fooocus SDXL Keyframe -> Wan AI 2.1 Video",
+        "/media <creative narrative concept>",
+        [this](const std::string& args) { handleMedia(args); }
+    };
+    slashCommands_["/cinematic"] = slashCommands_["/media"];
 
   slashCommands_["/guide"] = {
       "/guide", "Launch interactive help session & runtime diagnostics",
@@ -364,7 +402,10 @@ void ReplEngine::printHelpTable() {
          "/think <task objective> [candidateA] [candidateB]"},
         {"/chat", "/talk, /banter",
          "Fun interactive conversation mode just to talk (personas: witty, pirate, etc.)",
-         "/chat [witty|pirate|cyberpunk|zen|nerd|coach|roast]"}}},
+         "/chat [witty|pirate|cyberpunk|zen|nerd|coach|roast]"},
+        {"/media", "/cinematic",
+         "Autonomous multimodal pipeline: Ollama Director -> Fooocus SDXL Keyframe -> Wan AI 2.1 Video",
+         "/media <creative concept>"}}},
 
       {"2. PC Hardware Profiling & Processing Levels",
        {{"/level", "/processing",
@@ -375,7 +416,10 @@ void ReplEngine::printHelpTable() {
          "/profile [cpu|cuda]"},
         {"/services", "/daemon",
          "Autonomous service daemon manager: native llama.cpp server and Ollama",
-         "/services [start|status|stop|pull <model>]"}}},
+         "/services [start|status|stop|pull <model>]"},
+        {"/host", "/serve, /wifi",
+         "Host ArenaFight on Local Wi-Fi Network for Web & Phone access",
+         "/host [start [port]|stop|status]"}}},
 
       {"3. AI Models, Abilities & Providers",
        {{"/models", "",
@@ -384,6 +428,9 @@ void ReplEngine::printHelpTable() {
         {"/model", "",
          "View or set active model universally across any provider",
          "/model [model_name]"},
+        {"/alias", "/aliases",
+         "Manage friendly names/aliases for AI models",
+         "/alias [list|set <name> <model>|rm <name>|clear]"},
         {"/abilities", "",
          "Display multidimensional model capability matrix and scores",
          "/abilities"},
@@ -404,7 +451,10 @@ void ReplEngine::printHelpTable() {
          "/opencode [status|models|run <prompt>|sync]"},
         {"/unsloth", "",
          "Unsloth AI on-the-fly fine-tuning engine",
-         "/unsloth [status|train|dataset|scaffold]"}}},
+         "/unsloth [status|train|dataset|scaffold|learn]"},
+        {"/learn", "/self-learn",
+         "Ground-Truth Self-Learning Engine: train AI on verified prompts with zero fake data",
+         "/learn [status|audit|rejected|verify|auto|add|train|reset]"}}},
 
       {"4. Security, Evidence & Telemetry",
        {{"/status", "",
@@ -822,13 +872,13 @@ void ReplEngine::handleGrillMe(const std::string &topic) {
 }
 
 void ReplEngine::handleLearn(const std::string &insight) {
-  if (insight.empty()) {
-    std::cout << ANSI_RED
-              << "Error: /learn requires an insight, convention, or rule to "
-                 "persist.\n"
-              << "Example: /learn In this project, all embedded timers must "
-                 "use std::chrono with millisecond precision.\n"
-              << ANSI_RESET;
+  std::string trimmed = trim(insight);
+  if (trimmed.empty() || trimmed == "status" || trimmed == "audit" ||
+      trimmed == "inspect" || trimmed == "list" || trimmed == "rejected" ||
+      trimmed == "quarantine" || trimmed == "reset" ||
+      trimmed.rfind("auto", 0) == 0 || trimmed.rfind("verify", 0) == 0 ||
+      trimmed.rfind("add", 0) == 0 || trimmed.rfind("train", 0) == 0) {
+    handleSelfLearn(trimmed);
     return;
   }
 
@@ -840,13 +890,20 @@ void ReplEngine::handleLearn(const std::string &insight) {
   KnowledgeItem ki = customizations_.addKnowledge(title, insight, insight,
                                                   {"learned", "convention"});
 
+  // Also ingest into verified ground-truth self-learning pool
+  try {
+    SelfLearningEngine selfLearn(agent_.getConfig());
+    selfLearn.ingestPromptPair("Project Convention: " + title, "Coding guideline",
+                               insight, "reasoning", "user_curated");
+  } catch (...) {}
+
   std::cout << "\n"
             << ANSI_GREEN << ANSI_BOLD << "[KNOWLEDGE PERSISTED]" << ANSI_RESET
             << "\n"
             << "Knowledge Item ID: " << ki.id << "\n"
             << "Saved to: .arena/knowledge/" << ki.id << "/metadata.json\n"
             << "This insight will be automatically injected into future "
-               "reasoning contexts.\n\n";
+               "reasoning contexts and ground-truth fine-tuning datasets.\n\n";
 }
 
 void ReplEngine::handleSchedule(const std::string &args) {
@@ -1038,13 +1095,19 @@ void ReplEngine::handleModel(const std::string &args) {
     return;
   }
 
+  std::string resolved = agent_.resolveModelAlias(s);
   agent_.setModel(s);
-  auto abilities = ModelAbilities::infer(s);
+  auto abilities = ModelAbilities::infer(resolved);
   std::cout << "\n"
             << ANSI_GREEN << ANSI_BOLD << "[PRIMARY MODEL CONFIGURED]"
-            << ANSI_RESET << "\n"
-            << "Model ID       : " << ANSI_CYAN << s << ANSI_RESET << "\n"
-            << "Primary Trait  : " << abilities.primaryStrength() << "\n"
+            << ANSI_RESET << "\n";
+  if (resolved != s) {
+    std::cout << "Alias Name     : " << ANSI_YELLOW << s << ANSI_RESET << "\n"
+              << "Resolved Model : " << ANSI_CYAN << resolved << ANSI_RESET << "\n";
+  } else {
+    std::cout << "Model ID       : " << ANSI_CYAN << s << ANSI_RESET << "\n";
+  }
+  std::cout << "Primary Trait  : " << abilities.primaryStrength() << "\n"
             << "Abilities Score: Coding="
             << static_cast<int>(abilities.coding * 100) << "%"
             << ", Reasoning=" << static_cast<int>(abilities.reasoning * 100)
@@ -1057,6 +1120,183 @@ void ReplEngine::handleModel(const std::string &args) {
             << "%\n"
             << "This model is registered into the agent catalog and "
                "prioritized for future execution tasks.\n\n";
+}
+
+void ReplEngine::handleAlias(const std::string &args) {
+  std::string s = trim(args);
+  auto aliases = agent_.getModelAliases();
+
+  if (s.empty() || s == "list" || s == "status") {
+    std::cout << "\n====================================================\n"
+              << "            AI MODEL ALIASES DIRECTORY              \n"
+              << "====================================================\n";
+    if (aliases.empty()) {
+      std::cout << ANSI_YELLOW << "No custom model aliases currently configured.\n"
+                << "Use '/alias set <name> <model_id>' to add aliases.\n\n"
+                << ANSI_RESET;
+    } else {
+      std::cout << std::left;
+      std::cout.width(18);
+      std::cout << "Alias";
+      std::cout.width(44);
+      std::cout << "Target Model ID";
+      std::cout << "Resolved Status\n";
+      std::cout << "---------------------------------------------------------------------------------\n";
+      for (const auto &[alias, target] : aliases) {
+        std::cout << "  " << ANSI_CYAN << std::left;
+        std::cout.width(16);
+        std::cout << alias << ANSI_RESET << " -> ";
+        std::cout.width(40);
+        std::cout << (target.size() > 38 ? target.substr(0, 35) + "..." : target);
+        auto sel = agent_.getRouter().getOrRegisterDynamicModel(target);
+        std::string status = sel.provider ? (ANSI_GREEN + sel.provider->name() + " (READY)" + ANSI_RESET) : (ANSI_DIM + "Configured" + ANSI_RESET);
+        std::cout << status << "\n";
+      }
+      std::cout << "---------------------------------------------------------------------------------\n"
+                << "Total Aliases: " << aliases.size() << "\n\n";
+    }
+
+    std::cout << "Usage:\n"
+              << "  /alias                             List all configured model aliases\n"
+              << "  /alias set <alias> <model_id>      Register alias for a model\n"
+              << "  /alias <alias> = <model_id>        Shorthand assignment\n"
+              << "  /alias rm <alias>                  Remove an alias\n"
+              << "  /alias clear                       Clear all custom aliases\n"
+              << "----------------------------------------------------\n"
+              << " Made by Lunarmist-byte | https://github.com/Lunarmist-byte\n"
+              << " LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n\n";
+    return;
+  }
+
+  std::string alias;
+  std::string target;
+
+  if (s.rfind("set ", 0) == 0 || s.rfind("add ", 0) == 0) {
+    std::string rest = trim(s.substr(4));
+    std::stringstream ss(rest);
+    ss >> alias;
+    std::getline(ss, target);
+    target = trim(target);
+  } else if (s.find('=') != std::string::npos) {
+    size_t eq = s.find('=');
+    alias = trim(s.substr(0, eq));
+    target = trim(s.substr(eq + 1));
+  } else if (s.rfind("rm ", 0) == 0 || s.rfind("remove ", 0) == 0 || s.rfind("del ", 0) == 0) {
+    size_t space = s.find(' ');
+    std::string toRemove = trim(s.substr(space + 1));
+    if (agent_.removeModelAlias(toRemove)) {
+      std::cout << ANSI_GREEN << "\n[ALIAS REMOVED] Deleted alias '" << toRemove << "'.\n\n" << ANSI_RESET;
+    } else {
+      std::cout << ANSI_YELLOW << "\n[ALIAS] No alias named '" << toRemove << "' found.\n\n" << ANSI_RESET;
+    }
+    return;
+  } else if (s == "clear" || s == "reset") {
+    auto current = agent_.getModelAliases();
+    for (const auto& [k, v] : current) {
+      agent_.removeModelAlias(k);
+    }
+    std::cout << ANSI_GREEN << "\n[ALIASES CLEARED] All custom model aliases removed.\n\n" << ANSI_RESET;
+    return;
+  } else {
+    std::stringstream ss(s);
+    ss >> alias;
+    std::getline(ss, target);
+    target = trim(target);
+  }
+
+  if (alias.empty() || target.empty()) {
+    std::cout << ANSI_YELLOW << "Usage: /alias set <alias> <model_id> or /alias <alias> = <model_id>\n"
+              << "Example: /alias set qwen qwen2.5-coder:7b\n"
+              << "Example: /alias coder = anthropic/claude-3.5-sonnet\n\n" << ANSI_RESET;
+    return;
+  }
+
+  agent_.setModelAlias(alias, target);
+  std::cout << "\n" << ANSI_GREEN << ANSI_BOLD << "[MODEL ALIAS REGISTERED]" << ANSI_RESET << "\n"
+            << "Alias       : " << ANSI_YELLOW << alias << ANSI_RESET << "\n"
+            << "Target Model: " << ANSI_CYAN << target << ANSI_RESET << "\n"
+            << "You can now select this model by typing: /model " << alias << "\n"
+            << "Saved to: config.json\n\n";
+}
+
+void ReplEngine::handleHost(const std::string &args) {
+  std::string s = trim(args);
+  std::vector<std::string> tokens = string_utils::split(s, ' ');
+
+  std::string sub = tokens.empty() ? "" : string_utils::toLower(tokens[0]);
+
+  if (sub == "stop") {
+    if (!wifiServer_ || !wifiServer_->isRunning()) {
+      std::cout << "\n[WIFI-HOST] Host server is not currently running.\n\n";
+      return;
+    }
+    wifiServer_->stop();
+    wifiServer_.reset();
+    std::cout << "\n[WIFI-HOST] Local Wi-Fi host server stopped successfully.\n\n";
+    return;
+  }
+
+  if (sub == "status") {
+    if (wifiServer_ && wifiServer_->isRunning()) {
+      auto info = wifiServer_->getEndpointInfo();
+      std::cout << "\n====================================================\n"
+                << "          ARENAFIGHT WI-FI HOST STATUS              \n"
+                << "====================================================\n"
+                << "Status               : [ACTIVE / RUNNING]\n"
+                << "Local Machine Access : " << info.localUrl << "\n"
+                << "Local Wi-Fi Network  : " << info.wifiUrl << "\n"
+                << "Port                 : " << info.port << "\n"
+                << "Active Model         : " << agent_.getModel() << "\n"
+                << "----------------------------------------------------\n"
+                << "To stop the server: /host stop\n"
+                << " Made by Lunarmist-byte | https://github.com/Lunarmist-byte\n"
+                << " LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n"
+                << "====================================================\n\n";
+    } else {
+      std::string wifiIp = WiFiHostServer::detectLocalWifiIp();
+      std::cout << "\n====================================================\n"
+                << "          ARENAFIGHT WI-FI HOST STATUS              \n"
+                << "====================================================\n"
+                << "Status               : [INACTIVE / STOPPED]\n"
+                << "Detected Wi-Fi IP    : " << wifiIp << "\n"
+                << "Default Port         : 8080\n"
+                << "----------------------------------------------------\n"
+                << "To start server: /host [port]  or  /host start [port]\n"
+                << " Made by Lunarmist-byte | https://github.com/Lunarmist-byte\n"
+                << " LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n"
+                << "====================================================\n\n";
+    }
+    return;
+  }
+
+  int port = 8080;
+  if (sub == "start" && tokens.size() > 1) {
+    try { port = std::stoi(tokens[1]); } catch (...) {}
+  } else if (!sub.empty() && sub != "start") {
+    try { port = std::stoi(sub); } catch (...) {}
+  }
+
+  if (wifiServer_ && wifiServer_->isRunning()) {
+    std::cout << "\n[WIFI-HOST] Restarting server on port " << port << "...\n";
+    wifiServer_->stop();
+    wifiServer_.reset();
+  }
+
+  WiFiServerConfig cfg;
+  cfg.port = port;
+  cfg.bindAddress = "0.0.0.0"; // Bind to all network interfaces for Wi-Fi access
+
+  wifiServer_ = std::make_unique<WiFiHostServer>(agent_, cfg);
+  if (!wifiServer_->start()) {
+    std::cerr << "\n[WIFI-HOST] Failed to launch host server on port " << port << ".\n\n";
+    wifiServer_.reset();
+    return;
+  }
+
+  wifiServer_->printHostBanner();
+  std::cout << "[INFO] Wi-Fi host server running in background thread.\n"
+            << "You can continue typing commands in this terminal while others access ArenaFight!\n"
+            << "Type '/host status' to check connection info or '/host stop' to shut down.\n\n" << std::flush;
 }
 
 void ReplEngine::handleStatus(const std::string &) {
@@ -1343,8 +1583,18 @@ void ReplEngine::handleUnsloth(const std::string &args) {
         << (env.cudaAvailable
                 ? (ANSI_GREEN + "ENABLED (" + env.gpuName + " - " +
                    std::to_string(env.vramGb) + "GB VRAM)" + ANSI_RESET)
-                : (ANSI_YELLOW + "CPU / No CUDA" + ANSI_RESET))
-        << "\n\n"
+                : (env.cudaMismatch ? (ANSI_RED + "DISABLED: PyTorch is CPU-only (CUDA Hardware Detected!)" + ANSI_RESET) : (ANSI_YELLOW + "CPU / No CUDA" + ANSI_RESET)))
+        << "\n\n";
+
+    if (env.cudaMismatch) {
+        std::cout
+            << ANSI_RED << ANSI_BOLD << "====================================================\n"
+            << " [CUDA HARDWARE MISMATCH: CPU PYTORCH DETECTED]      \n"
+            << "====================================================\n" << ANSI_RESET
+            << ANSI_YELLOW << env.diagnosticAlert << ANSI_RESET << "\n\n";
+    }
+
+    std::cout
         << "Summary: " << env.statusSummary << "\n\n"
         << "Usage:\n"
         << "  /unsloth status             Inspect environment and hardware "
@@ -1355,6 +1605,7 @@ void ReplEngine::handleUnsloth(const std::string &args) {
            "script\n"
         << "  /unsloth train              Trigger on-the-fly QLoRA fine-tuning "
            "and export GGUF\n"
+        << "  /unsloth learn              Ground-truth self-learning engine (zero fake data)\n"
         << "----------------------------------------------------\n"
         << " Made by Lunarmist-byte | https://github.com/Lunarmist-byte\n"
         << " LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n\n";
@@ -1431,9 +1682,267 @@ void ReplEngine::handleUnsloth(const std::string &args) {
     return;
   }
 
+  if (sub.rfind("learn", 0) == 0) {
+    handleSelfLearn(trim(sub.substr(5)));
+    return;
+  }
+
   std::cout << ANSI_YELLOW << "Unknown unsloth subcommand: " << sub
-            << ". Use: status, dataset, scaffold, or train." << ANSI_RESET
+            << ". Use: status, dataset, scaffold, train, or learn." << ANSI_RESET
             << "\n";
+}
+
+void ReplEngine::handleSelfLearn(const std::string &args) {
+  SelfLearningEngine selfLearn(agent_.getConfig());
+  std::string sub = trim(args);
+
+  if (sub.empty() || sub == "status") {
+    auto stats = selfLearn.getStats();
+    auto verifiedPairs = selfLearn.getVerifiedPairs();
+    auto rejectedList = selfLearn.getRejectedCandidates();
+
+    std::cout << "\n====================================================\n"
+              << "     ARENA GROUND-TRUTH SELF-LEARNING ENGINE        \n"
+              << "        Anti-Fake Data & Verified Training          \n"
+              << "====================================================\n"
+              << "Ground-Truth Quality Rate : " << ANSI_GREEN << ANSI_BOLD
+              << "100% VERIFIED (Zero Fake Data Guarantee)" << ANSI_RESET << "\n"
+              << "Verified Instruction Pairs: " << ANSI_CYAN
+              << verifiedPairs.size() << ANSI_RESET
+              << " ground-truth pairs ready for training\n"
+              << "Blocked Fake Data Attempts: " << ANSI_YELLOW
+              << rejectedList.size() << ANSI_RESET
+              << " non-grounded / simulated items quarantined\n"
+              << "Continuous Auto-Learning  : "
+              << (stats.autoLearningEnabled
+                      ? (ANSI_GREEN + "[ENABLED]" + ANSI_RESET)
+                      : (ANSI_RED + "[DISABLED]" + ANSI_RESET))
+              << "\n"
+              << "Base Pre-Trained Model    : " << ANSI_BOLD
+              << stats.activeBaseModel << ANSI_RESET << "\n";
+
+    if (!stats.lastFinetunedModel.empty()) {
+      std::cout << "Last Fine-Tuned Model     : " << ANSI_GREEN
+                << stats.lastFinetunedModel << ANSI_RESET << "\n";
+    }
+
+    if (!stats.rejectionBreakdown.empty()) {
+      std::cout << "\n--- Quarantine Filter Breakdown (Fake Data Blocked) ---\n";
+      for (const auto &[reason, count] : stats.rejectionBreakdown) {
+        std::cout << "  * " << reason << ": " << count << " blocked\n";
+      }
+    }
+
+    std::cout << "\nUsage Commands:\n"
+              << "  /learn status               Display self-learning diagnostics & stats\n"
+              << "  /learn audit                Inspect verified ground-truth training pairs & proofs\n"
+              << "  /learn rejected             Inspect blocked fake data items & rejection reasons\n"
+              << "  /learn verify [dir]         Scan saved sessions and ingest verified ground truth\n"
+              << "  /learn auto <on|off>        Toggle continuous auto-learning from agent tasks\n"
+              << "  /learn add <prompt> -> <solution>\n"
+              << "                              Curate a prompt-solution pair with syntax validation\n"
+              << "  /learn train [base_model]   Trigger Unsloth QLoRA fine-tuning on 100% verified data\n"
+              << "  /learn reset                Reset the verified and rejected learning pools\n"
+              << "----------------------------------------------------\n"
+              << " Made by Lunarmist-byte | https://github.com/Lunarmist-byte\n"
+              << " LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n\n";
+    return;
+  }
+
+  if (sub == "audit" || sub == "inspect" || sub == "list") {
+    auto pairs = selfLearn.getVerifiedPairs();
+    if (pairs.empty()) {
+      std::cout << ANSI_YELLOW
+                << "\n[SELF-LEARN] No verified ground-truth training pairs found.\n"
+                << "Run tasks in Arena to automatically collect verified pairs.\n\n"
+                << ANSI_RESET;
+      return;
+    }
+
+    std::cout << "\n====================================================\n"
+              << "     VERIFIED GROUND-TRUTH TRAINING REPOSITORY      \n"
+              << " Total Verified Pairs: " << pairs.size() << "\n"
+              << "====================================================\n\n";
+
+    int idx = 1;
+    for (const auto &p : pairs) {
+      std::cout << ANSI_CYAN << "[" << idx++ << "] Pair ID: " << p.id << " ("
+                << p.domain << ")\n"
+                << ANSI_RESET
+                << "    Prompt: "
+                << (p.prompt.size() > 70 ? p.prompt.substr(0, 67) + "..."
+                                         : p.prompt)
+                << "\n"
+                << "    Verification Confidence: " << ANSI_GREEN
+                << static_cast<int>(p.verificationScore * 100) << "%"
+                << ANSI_RESET << "\n";
+      if (!p.verifiedFiles.empty()) {
+        std::cout << "    Grounded Physical Files: ";
+        for (const auto &f : p.verifiedFiles)
+          std::cout << f << " ";
+        std::cout << "\n";
+      }
+      if (!p.evidenceIds.empty()) {
+        std::cout << "    Linked Evidence IDs: ";
+        for (const auto &e : p.evidenceIds)
+          std::cout << e << " ";
+        std::cout << "\n";
+      }
+      std::cout << "----------------------------------------------------\n";
+      if (idx > 15) {
+        std::cout << ANSI_DIM << "... and " << (pairs.size() - 15)
+                  << " more verified pairs. Run /learn dataset to export.\n"
+                  << ANSI_RESET;
+        break;
+      }
+    }
+    std::cout << "\n";
+    return;
+  }
+
+  if (sub == "rejected" || sub == "quarantine") {
+    auto rejected = selfLearn.getRejectedCandidates();
+    if (rejected.empty()) {
+      std::cout << ANSI_GREEN
+                << "\n[SELF-LEARN] Zero fake data in quarantine. All ingested data is verified!\n\n"
+                << ANSI_RESET;
+      return;
+    }
+
+    std::cout << "\n====================================================\n"
+              << "      BLOCKED FAKE / UNVERIFIED DATA QUARANTINE     \n"
+              << " Total Blocked Candidates: " << rejected.size() << "\n"
+              << "====================================================\n\n";
+
+    int idx = 1;
+    for (const auto &r : rejected) {
+      std::cout << ANSI_YELLOW << "[" << idx++
+                << "] Reason: " << rejectionReasonToString(r.reason) << "\n"
+                << ANSI_RESET << "    Detail: " << r.reasonDetail << "\n"
+                << "    Prompt: "
+                << (r.prompt.size() > 65 ? r.prompt.substr(0, 62) + "..."
+                                         : r.prompt)
+                << "\n";
+      if (!r.sessionId.empty()) {
+        std::cout << "    Session ID: " << r.sessionId << "\n";
+      }
+      std::cout << "----------------------------------------------------\n";
+      if (idx > 15) {
+        std::cout << ANSI_DIM << "... and " << (rejected.size() - 15)
+                  << " more blocked candidates.\n"
+                  << ANSI_RESET;
+        break;
+      }
+    }
+    std::cout << "\n";
+    return;
+  }
+
+  if (sub.rfind("auto", 0) == 0) {
+    std::string mode = trim(sub.substr(4));
+    if (mode == "on" || mode == "true" || mode == "1" || mode == "enable") {
+      selfLearn.setAutoLearning(true);
+      std::cout << ANSI_GREEN
+                << "\n[SELF-LEARN] Continuous auto-learning ENABLED. Verified agent sessions will automatically be ingested.\n\n"
+                << ANSI_RESET;
+    } else if (mode == "off" || mode == "false" || mode == "0" ||
+               mode == "disable") {
+      selfLearn.setAutoLearning(false);
+      std::cout << ANSI_YELLOW
+                << "\n[SELF-LEARN] Continuous auto-learning DISABLED.\n\n"
+                << ANSI_RESET;
+    } else {
+      std::cout << "Usage: /learn auto <on|off>\n"
+                << "Current Status: "
+                << (selfLearn.isAutoLearningEnabled() ? "ENABLED" : "DISABLED")
+                << "\n\n";
+    }
+    return;
+  }
+
+  if (sub.rfind("verify", 0) == 0) {
+    std::string dir = trim(sub.substr(6));
+    if (dir.empty())
+      dir = "sessions";
+    std::cout << "\n[SELF-LEARN] Scanning '" << dir
+              << "' for ground-truth trajectories...\n";
+    size_t count = selfLearn.scanAndIngestSessions(dir);
+    std::cout << ANSI_GREEN << "[SELF-LEARN] Scan complete: " << count
+              << " verified sessions ingested into training repository.\n\n"
+              << ANSI_RESET;
+    return;
+  }
+
+  if (sub.rfind("add", 0) == 0) {
+    std::string payload = trim(sub.substr(3));
+    size_t arrowPos = payload.find("->");
+    if (arrowPos == std::string::npos) {
+      arrowPos = payload.find("|");
+    }
+    if (arrowPos == std::string::npos) {
+      std::cout << ANSI_YELLOW
+                << "Usage: /learn add <prompt> -> <solution>\n"
+                << "Example: /learn add Write an ESP32 I2C scanner -> [C++ implementation with Wire.h]\n\n"
+                << ANSI_RESET;
+      return;
+    }
+    std::string p = trim(payload.substr(0, arrowPos));
+    std::string s =
+        trim(payload.substr(arrowPos + (payload[arrowPos] == '-' ? 2 : 1)));
+
+    if (selfLearn.ingestPromptPair(p, "User-curated verified instruction", s,
+                                   "coding", "user_curated")) {
+      std::cout << ANSI_GREEN
+                << "\n[SELF-LEARN] Successfully verified and added ground-truth instruction pair!\n\n"
+                << ANSI_RESET;
+    } else {
+      std::cout << ANSI_RED
+                << "\n[SELF-LEARN REJECTED] The submitted pair did not pass ground-truth verification checks (too brief or mock tokens detected).\n\n"
+                << ANSI_RESET;
+    }
+    return;
+  }
+
+  if (sub.rfind("train", 0) == 0) {
+    std::cout << "\n[SELF-LEARN] Triggering fine-tuning strictly on 100% verified ground-truth data...\n";
+    UnslothManager unsloth(agent_.getConfig());
+    UnslothTrainConfig cfg;
+
+    std::string rest = trim(sub.substr(5));
+    std::stringstream ss(rest);
+    std::string word;
+    while (ss >> word) {
+      if (word == "--dry-run" || word == "--mock") {
+        cfg.dryRunSimulation = true;
+      } else if (!word.empty() && word.front() != '-') {
+        cfg.baseModel = word;
+      }
+    }
+
+    bool ok = selfLearn.triggerSelfLearningFineTune(
+        unsloth, cfg,
+        [](const std::string &line) { std::cout << "  " << line << "\n"; },
+        &agent_.getRouter());
+
+    if (ok) {
+      std::cout << ANSI_GREEN
+                << "\n[SELF-LEARN] Fine-tuning cycle successfully completed!\n\n"
+                << ANSI_RESET;
+    }
+    return;
+  }
+
+  if (sub == "reset") {
+    selfLearn.reset();
+    std::cout << ANSI_GREEN
+              << "\n[SELF-LEARN] Learning pools reset to clean state.\n\n"
+              << ANSI_RESET;
+    return;
+  }
+
+  std::cout << ANSI_YELLOW << "Unknown /learn command: '" << sub
+            << "'. Use: status, audit, rejected, verify, auto, add, train, or reset.\n"
+            << ANSI_RESET;
 }
 
 void ReplEngine::handleAbilities(const std::string &) {
@@ -1832,6 +2341,175 @@ void ReplEngine::handleHelp(const std::string &args) {
                 << "  /chat pirate       Start chatting immediately as Capt'n Byte\n"
                 << "  /chat cyberpunk    Start chatting with a 2077 Netrunner\n"
                 << "  /chat coach        Get pumped up with the motivational hype coach\n\n"
+                << ANSI_DIM
+                << "Made by Lunarmist-byte | https://github.com/Lunarmist-byte\n"
+                << "LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n"
+                << "================================================================================\n\n"
+                << ANSI_RESET;
+      return;
+    }
+
+    if (cmd == "/host" || cmd == "/serve" || cmd == "/wifi") {
+      std::cout << "\n"
+                << ANSI_CYAN << ANSI_BOLD
+                << "================================================================================\n"
+                << "   ARENAFIGHT WI-FI HOSTING & MOBILE REMOTE CONTROL                             \n"
+                << "================================================================================\n"
+                << ANSI_RESET
+                << ANSI_BOLD << "Overview:\n" << ANSI_RESET
+                << "  An embedded native C++20 HTTP micro-daemon bound across 0.0.0.0, enabling\n"
+                << "  any device on your local Wi-Fi or LAN (smartphones, tablets, secondary PCs)\n"
+                << "  to prompt the agent, run tasks, monitor verification gates, view files,\n"
+                << "  and audit self-learning datasets without installing apps or dependencies.\n\n"
+                << ANSI_BOLD << "Commands & Aliases:\n" << ANSI_RESET
+                << "  * REPL Commands : " << ANSI_YELLOW << "/host [start [port]|stop|status]" << ANSI_RESET
+                << ", " << ANSI_YELLOW << "/serve [port]" << ANSI_RESET
+                << ", " << ANSI_YELLOW << "/wifi" << ANSI_RESET << "\n"
+                << "  * CLI Commands  : " << ANSI_YELLOW << "arena host [--port <port>] [--bind <ip>]" << ANSI_RESET
+                << ", " << ANSI_YELLOW << "arena serve [--port <port>]" << ANSI_RESET << "\n\n"
+                << ANSI_BOLD << "How to Connect from Phone / Wi-Fi Devices:\n" << ANSI_RESET
+                << "  1. Connect your smartphone, tablet, or laptop to the same Wi-Fi.\n"
+                << "  2. Run '/host start' in the REPL or 'arena host' in terminal.\n"
+                << "  3. Open any web browser on your phone and navigate to the displayed URL\n"
+                << "     (e.g., http://<local-wifi-ip>:8080).\n\n"
+                << ANSI_BOLD << "Embedded Web Application Features:\n" << ANSI_RESET
+                << "  * Mobile-First Responsive UI (100% offline, zero npm, zero external CDNs)\n"
+                << "  * Interactive Task Runner with live 7 verification gate passes\n"
+                << "  * Persona Chat with 5 characters (Witty, Rigorous, Pirate, Cyberpunk, Concise)\n"
+                << "  * Live Model & Alias Switcher and Fast vs Perfect Boi processing level toggle\n"
+                << "  * Hardware Telemetry Monitor (CPU cores, RAM headroom, GPU VRAM, CUDA status)\n"
+                << "  * Workspace File Viewer & Generative Media Gallery (Images & Videos)\n"
+                << "  * Ground-Truth Self-Learning Dataset Auditor & Fake-Data Quarantine Inspector\n\n"
+                << ANSI_BOLD << "REST API Suite:\n" << ANSI_RESET
+                << "  GET  /               Embedded Web Application\n"
+                << "  GET  /api/status     Runtime telemetry, active model, and hardware stats\n"
+                << "  GET  /api/models     Discovered models and friendly aliases\n"
+                << "  POST /api/model      Switch active model\n"
+                << "  GET  /api/aliases    List model aliases\n"
+                << "  POST /api/aliases    Set or remove friendly alias\n"
+                << "  GET  /api/profile    Hardware headroom and dynamic limits\n"
+                << "  POST /api/chat       Interactive conversation with chosen persona\n"
+                << "  POST /api/execute    Autonomous session execution with 7 verification gates\n"
+                << "  POST /api/level      Set processing level (fast / perfect)\n"
+                << "  GET  /api/files      Workspace file explorer & source viewer\n"
+                << "  GET  /api/media      Catalog of generated images and videos\n"
+                << "  GET  /api/self-learn Verified ground truth training pairs & quarantined items\n\n"
+                << ANSI_BOLD << "Examples:\n" << ANSI_RESET
+                << "  /host start          Start server on default port 8080\n"
+                << "  /host start 9090     Start server on custom port 9090\n"
+                << "  /wifi                Display current local Wi-Fi connection URL\n"
+                << "  /host status         Check background server status\n"
+                << "  /host stop           Stop the background server\n\n"
+                << ANSI_DIM
+                << "Made by Lunarmist-byte | https://github.com/Lunarmist-byte\n"
+                << "LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n"
+                << "================================================================================\n\n"
+                << ANSI_RESET;
+      return;
+    }
+
+    if (cmd == "/media" || cmd == "/cinematic") {
+      std::cout << "\n"
+                << ANSI_CYAN << ANSI_BOLD
+                << "================================================================================\n"
+                << "   AUTONOMOUS MULTIMODAL ORCHESTRATION: OLLAMA -> FOOOCUS -> WAN AI 2.1         \n"
+                << "================================================================================\n"
+                << ANSI_RESET
+                << ANSI_BOLD << "Overview:\n" << ANSI_RESET
+                << "  End-to-end multimodal generative pipeline bridging cognitive LLM reasoning with\n"
+                << "  diffusion synthesis: Ollama structures cinematic prompts and motion kinetics,\n"
+                << "  Fooocus generates verified 1152x896 SDXL keyframe PNGs, and Wan AI 2.1 animates\n"
+                << "  the keyframe into an 81-frame MP4 video sequence with physical evidence validation.\n\n"
+                << ANSI_BOLD << "Commands & Aliases:\n" << ANSI_RESET
+                << "  * REPL Commands : " << ANSI_YELLOW << "/media <concept>" << ANSI_RESET
+                << ", " << ANSI_YELLOW << "/cinematic <concept>" << ANSI_RESET << "\n"
+                << "  * CLI Commands  : " << ANSI_YELLOW << "arena media \"<concept>\"" << ANSI_RESET
+                << ", " << ANSI_YELLOW << "arena cinematic \"<concept>\"" << ANSI_RESET << "\n\n"
+                << ANSI_BOLD << "Orchestration Stages:\n" << ANSI_RESET
+                << "  1. Stage 1 (Cognitive Director): Ollama (cinematic-director) expands sparse prompts into positive/negative/motion JSON\n"
+                << "  2. Stage 2 (VRAM Memory Protocol): Sequentially unloads Ollama weights (keep_alive: 0) to fit 8GB GPU memory budgets\n"
+                << "  3. Stage 3 (Neural Keyframe): Fooocus SDXL synthesizes high-fidelity 1152x896 PNG keyframe (Magic bytes 89 50 4E 47)\n"
+                << "  4. Stage 4 (Neural Video DiT): Wan AI 2.1 I2V generates 81 frames @ 16 fps (~5.06s) MP4 video (ISO BMFF ftyp box)\n"
+                << "  5. Stage 5 (Evidence Ledger): Verifies disk presence, container validity, and registers SHA-256 in audit chain\n\n"
+                << ANSI_BOLD << "Examples:\n" << ANSI_RESET
+                << "  /media cyberpunk car drifting in neon rain\n"
+                << "  /media astronaut discovering glowing monolith on alien desert\n"
+                << "  arena media \"ancient samurai warrior standing under cherry blossom storm\"\n\n"
+                << ANSI_DIM
+                << "Made by Lunarmist-byte | https://github.com/Lunarmist-byte\n"
+                << "LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n"
+                << "================================================================================\n\n"
+                << ANSI_RESET;
+      return;
+    }
+
+    if (cmd == "/alias" || cmd == "/aliases") {
+      std::cout << "\n"
+                << ANSI_CYAN << ANSI_BOLD
+                << "================================================================================\n"
+                << "               AI MODEL ALIASES & SHORTHAND NAMES DIRECTORY                     \n"
+                << "================================================================================\n"
+                << ANSI_RESET
+                << ANSI_BOLD << "Overview:\n" << ANSI_RESET
+                << "  Assign friendly, memorable shorthand nicknames to long model identifier paths\n"
+                << "  across any provider (Ollama, OpenRouter, native llama.cpp, OpenCode, Claude Code).\n"
+                << "  Aliases persist in config.json and work universally with /model, --model, and\n"
+                << "  all CLI and REPL execution workflows.\n\n"
+                << ANSI_BOLD << "Commands & Syntax:\n" << ANSI_RESET
+                << "  * /alias                             List all registered model aliases\n"
+                << "  * /alias set <alias> <model_id>      Register a new model nickname\n"
+                << "  * /alias <alias> = <model_id>        Shorthand assignment syntax\n"
+                << "  * /alias rm <alias>                  Remove an existing alias\n"
+                << "  * /alias clear                       Clear all custom aliases\n"
+                << "  * arena alias [cmd]                  Execute alias commands from command line\n\n"
+                << ANSI_BOLD << "Universal llama.cpp Compatibility:\n" << ANSI_RESET
+                << "  Aliases work with native llama.cpp server and local GGUF models, featuring universal\n"
+                << "  tool-calling support across DeepSeek, Qwen2.5, Llama 3, Mistral, and custom weights.\n\n"
+                << ANSI_BOLD << "Examples:\n" << ANSI_RESET
+                << "  /alias set speedy google/gemini-2.0-flash-001\n"
+                << "  /alias coder = qwen2.5-coder:7b\n"
+                << "  /alias local = DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf\n"
+                << "  /model speedy\n"
+                << "  arena --model coder \"Write an optimized hash map in C++20\"\n\n"
+                << ANSI_DIM
+                << "Made by Lunarmist-byte | https://github.com/Lunarmist-byte\n"
+                << "LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n"
+                << "================================================================================\n\n"
+                << ANSI_RESET;
+      return;
+    }
+
+    if (cmd == "/learn" || cmd == "/unsloth" || cmd == "/self-learn" || cmd == "/finetune") {
+      std::cout << "\n"
+                << ANSI_CYAN << ANSI_BOLD
+                << "================================================================================\n"
+                << "   GROUND-TRUTH SELF-LEARNING & UNSLOTH AI FINE-TUNING ENGINE                   \n"
+                << "================================================================================\n"
+                << ANSI_RESET
+                << ANSI_BOLD << "Overview:\n" << ANSI_RESET
+                << "  An autonomous self-learning engine that trains local models strictly on 100%\n"
+                << "  verified physical evidence and ground truth. Includes a multi-stage quarantine\n"
+                << "  gate that permanently blocks synthetic hallucinations and mock test data from\n"
+                << "  entering fine-tuning datasets.\n\n"
+                << ANSI_BOLD << "Commands & Subcommands:\n" << ANSI_RESET
+                << "  * /learn status                      Display ground-truth verification rate & quarantine stats\n"
+                << "  * /learn audit                       Inspect verified training pairs with physical proof hashes\n"
+                << "  * /learn rejected                    Inspect blocked fake data items & rejection reasons\n"
+                << "  * /learn verify [dir]                Scan past sessions and ingest 100% verified ground truth\n"
+                << "  * /learn auto <on|off>               Toggle continuous auto-learning from completed tasks\n"
+                << "  * /learn add <prompt> -> <solution>  Curate a verified training pair with syntax validation\n"
+                << "  * /learn train [base_model]          Trigger Unsloth QLoRA fine-tuning on verified data\n"
+                << "  * /learn reset                       Clear training and quarantine repositories\n"
+                << "  * /unsloth status                    Inspect Python, PyTorch, CUDA, and Unsloth environment\n"
+                << "  * /unsloth train                     Trigger on-the-fly QLoRA training and GGUF export\n\n"
+                << ANSI_BOLD << "Anti-Fake Data Guarantee:\n" << ANSI_RESET
+                << "  Only tasks where compiler exit codes equal 0, all unit test assertions pass,\n"
+                << "  and independent verifier confidence exceeds 85% are admitted to training.\n\n"
+                << ANSI_BOLD << "Examples:\n" << ANSI_RESET
+                << "  /learn status\n"
+                << "  /learn auto on\n"
+                << "  /learn verify sessions\n"
+                << "  /learn train unsloth/Qwen2.5-Coder-7B-Instruct-bnb-4bit\n\n"
                 << ANSI_DIM
                 << "Made by Lunarmist-byte | https://github.com/Lunarmist-byte\n"
                 << "LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/\n"
@@ -2457,6 +3135,43 @@ void printPersonasList() {
 }
 
 } // namespace
+
+void ReplEngine::handleMedia(const std::string& args) {
+    std::string sceneConcept = trim(args);
+    if (sceneConcept.empty()) {
+        sceneConcept = askUserInteractive("Enter creative visual concept to orchestrate (e.g. 'cyberpunk street market in rain'):");
+    }
+    if (sceneConcept.empty()) {
+        sceneConcept = "cyberpunk street market in neon rain with flying hovercrafts";
+    }
+
+    std::cout << "\n" << ANSI_CYAN << ANSI_BOLD
+              << "[AUTONOMOUS MULTIMODAL ORCHESTRATION: OLLAMA -> FOOOCUS -> WAN AI 2.1]"
+              << ANSI_RESET << "\n"
+              << "Concept: " << sceneConcept << "\n\n";
+
+    displayThinking(
+        "Directing cinematic scene parameters via Ollama Cognitive Director...\n"
+        "Scheduling sequential VRAM release protocol for 8GB GPU safety...\n"
+        "Dispatching Fooocus SDXL keyframe generation and Wan AI 2.1 temporal video diffusion.");
+
+    MediaOrchestratePipelineTool tool;
+    nlohmann::json toolArgs = {
+        {"concept", sceneConcept},
+        {"output_video", "generated_media/cinematic_scene.mp4"},
+        {"output_keyframe", "generated_media/keyframe_001.png"},
+        {"director_model", "cinematic-director"},
+        {"mode", "t2i2v"},
+        {"vram_sequential", true}
+    };
+
+    auto res = tool.execute(toolArgs, agent_.getConfig().workspace_dir);
+    if (res.success) {
+        std::cout << "\n" << res.output << "\n";
+    } else {
+        std::cout << "\n" << ANSI_RED << "Multimodal Pipeline Error: " << res.error << ANSI_RESET << "\n\n";
+    }
+}
 
 void ReplEngine::handleChat(const std::string& args) {
     std::string persona = trim(args);

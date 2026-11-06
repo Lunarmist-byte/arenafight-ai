@@ -502,21 +502,31 @@ void TerminalUI::printHelpSession(const Config& config, const std::vector<std::p
               << "  - CLI invocation:    arena chat [persona]   or   arena talk [persona]\n"
               << "  - REPL invocation:   /chat [persona]        or   /talk [persona]\n\n";
 
-    std::cout << "9. QUICK-START CHEAT SHEET:\n"
+    std::cout << "9. LOCAL WI-FI HOSTING & MOBILE WEB UI (/host, /wifi, /serve):\n"
+              << "--------------------------------------------------------------------------------\n"
+              << "  Host ArenaFight micro-daemon across 0.0.0.0 for mobile and Wi-Fi access:\n"
+              << "  - CLI commands:      arena host [--port 8080]   or   arena serve\n"
+              << "  - REPL commands:     /host start [port], /host stop, /host status, /wifi\n"
+              << "  - Access URL:        Open http://<wifi-ip>:8080 in mobile Safari or Chrome\n"
+              << "  - Web App Features:  Task execution, 7 physical gates, persona chat, file viewer,\n"
+              << "                       media gallery, model switcher, and ground-truth dataset auditor.\n\n";
+
+    std::cout << "10. QUICK-START CHEAT SHEET:\n"
               << "--------------------------------------------------------------------------------\n"
               << "  * /goal <task>       Pursue goal autonomously to completion\n"
               << "  * /plan <task>       Generate interactive plan artifact\n"
               << "  * /grill-me <idea>   Interactive requirements interview before writing code\n"
               << "  * /think <task>      Fast thinking duel (code gen disallowed)\n"
               << "  * /chat [persona]    Fun interactive talk mode (witty, pirate, cyberpunk, zen)\n"
-              << "  * /help chat         Display interactive mode personas & commands guide\n"
+              << "  * /host [start|stop] Host ArenaFight on Wi-Fi for phone & tablet access\n"
+              << "  * /wifi              Display local Wi-Fi connection URL\n"
+              << "  * /help [command]    Display guide for any command (e.g. /help host, /help chat)\n"
               << "  * /services          Autonomous daemon manager (llama.cpp server & Ollama)\n"
               << "  * /metrics           Display live telemetry & verification metrics observatory\n"
               << "  * /temp [float]      Adjust generation temperature (0.0 - 2.0)\n"
               << "  * /tokens [int]      Adjust max output token limit\n"
               << "  * /abilities         Display multi-dimensional model ability matrix\n"
               << "  * /status            View session telemetry and claim confidence\n"
-              << "  * /help [command]    Display slash command reference guide\n"
               << "  * /back              Return to Arena main menu\n"
               << "  * /exit              Exit Arena completely\n";
 

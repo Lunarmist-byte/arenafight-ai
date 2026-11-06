@@ -8,6 +8,7 @@
 #include "arenafight/agent/arena_agent.hpp"
 #include "arenafight/artifacts/artifact.hpp"
 #include "arenafight/customizations/customization_manager.hpp"
+#include "arenafight/server/wifi_host_server.hpp"
 
 // Made by Lunarmist-byte
 // GitHub: https://github.com/Lunarmist-byte
@@ -25,6 +26,7 @@ struct SlashCommand {
 class ReplEngine {
 public:
     explicit ReplEngine(ArenaAgent& agent);
+    ~ReplEngine();
 
     // Run the main interactive REPL loop
     void run();
@@ -43,6 +45,7 @@ public:
     void handleRules(const std::string& args);
     void handleModels(const std::string& args);
     void handleModel(const std::string& args);
+    void handleAlias(const std::string& args);
     void handleStatus(const std::string& args);
     void handleMode(const std::string& args);
     void handleConnect(const std::string& args);
@@ -51,6 +54,7 @@ public:
     void handleOpenCode(const std::string& args);
     void handleMetrics(const std::string& args);
     void handleUnsloth(const std::string& args);
+    void handleSelfLearn(const std::string& args);
     void handleAbilities(const std::string& args);
     void handleTemperature(const std::string& args);
     void handleTokens(const std::string& args);
@@ -74,6 +78,8 @@ public:
     void handleScaffold(const std::string& args);
     void handleQoS(const std::string& path);
     void handleCalculate(const std::string& args);
+    void handleMedia(const std::string& args);
+    void handleHost(const std::string& args);
 
     // Mentions resolver (@file, @git, @memory, @claims)
     std::string resolveMentions(const std::string& prompt);
@@ -89,6 +95,7 @@ private:
     ArtifactManager artifacts_;
     CustomizationManager customizations_;
     std::map<std::string, SlashCommand> slashCommands_;
+    std::unique_ptr<WiFiHostServer> wifiServer_;
     bool running_ = true;
 
     void registerCommands();

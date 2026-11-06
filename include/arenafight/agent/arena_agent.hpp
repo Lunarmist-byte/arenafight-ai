@@ -51,10 +51,28 @@ public:
     float getTemperature() const { return config_.default_temperature; }
     int getMaxTokens() const { return config_.default_max_tokens; }
     void setModel(const std::string& modelName) {
-        config_.default_model = modelName;
-        router_.getOrRegisterDynamicModel(modelName);
+        std::string resolved = router_.resolveAlias(modelName);
+        config_.default_model = resolved;
+        router_.getOrRegisterDynamicModel(resolved);
     }
     const std::string& getModel() const { return config_.default_model; }
+    void setModelAlias(const std::string& alias, const std::string& targetModel) {
+        config_.setAlias(alias, targetModel);
+        router_.setAlias(alias, targetModel);
+        config_.saveToFile("config.json");
+    }
+    bool removeModelAlias(const std::string& alias) {
+        bool ok = config_.removeAlias(alias);
+        router_.removeAlias(alias);
+        config_.saveToFile("config.json");
+        return ok;
+    }
+    std::string resolveModelAlias(const std::string& aliasOrName) const {
+        return router_.resolveAlias(aliasOrName);
+    }
+    std::map<std::string, std::string> getModelAliases() const {
+        return router_.getAliases();
+    }
     void setProcessingLevel(const std::string& lvl) { config_.setProcessingLevel(lvl); }
     std::string getProcessingLevel() const { return config_.processing_level; }
     bool isFast() const { return config_.isFast(); }

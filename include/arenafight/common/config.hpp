@@ -42,6 +42,24 @@ struct Config {
   bool prompt_injection_guard = true;
   bool use_cuda = true;   // Prefer NVIDIA CUDA acceleration when available
   bool force_cpu = false; // Force CPU execution (slow variant mode)
+  std::map<std::string, std::string> model_aliases; // Friendly names for models (e.g. "qwen" -> "qwen2.5-coder:7b")
+
+  // Model aliases helpers
+  std::string resolveAlias(const std::string &nameOrAlias) const {
+    auto it = model_aliases.find(nameOrAlias);
+    if (it != model_aliases.end() && !it->second.empty()) {
+      return it->second;
+    }
+    return nameOrAlias;
+  }
+  void setAlias(const std::string &alias, const std::string &targetModel) {
+    if (!alias.empty() && !targetModel.empty()) {
+      model_aliases[alias] = targetModel;
+    }
+  }
+  bool removeAlias(const std::string &alias) {
+    return model_aliases.erase(alias) > 0;
+  }
 
   // Hardware acceleration helpers
   bool isCudaPreferred() const { return use_cuda && !force_cpu; }

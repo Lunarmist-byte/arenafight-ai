@@ -1,6 +1,6 @@
 # ArenaFight Agent
 
-**Version:** 2.5.0 
+**Version:** 2.6.0 
 **Architecture:** Pure C++20 Native Standard  
 
 An autonomous, local-first multi-model AI agent orchestration runtime and execution system built in **C++20**.
@@ -309,6 +309,63 @@ arena unsloth scaffold
 arena unsloth train
 ```
 
+### CUDA Hardware Mismatch Detection & PyTorch Remediation
+ArenaFight inspects Python package metadata directly without executing runtime initialization crashes. If an NVIDIA GPU is physically detected via system profiler but PyTorch is installed with a CPU-only build (`torch x.xx.x+cpu`), Arena triggers a dedicated hardware mismatch alert with copyable remediation commands:
+```bash
+# Check hardware diagnostics and CUDA compatibility
+arena unsloth status
+```
+Remediation command to enable GPU CUDA kernels:
+```powershell
+pip install --upgrade --force-reinstall torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+```
+
+---
+
+### Ground-Truth Self-Learning Engine (Zero Fake Data Guarantee)
+ArenaFight features an autonomous **Ground-Truth Self-Learning Engine** (`SelfLearningEngine`) that continuously learns from user prompts and execution trajectories while enforcing strict anti-fake data filtration:
+
+#### Anti-Fake Data & Anti-Hallucination Invariants
+To ensure models never learn from hallucinations, simulated responses, or broken code, all candidates must pass 7 ground-truth validation invariants:
+1. **Non-Simulated Execution:** Strictly blocks mock providers (`TestMock`, `mock-coder`) and dummy placeholders (`[MOCK]`, `simulation placeholder`, `TODO: implement`, `dummy implementation`).
+2. **Physical Filesystem Grounding:** Verifies every claimed created or edited file physically exists on the disk with non-zero size (`std::filesystem::exists` and `file_size > 0`).
+3. **Verification Gate Clearance:** Enforces that the session passed independent verification (compilation, automated tests, no build errors) with a completion score $\ge 0.80$.
+4. **Zero Contradictions:** Verifies that the session's `ClaimRegistry` has zero unresolved factual contradictions.
+5. **Substantive Content Filter:** Eliminates trivial chatter (< 10 chars, "hi", "test") and API error messages.
+6. **Verified Self-Correction Filter:** For debugging pairs, requires a proven real failure followed by verified passing recovery.
+7. **Tamper-Evident Hash Chains:** Confirms observations align with cryptographic audit records.
+
+Any trajectory failing any of these criteria is blocked from training and quarantined in `self_learning/rejected_candidates.jsonl` with an explicit diagnostic reason.
+
+#### Continuous Auto-Learning Loop
+When enabled (`/learn auto on`), every successfully completed and verified agent task automatically feeds into the ground-truth training repository (`self_learning/verified_dataset.jsonl`).
+
+#### Self-Learning Commands
+```bash
+# Display Self-Learning diagnostics, quality rates, and quarantine breakdown
+arena learn status
+
+# Inspect verified ground-truth training pairs and physical proofs
+arena learn audit
+
+# Inspect blocked fake data and quarantine reasons
+arena learn rejected
+
+# Scan saved sessions on disk and ingest verified ground truth
+arena learn verify
+
+# Toggle continuous auto-learning from agent tasks
+arena learn auto on
+arena learn auto off
+
+# Curate and validate a custom prompt-solution pair
+arena learn add "Write ESP32 I2C scanner" -> "[Verified C++ implementation with Wire.h]"
+
+# Fine-tune model with Unsloth strictly on 100% verified ground truth
+arena learn train
+arena learn train unsloth/Qwen2.5-Coder-7B-Instruct-bnb-4bit
+```
+
 ---
 
 ## 8. OpenCode Bridge Integration (`OpenCodeProvider`)
@@ -416,12 +473,18 @@ The C++ codebase is refactored according to modern C++20 best practices:
 Usage:
   arena                          Launch Interactive REPL
   arena "<task>"                  Execute a task autonomously (/goal)
+  arena chat [persona]           Launch fun interactive conversation mode (witty, pirate, zen, etc.)
+  arena talk [persona]           Alias for arena chat
+  arena media "<concept>"        Autonomous multimodal pipeline (Ollama -> Fooocus -> Wan AI 2.1)
   arena goal "<task>"             Autonomous goal pursuit with verification
   arena verify                    Run Level 1 physical evidence verification gates
   arena mcp                       Run Model Context Protocol (MCP) server over stdio
   arena plan "<task>"             Generate structured plan artifact with milestones
   arena grill-me "<topic>"        Interactive requirements interview
   arena mode [standalone|opencode] Inspect or switch runtime execution mode
+  arena level [fast|perfect]     Set processing level: Fast (standard) or Perfect Boi (adaptive)
+  arena profile                  Assess host machine hardware & dynamic limits (no hardcoding)
+  arena services, daemon         Autonomous background service manager (llama.cpp server & Ollama)
   arena connect [opencode]        Connect and synchronize OpenCode bridge
   arena disconnect               Disconnect bridge and switch to standalone mode
   arena status                   Display runtime architecture and verification status
@@ -429,13 +492,17 @@ Usage:
   arena audit                    Verify tamper-evident SHA-256 cryptographic audit trail
   arena benchmark [all|models...] Benchmark models across Reasoning, Coding, Verif, TPS
   arena opencode [cmd]           OpenCode CLI integration (status|models|run|sync)
-  arena unsloth [cmd]            Unsloth AI on-the-fly fine-tuning (status|dataset|scaffold|train)
+  arena unsloth [cmd]            Unsloth AI on-the-fly fine-tuning (status|dataset|scaffold|train|learn)
+  arena learn [cmd]              Ground-Truth Self-Learning Engine (status|audit|rejected|verify|auto|add|train)
+  arena alias [cmd]              Manage friendly names/aliases for AI models (list|set|rm|clear)
   arena files [cmd]              Workspace file operations (list|cat|read|attach|attached)
   arena think "<task>"           Fast thinking tournament (Code generation disallowed)
   arena duel "<task>"            Alias for think tournament
   arena abilities                Display model ability matrix & capability scores
   arena metrics, telemetry       Display live verification & evidence telemetry observatory
+  arena help [command]           Display slash command or interactive mode guide (e.g. arena help host)
   arena help-session, guide      Launch interactive guided help session & diagnostics
+  arena host, serve [--port N]   Host ArenaFight on Local Wi-Fi Network for Web & Phone access
   arena providers                Inspect all AI model backends status
   arena artifacts                List and inspect project artifacts
   arena skills                   List active skills
@@ -448,7 +515,8 @@ Usage:
   arena calculate <type> <args>  Calculate circuit values (led, divider, i2c, battery)
   arena resume <session-id>      Resume an existing session
   arena sessions                 List past saved sessions
-  arena models                   Discover and list models across all backends
+  arena models [set <name>]      Discover and list models across all backends
+  arena model <name>             Set active reasoning model for session execution
   arena config                   Display current configuration
   arena test                     Run built-in automated self-tests
 
@@ -456,11 +524,27 @@ Options:
   --standalone                   Run in isolated standalone mode (Default)
   --opencode, --connected        Run connected to OpenCode CLI bridge
   --mode <standalone|opencode>   Set runtime execution mode
+  --cuda                         Enable dedicated NVIDIA CUDA GPU acceleration (default if present)
+  --cpu, --no-cuda               Run in CPU-only / slow variant mode
+  --fast                         Fast processing level: standard turnaround & loops
+  --perfect, --perfect-boi       Perfect Boi level: exhaustive verification & PC-assessed limits
+  --level <fast|perfect>         Explicitly set processing level
+  --security <level>             Set security level (strict, balanced, permissive)
+  --strict                       Enable strict security sandbox lockdown
+  --model, -m <model_name>       Set primary model for task/session (or friendly alias)
+  --base-url, --endpoint <url>   Set custom OpenAI-compatible API base URL (vLLM, LM Studio, etc.)
+  --api-key <key>                Set API key for remote providers
   --file, -f <path>              Attach specific file context to prompt/session
   --files <p1,p2,...>            Attach multiple comma-separated files
   --temperature, -t <float>      Set model generation temperature (0.0 to 2.0)
   --max-tokens, --tokens <int>   Set max generation token limit
   --claude                       Select Claude Code CLI as primary provider
+  --llama, --llamacpp            Select native llama.cpp server as primary provider
+  --ollama                       Select Ollama as primary provider
+  --openrouter                   Select OpenRouter as primary provider
+  --mock                         Force built-in offline test mock provider
+  --no-mock-fallback             Disable automatic fallback to offline mock
+  --verbose, -v                  Enable debug output
   --ollama                       Select Ollama as primary provider
   --openrouter                   Select OpenRouter as primary provider
   --mock                         Force built-in offline test mock provider
@@ -483,13 +567,19 @@ Options:
 * `/grill-me <topic>`: Requirements interview to resolve edge cases and design decisions.
 * `/think <task>`: Fast thinking tournament with code generation disallowed (compares internal reasoning directly).
 * `/duel <task>`: Alias for `/think`.
+* `/host [start [port]|stop|status]`: Host ArenaFight micro-daemon on local Wi-Fi for mobile phone and tablet access.
+* `/serve`: Alias for `/host start`.
+* `/wifi`: Displays local Wi-Fi connection URL and network endpoints.
+* `/alias [list|set <name> <model>|rm <name>|clear]`: Manage model aliases and friendly shortcuts.
+* `/help [command]`: Displays slash command reference guide or dedicated rich documentation (e.g. `/help host`, `/help chat`, `/help media`).
 * `/guide` / `/help session`: Launches interactive guided help session and system diagnostics.
 * `/files [cmd]`: Inspect, preview, and attach workspace files (`list`, `cat <path>`, `attach <path>`, `attached`, `clear`).
 * `/unsloth [cmd]`: On-the-fly fine-tuning with Unsloth AI (status, dataset [path-or-file], scaffold, train).
 * `/abilities`: Displays model ability matrix and multidimensional scores.
 * `/temp [val]`: Inspects or updates model generation temperature (0.0 - 2.0).
 * `/tokens [val]`: Inspects or updates max output token limit.
-* `/learn <insight>`: Persists repository conventions and rules into `.arena/knowledge/`.
+* `/learn [status|audit|rejected|verify|auto|add|train|reset]` (or `/self-learn`): Ground-Truth Self-Learning Engine that trains AI models on verified prompts with zero fake data.
+* `/learn <insight>`: Persists repository conventions and rules into `.arena/knowledge/` and immediately ingests them into the verified training pool.
 * `/schedule <delay_sec> <task>`: Schedules delayed or recurring background jobs.
 * `/artifacts [id]`: Lists and inspects project artifacts with YAML metadata.
 * `/skills [name]`: Inspects discovered skills.
@@ -654,8 +744,10 @@ arena help chat
 arena > /help session
 # or
 arena > /guide
-# or view dedicated interactive mode details
+# or view dedicated rich documentation
+arena > /help host
 arena > /help chat
+arena > /help media
 ```
 
 The help session displays:
@@ -664,6 +756,7 @@ The help session displays:
 * Explanation of thinking phase tournaments, file context injection, and Unsloth AI fine-tuning.
 * Summary of the 6 Physical Evidence Verification Gates and Hardware Studio commands.
 * Fun Interactive Talk Mode guide (`/chat`, `/talk`, `/banter`), all 7 personas, and in-chat commands.
+* Local Wi-Fi Hosting & Mobile Remote Control guide (`/host`, `/wifi`, `/serve`).
 * Quick-start cheat sheet with copyable examples.
 
 ---
@@ -843,7 +936,7 @@ ninja -C build
 ```
 
 ### Running Tests
-The automated test suite executes **35/35** comprehensive tests covering configuration, tools, process safety, evidence hierarchy, multi-model consensus, ability-based routing, temperature customization, OpenCode integration, Unsloth fine-tuning, file context attachments, fast thinking-phase tournaments, bespoke UI dashboard integrity, universal model compatibility, universal model benchmarking, CLI dual runtime modes, defense-in-depth security sandbox, host hardware assessment & dynamic PC limits, two processing levels (Fast vs Perfect Boi), autonomous service detection, and NVIDIA CUDA / iGPU / CPU slow-variant hardware acceleration:
+The automated test suite executes **40/40** comprehensive tests covering configuration, tools, process safety, evidence hierarchy, multi-model consensus, ability-based routing, temperature customization, OpenCode integration, Unsloth fine-tuning, file context attachments, fast thinking-phase tournaments, bespoke UI dashboard integrity, universal model compatibility, universal model benchmarking, CLI dual runtime modes, defense-in-depth security sandbox, host hardware assessment & dynamic PC limits, two processing levels (Fast vs Perfect Boi), autonomous service detection, and NVIDIA CUDA / iGPU / CPU slow-variant hardware acceleration, and Ground-Truth Self-Learning Engine & Anti-Fake Data Verification:
 ```bash
 # Run test suite executable directly
 ./build/arena_test.exe
@@ -946,9 +1039,107 @@ In the REPL:
 
 ---
 
-## 22. Release Notes & Version History
+## 22. Local Wi-Fi Hosting & Mobile Remote Control (`arena host` / `arena serve`)
 
-### Version 2.5.0 (Current Release - Peak CLI Edition)
+ArenaFight features an embedded, native C++20 HTTP/1.1 micro-daemon that binds across all network interfaces (`0.0.0.0`), allowing anyone connected to the same local Wi-Fi or LAN to interact with the agent, prompt tasks, monitor verification gates, view files, and audit self-learning datasets directly from their smartphone, tablet, or secondary PC without installing any apps or running third-party web frameworks.
+
+```text
+====================================================
+          ARENAFIGHT WI-FI & LOCAL HOST             
+====================================================
+Local Machine Access : http://localhost:8080
+Local Wi-Fi Network  : http://192.168.1.105:8080
+Active Model         : qwen2.5-coder:32b
+Acceleration Mode    : CUDA (NVIDIA Hardware Accelerated)
+Processing Level     : PERFECT
+Bound Interface      : 0.0.0.0 (Port 8080)
+----------------------------------------------------
+How to connect from any device on your Wi-Fi:
+  1. Connect your smartphone, tablet, or laptop to the same Wi-Fi.
+  2. Open any web browser and navigate to:
+     http://192.168.1.105:8080
+  3. Prompt, chat, monitor gates, and run autonomous tasks remotely!
+----------------------------------------------------
+Press Ctrl+C or type /stop to terminate host.
+ Made by Lunarmist-byte | https://github.com/Lunarmist-byte
+ LinkedIn: https://www.linkedin.com/in/amal-s-kumar-ba69a1290/
+====================================================
+```
+
+### 1. Starting the Wi-Fi Host
+From the command line:
+```bash
+# Start Wi-Fi host server on default port 8080
+arena host
+
+# Start Wi-Fi server with custom port
+arena host --port 9090
+
+# Command alias
+arena serve --port 8080
+```
+
+Inside the interactive REPL (`arena > `):
+```text
+/host [start [port]|stop|status]    Control background Wi-Fi host server
+/serve                              Alias for /host start
+/wifi                               Inspect local Wi-Fi connection URL and endpoints
+```
+
+### 2. Embedded Zero-Dependency Mobile Web Application
+The embedded Web UI is delivered directly out of the compiled C++ binary as an in-memory string with zero runtime assets, zero npm dependencies, and no CDN requirements (100% offline-compatible):
+* **Mobile-First Responsive Dashboard:** Optimized for mobile phones (iOS Safari, Android Chrome), tablets, and desktop browsers with dark-mode aesthetic.
+* **Autonomous Task Executor & 7 Verification Gates:** Submit tasks remotely and observe real-time verification gate passes (Artifacts, Compilation, Tests, Requirements, Review, Contradictions, Hardware QoS).
+* **Interactive AI Companion Chat:** Chat directly with the agent with customizable personas (Witty, Rigorous, Pirate, Cyberpunk, Concise).
+* **Model & Alias Switcher:** Switch between local Ollama models, OpenRouter, and custom model aliases directly from the browser navbar.
+* **Processing Level Selector:** Toggle between Fast (10 turns) and Perfect Boi (dynamic verification) on the fly.
+* **Hardware Telemetry Monitor:** Live GPU VRAM, CPU threads, available RAM headroom, and CUDA status.
+* **File Explorer & Code Viewer:** Read and inspect project files directly from mobile devices.
+* **Generative Media Gallery:** Preview images and stream videos generated by Fooocus SDXL and Wan AI 2.1.
+* **Self-Learning Ground-Truth Auditor:** Inspect verified instruction pairs and review quarantined fake data items.
+
+### 3. REST API Specification Suite
+Every feature of ArenaFight is accessible via clean REST endpoints with full CORS headers:
+* `GET /` - Serves the responsive embedded Single Page Application.
+* `GET /api/status` - Returns runtime status, version, Wi-Fi endpoints, agent model, and hardware telemetry.
+* `GET /api/models` - Lists all available local and remote models alongside registered aliases.
+* `POST /api/model` - Changes the active LLM (`{"model": "<model_id>"}`).
+* `GET /api/aliases` - Returns the dictionary of model aliases.
+* `POST /api/aliases` - Creates or deletes a model alias (`{"alias": "fast", "model": "qwen2.5-coder:7b"}`).
+* `GET /api/profile` - Returns physical CPU, RAM, GPU, VRAM assessment, and calculated dynamic limits.
+* `POST /api/chat` - Generates a conversational response with the selected persona (`{"message": "Hello", "persona": "witty"}`).
+* `POST /api/execute` - Launches an autonomous session with task planning and physical verification (`{"task": "Build unit tests"}`).
+* `POST /api/level` - Changes processing level (`{"level": "fast"|"perfect"}`).
+* `GET /api/files?path=<file>` - Inspects directory contents or reads file content safely within workspace bounds.
+* `GET /api/media` - Returns catalog of verified image and video artifacts.
+* `GET /api/media/view?file=<path>` - Streams binary image or video assets.
+* `GET /api/self-learn` - Returns verified ground-truth instruction pairs and rejected fake-data records.
+
+---
+
+## 23. Release Notes & Version History
+
+### Version 2.6.0 (Current Release - Universal Intelligence, Wi-Fi Hosting & Self-Learning Edition)
+* **Local Wi-Fi Hosting & Embedded Mobile Web UI (`arena host` / `arena serve` / `/host`):**
+  * Native C++20 HTTP micro-daemon listening on `0.0.0.0` with automatic local network IP detection (`http://<local-wifi-ip>:8080`).
+  * High-visibility terminal startup banner with connection instructions for smartphones, tablets, and remote PCs.
+  * Embedded zero-dependency, dark-themed responsive Single Page Application with persona chat, task runner, 7 verification gates, file viewer, media gallery, and self-learning auditor.
+  * Comprehensive REST API suite for telemetry, models, aliases, hardware profiling, and remote command execution.
+* **Model Aliases System:**
+  * Define and manage intuitive shortcuts for models (`/alias set <name> <model>`, `arena alias set ...`, `arena --model <alias>`).
+  * Aliases are saved in `config.json` and work seamlessly across CLI flags, REPL commands, agent execution, and dynamic model routing.
+* **Universal llama.cpp Compatibility Across All Models:**
+  * Native tool execution, prompt injection fallback, and `<think> ... </think>` reasoning extraction for all GGUF model families (Qwen, Llama 3, Mistral, DeepSeek R1, Phi, StarCoder, Gemma 2, and custom fine-tunes).
+  * Robust GGUF binary magic validation and exact stem path resolution preventing wrong-model hijacking.
+* **Ground-Truth Self-Learning Engine (Zero Fake Data Guarantee):**
+  * Automated extraction and verification pipeline enforcing 7 Anti-Fake Invariants.
+  * Rejects mock provider outputs, simulated tokens, missing physical artifacts, test runner failures, and contradictions before fine-tuning with Unsloth.
+* **Hermetic Repository Hygiene:**
+  * Comprehensive `.gitignore` protecting GGUF weights, `Modelfile*`, `self_learning/` datasets, and media artifacts from being staged or committed to GitHub.
+* **Automated Verification:**
+  * **42/42 passing unit tests** covering all subsystems.
+
+### Version 2.5.0 (Peak CLI Edition)
 * **Pure Developer CLI Evolution:**
   * Purged all HTML web UI files (`index.html`, `simple_ui.html`, `metrics.html`) and `--ui` flags.
   * Added native terminal telemetry observatory (`arena metrics` / `arena telemetry` / `/metrics`) displaying the 6 Physical Evidence Gates, thinking duel token savings, and hardware allocations.
@@ -980,16 +1171,16 @@ In the REPL:
 * **Universal Benchmarking Engine:**
   * Automated 4-axis benchmark suite across Reasoning, Coding, Verification, and Throughput (`arena benchmark all`).
 * **OpenCode Bi-Directional MCP Server & Slash Commands:**
-  * Native Model Context Protocol (MCP) server (\arena mcp\ / \arena --mcp\) running over stdio JSON-RPC 2.0 with 12 integrated tools (\arena_verify\, \arena_goal\, \arena_plan\, \arena_profile\, \arena_benchmark\, \arena_qos\, \arena_calculate\, \arena_security\, \arena_think\, \arena_generate_image\, \arena_generate_video\, \arena_media_inspect\).
+  * Native Model Context Protocol (MCP) server (\arena mcp\ / \arena --mcp\) running over stdio JSON-RPC 2.0 with 13 integrated tools (\arena_verify\, \arena_goal\, \arena_plan\, \arena_profile\, \arena_benchmark\, \arena_qos\, \arena_calculate\, \arena_security\, \arena_think\, \arena_generate_image\, \arena_generate_video\, \arena_media_inspect\, \arena_media_orchestrate\).
   * Automated workspace export (\arena opencode sync\) creating root opencode.json, .opencode/opencode.json, .opencode/INSTRUCTIONS.md, and OpenCode custom slash commands in .opencode/commands/ (/arena, /verify, /profile, /benchmark, /qos).
   * Dedicated standalone \arena verify\ command to execute Level 1 physical evidence gates directly from terminal or OpenCode bash tool.
 * **Multimodal Generative Media Engine (Wan AI 2.1 & Fooocus SDXL):**
-  * Integrated tools: \media_generate_image\ (Fooocus SDXL local/API), \media_generate_video\ (Wan AI 2.1 T2V/I2V), and \media_inspect\ (magic byte header validator).
+  * Integrated tools: \media_generate_image\ (Fooocus SDXL local/API), \media_generate_video\ (Wan AI 2.1 T2V/I2V), \media_inspect\ (magic byte header validator), and \media_orchestrate_pipeline\ (/media, arena media) for autonomous Ollama -> Fooocus -> Wan AI 2.1 pipeline with 8GB GPU VRAM scheduling.
   * Level 1 physical evidence verification for all generated media assets: file presence on disk, format magic bytes (PNG: \89 50 4E 47\, JPEG: \FF D8 FF\, MP4: \typ\), dimension/duration confirmation, and SHA-256 cryptographic logging.
 * **Enterprise Customization & Skills System:**
   * Complete operational doctrines in \.arena/skills/\: \generative-media\, \security-auditor\, \opencode-orchestrator\, \hardware-engineer\, \code-architect\, and \erifier\.
 * **Automated Verification:**
-  * 37/37 passing unit tests covering all subsystems including multimodal media tools, skills matching, native MCP server, and OpenCode workspace integration.
+  * 40/40 passing unit tests covering all subsystems including multimodal media tools, skills matching, native MCP server, OpenCode workspace integration, and Ground-Truth Self-Learning with Anti-Fake Data Verification.
 
 ### Version 2.0.0
 * Dual-mode runtime architecture (Standalone native vs Connected OpenCode CLI bridge).

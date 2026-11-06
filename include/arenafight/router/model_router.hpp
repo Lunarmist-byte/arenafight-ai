@@ -69,10 +69,17 @@ public:
     // Dynamically retrieve or bind any arbitrary model string to an active provider
     ModelSelection getOrRegisterDynamicModel(const std::string& modelName);
 
+    // Model Aliases Management
+    void setAlias(const std::string& alias, const std::string& targetModel);
+    bool removeAlias(const std::string& alias);
+    std::string resolveAlias(const std::string& aliasOrName) const;
+    std::map<std::string, std::string> getAliases() const;
+
 private:
     Config config_;
     std::vector<std::shared_ptr<ModelProvider>> providers_;
     std::vector<std::pair<std::shared_ptr<ModelProvider>, ModelInfo>> catalog_;
+    std::map<std::string, std::string> aliases_;
 
     void rebuildCatalog();
 };

@@ -35,6 +35,7 @@
 #include "arenafight/common/fs_utils.hpp"
 #include "arenafight/common/string_utils.hpp"
 #include "arenafight/finetune/unsloth_manager.hpp"
+#include "arenafight/finetune/self_learning_engine.hpp"
 #include "arenafight/repl/repl_engine.hpp"
 #include "arenafight/benchmark/benchmark_engine.hpp"
 #include "arenafight/security/security_sandbox.hpp"
@@ -43,6 +44,8 @@
 #include "arenafight/ui/terminal_ui.hpp"
 #include "arenafight/mcp/mcp_server.hpp"
 #include "arenafight/tools/media_tools.hpp"
+#include "arenafight/common/http_client.hpp"
+#include "arenafight/server/wifi_host_server.hpp"
 #include <thread>
 #include <chrono>
 
@@ -62,7 +65,7 @@ void safeRemoveAll(const std::filesystem::path& p) {
 #define TEST_ASSERT(cond, msg) \
     do { \
         if (!(cond)) { \
-            std::cerr << "\n[TEST FAILED] " << msg << " (" << __FILE__ << ":" << __LINE__ << ")\n"; \
+            std::cout << "\n[TEST FAILED] " << msg << " (" << __FILE__ << ":" << __LINE__ << ")\n" << std::flush; \
             return false; \
         } \
     } while(0)
@@ -1002,7 +1005,7 @@ bool testFileOperationsAndAttachmentIntegration() {
     std::string testJson = cfg.workspace_dir + "/schema.json";
     std::string testMd = cfg.workspace_dir + "/spec.md";
 
-    FileUtils::writeTextFile(testCpp, "#include <iostream>\n// PWM Motor Controller\nvoid initMotor() { /* safe */ }\n// Made by Lunarmist-byte");
+    FileUtils::writeTextFile(testCpp, "#include <iostream>\\n// PWM Motor Controller\\nvoid initMotor() { /* safe */ }\\n// Made by Lunarmist-byte");
     FileUtils::writeTextFile(testPy, "import os\n# PyTorch Agent Optimizer\ndef train():\n    pass\n# Made by Lunarmist-byte");
     FileUtils::writeTextFile(testJson, "{\n  \"model\": \"qwen-2.5-coder\",\n  \"max_tokens\": 4096\n}");
     FileUtils::writeTextFile(testMd, "# Hardware Specification\nEnsure non-blocking ISR.\nMade by Lunarmist-byte");
@@ -1953,6 +1956,40 @@ bool testGeneralizedMediaToolsAndPhysicalVerification() {
     }
     TEST_ASSERT(hasOcOrch, "Matched skills must include opencode-orchestrator");
 
+    // 6. Test Media Orchestration Pipeline Tool (Ollama -> Fooocus -> Wan AI 2.1)
+    MediaOrchestratePipelineTool orchTool;
+    nlohmann::json orchArgs = {
+        {"concept", "Cyberpunk hovercraft chase in rain"},
+        {"output_keyframe", "orch_keyframe.png"},
+        {"output_video", "orch_video.mp4"},
+        {"mode", "t2i2v"},
+        {"vram_sequential", true}
+    };
+    auto orchRes = orchTool.execute(orchArgs, testWs);
+    TEST_ASSERT(orchRes.success, "Media orchestrator pipeline tool must succeed");
+    TEST_ASSERT(std::filesystem::exists(std::filesystem::path(testWs) / "orch_keyframe.png"),
+                "Orchestrated keyframe must exist on disk");
+    TEST_ASSERT(std::filesystem::exists(std::filesystem::path(testWs) / "orch_video.mp4"),
+                "Orchestrated video must exist on disk");
+    TEST_ASSERT(orchRes.output.find("Stage 1 Director") != std::string::npos,
+                "Orchestration output must detail Stage 1 Director");
+    TEST_ASSERT(orchRes.output.find("Stage 2 VRAM Budget") != std::string::npos,
+                "Orchestration output must detail Stage 2 VRAM Budget");
+    TEST_ASSERT(orchRes.output.find("Stage 3 Keyframe") != std::string::npos,
+                "Orchestration output must detail Stage 3 Keyframe");
+    TEST_ASSERT(orchRes.output.find("Stage 4 Video DiT") != std::string::npos,
+                "Orchestration output must detail Stage 4 Video DiT");
+
+    // 7. MCP Server media orchestrator tool dispatch
+    std::string mcpOrchCall = R"({"jsonrpc":"2.0","id":12,"method":"tools/call","params":{"name":"arena_media_orchestrate","arguments":{"concept":"Futuristic rover exploring Mars monolith","output_keyframe":"mcp_orch_kf.png","output_video":"mcp_orch_vid.mp4"}}})";
+    auto mcpOrchResp = mcp.handleMessage(mcpOrchCall);
+    TEST_ASSERT(mcpOrchResp.contains("result"), "MCP arena_media_orchestrate must return result");
+    TEST_ASSERT(!mcpOrchResp["result"].value("isError", false), "MCP arena_media_orchestrate must not error");
+    TEST_ASSERT(std::filesystem::exists(std::filesystem::path(testWs) / "mcp_orch_kf.png"),
+                "MCP orchestrated keyframe must exist on disk");
+    TEST_ASSERT(std::filesystem::exists(std::filesystem::path(testWs) / "mcp_orch_vid.mp4"),
+                "MCP orchestrated video must exist on disk");
+
     safeRemoveAll(testWs);
     std::cout << "PASSED\n";
     return true;
@@ -2067,7 +2104,324 @@ bool testFunInteractiveChatMode() {
     return true;
 }
 
-int main() {
+bool testSelfLearningEngineAndAntiFakeDataValidator() {
+    std::cout << "[TEST] 40. Ground-truth self-learning engine & anti-fake data validator... " << std::flush;
+    Config cfg;
+    std::string testDir = "test_self_learning_dir";
+    SelfLearningEngine selfLearn(cfg, testDir);
+    selfLearn.reset();
+
+    // 1. Test Anti-Fake Rejection: Trivial Prompt Noise
+    Session trivialSession;
+    trivialSession.id = "sess_trivial";
+    trivialSession.originalTask = "hi";
+    ValidationReport rTrivial = selfLearn.validateSession(trivialSession);
+    TEST_ASSERT(!rTrivial.isGroundTruth, "Trivial prompt must be rejected");
+    TEST_ASSERT(rTrivial.reason == RejectionReason::TRIVIAL_OR_EMPTY_PROMPT, "Reason must be TRIVIAL_OR_EMPTY_PROMPT");
+
+    // 2. Test Anti-Fake Rejection: Mock Provider Contamination
+    Session mockSession;
+    mockSession.id = "sess_mock";
+    mockSession.originalTask = "Implement secure authentication microservice";
+    mockSession.completed = true;
+    mockSession.currentState = "COMPLETED";
+    ExecutionRecord mockExec;
+    mockExec.provider = "TestMock";
+    mockExec.model = "mock-coder";
+    mockSession.executions.push_back(mockExec);
+    Task mockTask;
+    mockTask.id = "task_1";
+    mockTask.result = "Implementation completed with [MOCK] placeholder code.";
+    mockSession.tasks.push_back(mockTask);
+    ValidationReport rMock = selfLearn.validateSession(mockSession);
+    TEST_ASSERT(!rMock.isGroundTruth, "Mock provider session must be rejected");
+    TEST_ASSERT(rMock.reason == RejectionReason::MOCK_PROVIDER_DETECTED, "Reason must be MOCK_PROVIDER_DETECTED");
+
+    // 3. Test Anti-Fake Rejection: Missing Physical Artifact (Non-existent File)
+    Session ghostSession;
+    ghostSession.id = "sess_ghost";
+    ghostSession.originalTask = "Write production crypto hashing module in C++";
+    ghostSession.completed = true;
+    ghostSession.currentState = "COMPLETED";
+    ExecutionRecord fileExec;
+    fileExec.provider = "Ollama";
+    fileExec.model = "qwen2.5-coder";
+    fileExec.tool = "write_file";
+    fileExec.input = {{"path", "non_existent_ghost_file_xyz.cpp"}};
+    ghostSession.executions.push_back(fileExec);
+    Task ghostTask;
+    ghostTask.id = "t1";
+    ghostTask.result = "Wrote production crypto code to non_existent_ghost_file_xyz.cpp with zero errors.";
+    ghostSession.tasks.push_back(ghostTask);
+    ValidationReport rGhost = selfLearn.validateSession(ghostSession);
+    TEST_ASSERT(!rGhost.isGroundTruth, "Session claiming non-existent file must be rejected as fake data");
+    TEST_ASSERT(rGhost.reason == RejectionReason::MISSING_PHYSICAL_FILE, "Reason must be MISSING_PHYSICAL_FILE");
+
+    // 4. Test Ingestion of 100% Ground-Truth Verified Session
+    std::string realFile = "test_verified_entrypoint.cpp";
+    FileUtils::writeTextFile(realFile, "#include <iostream>\nint main() { std::cout << \"Arena Ground Truth\"; return 0; }");
+    TEST_ASSERT(std::filesystem::exists(realFile), "Real test file must exist on disk");
+
+    Session validSession;
+    validSession.id = "sess_verified_42";
+    validSession.originalTask = "Implement verified C++20 entrypoint with physical grounding";
+    validSession.completed = true;
+    validSession.currentState = "COMPLETED";
+    ExecutionRecord realExec;
+    realExec.provider = "Ollama";
+    realExec.model = "qwen2.5-coder-7b";
+    realExec.tool = "write_file";
+    realExec.input = {{"path", realFile}};
+    validSession.executions.push_back(realExec);
+    Task realTask;
+    realTask.id = "t1";
+    realTask.description = "Create real C++ entrypoint";
+    realTask.status = TaskStatus::COMPLETED;
+    realTask.result = "Verified implementation written to " + realFile + " and verified via compiler.";
+    validSession.tasks.push_back(realTask);
+
+    VerificationResult verif;
+    verif.complete = true;
+    verif.completionScore = 0.98;
+    verif.confidence = 0.95;
+    GateCheckResult g1;
+    g1.gateName = "Gate 1: Files Exist";
+    g1.passed = true;
+    g1.evidenceId = "ev_files_exist_1";
+    verif.gates.push_back(g1);
+
+    bool ingested = selfLearn.ingestSession(validSession, &verif);
+    TEST_ASSERT(ingested, "Valid ground-truth session must be successfully ingested");
+    TEST_ASSERT(selfLearn.getStats().verifiedCount >= 1, "Verified count must be at least 1");
+
+    // 5. Test Prompt-Solution Pair Ingestion & Validation
+    bool promptOk = selfLearn.ingestPromptPair(
+        "Explain ESP32 strapping pins and safe GPIOs",
+        "Context: ESP-IDF firmware",
+        "ESP32 strapping pins must NOT conflict during boot: GPIO 0, 2, 5, 12, 15.\nSafe I2C default: GPIO 21 (SDA), GPIO 22 (SCL).",
+        "hardware",
+        "curated"
+    );
+    TEST_ASSERT(promptOk, "Valid prompt-solution pair must be accepted");
+
+    // 6. Test Dataset Export strictly with Ground-Truth
+    auto dataset = selfLearn.exportVerifiedDataset();
+    TEST_ASSERT(dataset.size() >= 2, "Verified dataset must contain at least 2 entries");
+    bool hasCredit = false;
+    for (const auto& d : dataset) {
+        if (d.output.find("Made by Lunarmist-byte") != std::string::npos &&
+            d.output.find("https://github.com/Lunarmist-byte") != std::string::npos) {
+            hasCredit = true;
+            break;
+        }
+    }
+    TEST_ASSERT(hasCredit, "Verified learning dataset must contain Lunarmist-byte author credit");
+
+    // 7. Test Fine-Tuning Execution Trigger with 100% Verified Data
+    UnslothManager unsloth(cfg);
+    UnslothTrainConfig trainCfg;
+    trainCfg.dryRunSimulation = true;
+    trainCfg.maxSteps = 10;
+    bool ftSuccess = selfLearn.triggerSelfLearningFineTune(unsloth, trainCfg, nullptr, nullptr);
+    TEST_ASSERT(ftSuccess, "Self-learning fine-tuning loop must succeed on verified dataset");
+
+    // 8. Test REPL commands handling for /learn
+    ArenaAgent agent(cfg);
+    ReplEngine repl(agent);
+    repl.handleLearn("status");
+    repl.handleLearn("audit");
+    repl.handleLearn("rejected");
+    repl.handleLearn("auto off");
+
+    // Clean up
+    std::error_code ec;
+    std::filesystem::remove(realFile, ec);
+    std::filesystem::remove_all(testDir, ec);
+
+    std::cout << "PASSED\n";
+    return true;
+}
+
+bool testModelAliasesAndUniversalLlamaCpp() {
+    std::cout << "[TEST] 41. Model aliases system and universal llama.cpp tool compatibility... " << std::flush;
+    Config cfg;
+
+    // 1. Test Config model aliases
+    cfg.setAlias("my-qwen", "qwen2.5-coder:32b");
+    TEST_ASSERT(cfg.resolveAlias("my-qwen") == "qwen2.5-coder:32b", "Config must resolve alias");
+    TEST_ASSERT(cfg.resolveAlias("unregistered_model") == "unregistered_model", "Unregistered model must return itself");
+    cfg.removeAlias("my-qwen");
+    TEST_ASSERT(cfg.resolveAlias("my-qwen") == "my-qwen", "Removed alias must not resolve");
+
+    // 2. Test ModelRouter alias resolution & dynamic binding
+    ModelRouter router(cfg);
+    router.setAlias("coder", "qwen2.5-coder:7b");
+    TEST_ASSERT(router.resolveAlias("coder") == "qwen2.5-coder:7b", "Router must resolve alias");
+    auto aliases = router.getAliases();
+    TEST_ASSERT(aliases.count("coder") > 0, "Aliases map must contain coder");
+    auto sel = router.getOrRegisterDynamicModel("coder");
+    TEST_ASSERT(sel.model.id == "qwen2.5-coder:7b" || sel.reason.find("coder") != std::string::npos, "Router dynamic model must resolve alias");
+
+    // 3. Test ArenaAgent alias management & setModel resolution
+    ArenaAgent agent(cfg);
+    agent.setModelAlias("speedy", "google/gemini-2.0-flash-001");
+    TEST_ASSERT(agent.resolveModelAlias("speedy") == "google/gemini-2.0-flash-001", "Agent must resolve alias");
+    agent.setModel("speedy");
+    TEST_ASSERT(agent.getModel() == "google/gemini-2.0-flash-001", "Agent setModel with alias must set resolved target");
+
+    // 4. Test REPL alias command handlers
+    ReplEngine repl(agent);
+    repl.handleAlias("list");
+    repl.handleAlias("set fast-coder qwen2.5-coder:7b");
+    TEST_ASSERT(agent.resolveModelAlias("fast-coder") == "qwen2.5-coder:7b", "handleAlias set must register alias");
+    repl.handleAlias("rm fast-coder");
+    TEST_ASSERT(agent.resolveModelAlias("fast-coder") == "fast-coder", "handleAlias rm must delete alias");
+
+    // 5. Test Universal llama.cpp tool calling across all model families
+    LlamaCppProvider llamaProv;
+    TEST_ASSERT(llamaProv.supportsTools("qwen2.5-coder:7b"), "llama.cpp must support tools for qwen");
+    TEST_ASSERT(llamaProv.supportsTools("llama-3.1-8b-instruct"), "llama.cpp must support tools for llama");
+    TEST_ASSERT(llamaProv.supportsTools("mistral-7b-instruct-v0.3"), "llama.cpp must support tools for mistral");
+    TEST_ASSERT(llamaProv.supportsTools("gemma-2-9b-it"), "llama.cpp must support tools for gemma");
+    TEST_ASSERT(llamaProv.supportsTools("phi-3.5-mini-instruct"), "llama.cpp must support tools for phi");
+    TEST_ASSERT(llamaProv.supportsTools("starcoder2-15b"), "llama.cpp must support tools for starcoder");
+    TEST_ASSERT(llamaProv.supportsTools("deepseek-r1-distill-qwen-14b"), "llama.cpp must support tools for deepseek");
+    TEST_ASSERT(llamaProv.supportsTools("custom-finetuned-weights"), "llama.cpp must support tools for any arbitrary model");
+
+    // 6. Test graceful empty resolution for non-existent models (no hijacking)
+    std::string nonExistent = LlamaServerDaemon::resolveModelGgufPath("totally_non_existent_mock_model_xyz");
+    TEST_ASSERT(nonExistent.empty(), "Non-existent model must return empty string and not hijack execution");
+
+    std::cout << "PASSED\n";
+    return true;
+}
+
+bool testWiFiHostServer() {
+    std::cout << "[TEST] 42. Local Wi-Fi host server, REST API, & Web UI... " << std::flush;
+
+    auto parseRawResponse = [](const std::string& raw) {
+        int code = 0;
+        size_t firstSpace = raw.find(' ');
+        if (firstSpace != std::string::npos) {
+            size_t secondSpace = raw.find(' ', firstSpace + 1);
+            if (secondSpace != std::string::npos) {
+                try {
+                    code = std::stoi(raw.substr(firstSpace + 1, secondSpace - firstSpace - 1));
+                } catch (...) {}
+            }
+        }
+        std::string body;
+        size_t bodyPos = raw.find("\r\n\r\n");
+        if (bodyPos != std::string::npos) {
+            body = raw.substr(bodyPos + 4);
+        } else {
+            bodyPos = raw.find("\n\n");
+            if (bodyPos != std::string::npos) body = raw.substr(bodyPos + 2);
+        }
+        return std::make_pair(code, body);
+    };
+
+    // 1. Test IP detection
+    std::string wifiIp = WiFiHostServer::detectLocalWifiIp();
+    TEST_ASSERT(!wifiIp.empty(), "Local Wi-Fi IP must not be empty");
+    auto allIps = WiFiHostServer::getAllLocalIps();
+    TEST_ASSERT(!allIps.empty(), "getAllLocalIps must return at least one IP address");
+
+    // 2. Setup agent and server on isolated port
+    Config cfg;
+    cfg.test_mock_enabled = true;
+    cfg.default_provider = "TestMock";
+    ArenaAgent agent(cfg);
+
+    WiFiServerConfig srvCfg;
+    srvCfg.port = 18080;
+    srvCfg.bindAddress = "0.0.0.0";
+
+    WiFiHostServer server(agent, srvCfg);
+    TEST_ASSERT(server.start(), "WiFiHostServer must start successfully");
+    TEST_ASSERT(server.isRunning(), "Server must report running status");
+
+    auto endpoint = server.getEndpointInfo();
+    TEST_ASSERT(endpoint.port >= 18080, "Endpoint port must be valid");
+    TEST_ASSERT(!endpoint.localUrl.empty(), "Local URL must not be empty");
+    TEST_ASSERT(!endpoint.wifiUrl.empty(), "WiFi URL must not be empty");
+
+    // 3. Test GET / (Embedded Web UI) via processRequest
+    std::string rawReqGetRoot = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
+    auto [uiCode, uiBody] = parseRawResponse(server.processRequest(rawReqGetRoot));
+    TEST_ASSERT(uiCode == 200, "HTTP GET / must return 200 OK");
+    TEST_ASSERT(uiBody.find("ArenaFight") != std::string::npos, "Web UI must contain ArenaFight title");
+    TEST_ASSERT(uiBody.find("Lunarmist-byte") != std::string::npos, "Web UI must contain Lunarmist-byte credit");
+    TEST_ASSERT(uiBody.find("https://github.com/Lunarmist-byte") != std::string::npos, "Web UI must contain GitHub link");
+
+    // 4. Test GET /api/status
+    std::string rawReqStatus = "GET /api/status HTTP/1.1\r\nHost: localhost\r\n\r\n";
+    auto [statusCode, statusBody] = parseRawResponse(server.processRequest(rawReqStatus));
+    TEST_ASSERT(statusCode == 200, "HTTP GET /api/status must return 200 OK");
+    auto statusJson = nlohmann::json::parse(statusBody, nullptr, false);
+    TEST_ASSERT(!statusJson.is_discarded(), "Response body must be valid JSON");
+    TEST_ASSERT(statusJson.value("status", "") == "online", "Status must report online");
+    TEST_ASSERT(statusJson.contains("host"), "Status must contain host info");
+    TEST_ASSERT(statusJson.contains("agent"), "Status must contain agent info");
+    TEST_ASSERT(statusJson.contains("hardware"), "Status must contain hardware info");
+
+    // 5. Test GET /api/models
+    std::string rawReqModels = "GET /api/models HTTP/1.1\r\nHost: localhost\r\n\r\n";
+    auto [modelsCode, modelsBody] = parseRawResponse(server.processRequest(rawReqModels));
+    TEST_ASSERT(modelsCode == 200, "HTTP GET /api/models must return 200 OK");
+    auto modelsJson = nlohmann::json::parse(modelsBody, nullptr, false);
+    TEST_ASSERT(modelsJson.contains("active_model"), "Models endpoint must return active_model");
+    TEST_ASSERT(modelsJson.contains("models"), "Models endpoint must return models array");
+
+    // 6. Test POST /api/aliases
+    nlohmann::json aliasPayload;
+    aliasPayload["alias"] = "test-speedy";
+    aliasPayload["model"] = "mock-coder";
+    std::string aliasBodyStr = aliasPayload.dump();
+    std::string rawReqAlias = "POST /api/aliases HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: "
+                              + std::to_string(aliasBodyStr.size()) + "\r\n\r\n" + aliasBodyStr;
+    auto [aliasCode, aliasBody] = parseRawResponse(server.processRequest(rawReqAlias));
+    TEST_ASSERT(aliasCode == 200, "POST /api/aliases must return 200 OK");
+    TEST_ASSERT(agent.resolveModelAlias("test-speedy") == "mock-coder", "Alias must be registered in agent");
+
+    // 7. Test GET /api/profile
+    std::string rawReqProfile = "GET /api/profile HTTP/1.1\r\nHost: localhost\r\n\r\n";
+    auto [profileCode, profileBody] = parseRawResponse(server.processRequest(rawReqProfile));
+    TEST_ASSERT(profileCode == 200, "GET /api/profile must return 200 OK");
+    auto profileJson = nlohmann::json::parse(profileBody, nullptr, false);
+    TEST_ASSERT(profileJson.contains("cpu_threads"), "Profile must contain cpu_threads");
+
+    // 8. Test POST /api/chat
+    nlohmann::json chatPayload;
+    chatPayload["message"] = "Hello from phone on Wi-Fi!";
+    chatPayload["persona"] = "witty";
+    std::string chatBodyStr = chatPayload.dump();
+    std::string rawReqChat = "POST /api/chat HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: "
+                             + std::to_string(chatBodyStr.size()) + "\r\n\r\n" + chatBodyStr;
+    auto [chatCode, chatBody] = parseRawResponse(server.processRequest(rawReqChat));
+    TEST_ASSERT(chatCode == 200, "POST /api/chat must return 200 OK");
+    auto chatJson = nlohmann::json::parse(chatBody, nullptr, false);
+    TEST_ASSERT(chatJson.value("success", false), "Chat API must report success");
+    TEST_ASSERT(!chatJson.value("response", "").empty(), "Chat API must return non-empty response");
+
+    // 9. Test OPTIONS CORS Preflight
+    std::string rawReqOptions = "OPTIONS /api/chat HTTP/1.1\r\nHost: localhost\r\n\r\n";
+    auto [optCode, optBody] = parseRawResponse(server.processRequest(rawReqOptions));
+    TEST_ASSERT(optCode == 200, "OPTIONS request must return 200 OK for CORS");
+
+    // 10. Test Stop
+    server.stop();
+    TEST_ASSERT(!server.isRunning(), "Server must report not running after stop()");
+
+    std::cout << "PASSED\n";
+    return true;
+}
+
+int main(int argc, char* argv[]) {
+    if (argc > 1 && std::string(argv[1]) == "42") {
+        return testWiFiHostServer() ? 0 : 1;
+    }
+
     std::cout << "\n====================================================\n"
               << "          ARENAFIGHT AGENT TEST SUITE               \n"
               << " Made by: Lunarmist-byte                            \n"
@@ -2076,7 +2430,7 @@ int main() {
               << "====================================================\n\n";
 
     int passed = 0;
-    int total = 39;
+    int total = 42;
 
     if (testConfig()) passed++;
     if (testFileTools()) passed++;
@@ -2117,6 +2471,9 @@ int main() {
     if (testGeneralizedMediaToolsAndPhysicalVerification()) passed++;
     if (testNativeLlamaCppAndOllamaGgufIntegration()) passed++;
     if (testFunInteractiveChatMode()) passed++;
+    if (testSelfLearningEngineAndAntiFakeDataValidator()) passed++;
+    if (testModelAliasesAndUniversalLlamaCpp()) passed++;
+    if (testWiFiHostServer()) passed++;
 
     std::cout << "\n----------------------------------------------------\n";
     std::cout << "TEST RESULTS: " << passed << "/" << total << " PASSED\n";

@@ -43,7 +43,8 @@ nlohmann::json Config::toJson() const {
       {"path_traversal_protection", path_traversal_protection},
       {"prompt_injection_guard", prompt_injection_guard},
       {"use_cuda", use_cuda},
-      {"force_cpu", force_cpu}};
+      {"force_cpu", force_cpu},
+      {"model_aliases", model_aliases}};
 }
 
 Config Config::fromJson(const nlohmann::json &j) {
@@ -129,6 +130,21 @@ Config Config::fromJson(const nlohmann::json &j) {
       j.value("prompt_injection_guard", cfg.prompt_injection_guard);
   cfg.use_cuda = j.value("use_cuda", cfg.use_cuda);
   cfg.force_cpu = j.value("force_cpu", cfg.force_cpu);
+
+  if (j.contains("model_aliases") && j["model_aliases"].is_object()) {
+    cfg.model_aliases =
+        j["model_aliases"].get<std::map<std::string, std::string>>();
+  }
+  // Initialize helpful baseline model aliases if none are configured
+  if (cfg.model_aliases.empty()) {
+    cfg.model_aliases["qwen"] = "qwen2.5-coder:7b";
+    cfg.model_aliases["coder"] = "qwen2.5-coder:7b";
+    cfg.model_aliases["r1"] = "deepseek-r1:latest";
+    cfg.model_aliases["sonnet"] = "anthropic/claude-3.5-sonnet";
+    cfg.model_aliases["local"] = "arena-finetuned:latest";
+    cfg.model_aliases["fast"] = "google/gemini-2.0-flash-001";
+  }
+
   return cfg;
 }
 

@@ -24,6 +24,8 @@ struct UnslothStatus {
     std::string gpuName;
     int vramGb = 0;
     std::string statusSummary;
+    bool cudaMismatch = false;
+    std::string diagnosticAlert;
 
     nlohmann::json toJson() const {
         return {
@@ -36,7 +38,9 @@ struct UnslothStatus {
             {"cudaAvailable", cudaAvailable},
             {"gpuName", gpuName},
             {"vramGb", vramGb},
-            {"statusSummary", statusSummary}
+            {"statusSummary", statusSummary},
+            {"cudaMismatch", cudaMismatch},
+            {"diagnosticAlert", diagnosticAlert}
         };
     }
 };

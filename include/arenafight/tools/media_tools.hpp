@@ -39,5 +39,15 @@ public:
     ToolResult execute(const nlohmann::json& arguments, const std::string& workingDir = ".") override;
 };
 
+class MediaOrchestratePipelineTool : public Tool {
+public:
+    std::string name() const override { return "media_orchestrate_pipeline"; }
+    std::string description() const override {
+        return "Autonomous multimodal pipeline orchestrating Ollama (Cognitive Director) -> Fooocus (SDXL Keyframe) -> Wan AI 2.1 (Temporal Video Diffusion) with VRAM scheduling and physical verification.";
+    }
+    nlohmann::json parameters() const override;
+    ToolResult execute(const nlohmann::json& arguments, const std::string& workingDir = ".") override;
+};
+
 } // namespace arenafight
 

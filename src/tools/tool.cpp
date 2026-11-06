@@ -93,6 +93,7 @@ ToolRegistry ToolRegistry::createStandardRegistry(const Config& config) {
     reg.registerTool(std::make_shared<MediaGenerateImageTool>());
     reg.registerTool(std::make_shared<MediaGenerateVideoTool>());
     reg.registerTool(std::make_shared<MediaInspectTool>());
+    reg.registerTool(std::make_shared<MediaOrchestratePipelineTool>());
 
     return reg;
 }

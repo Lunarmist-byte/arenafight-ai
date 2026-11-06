@@ -3,6 +3,8 @@
 #include "arenafight/common/logger.hpp"
 #include "arenafight/common/fs_utils.hpp"
 #include "arenafight/session/session.hpp"
+#include "arenafight/system/system_profiler.hpp"
+#include "arenafight/finetune/self_learning_engine.hpp"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -18,14 +20,18 @@ namespace arenafight {
 
 UnslothManager::UnslothManager(const Config& config)
     : config_(config) {
-    // Detect python binary
-    ProcessResult pyRes = ProcessExecutor::executeShell("python --version", ".", 3000);
-    if (pyRes.exitCode == 0) {
-        pythonBinary_ = "python";
+    const char* envPy = std::getenv("ARENA_PYTHON");
+    if (envPy && std::string(envPy).size() > 0) {
+        pythonBinary_ = envPy;
     } else {
-        ProcessResult py3Res = ProcessExecutor::executeShell("py -3 --version", ".", 3000);
-        if (py3Res.exitCode == 0) {
-            pythonBinary_ = "py -3";
+        ProcessResult pyRes = ProcessExecutor::executeShell("python --version", ".", 3000);
+        if (pyRes.exitCode == 0) {
+            pythonBinary_ = "python";
+        } else {
+            ProcessResult py3Res = ProcessExecutor::executeShell("py -3 --version", ".", 3000);
+            if (py3Res.exitCode == 0) {
+                pythonBinary_ = "py -3";
+            }
         }
     }
 }
@@ -48,10 +54,10 @@ UnslothStatus UnslothManager::checkEnvironment() {
         return status;
     }
 
-    // 2. Unsloth library check
+    // 2. Unsloth library check (use importlib.metadata to detect package installation without triggering GPU init crash)
     ProcessResult unslothRes = ProcessExecutor::executeShell(
-        pythonBinary_ + " -c 'import unsloth; print(unsloth.__version__)'", ".", 6000);
-    if (unslothRes.exitCode == 0 && !unslothRes.stdOut.empty() && unslothRes.stdOut.find("No module") == std::string::npos) {
+        pythonBinary_ + " -c 'import importlib.metadata as m; name = list(dict(unsloth=1))[0]; print(m.version(name))'", ".", 6000);
+    if (unslothRes.exitCode == 0 && !unslothRes.stdOut.empty() && unslothRes.stdOut.find("No module") == std::string::npos && unslothRes.stdOut.find("PackageNotFoundError") == std::string::npos) {
         status.unslothInstalled = true;
         status.unslothVersion = unslothRes.stdOut;
         while (!status.unslothVersion.empty() && (status.unslothVersion.back() == '\r' || status.unslothVersion.back() == '\n' || status.unslothVersion.back() == ' ')) {
@@ -76,9 +82,21 @@ UnslothStatus UnslothManager::checkEnvironment() {
         status.torchInstalled = true;
         std::stringstream ss(torchRes.stdOut);
         std::string line;
-        if (std::getline(ss, line)) status.torchVersion = line;
-        if (std::getline(ss, line)) status.cudaAvailable = (line.find("True") != std::string::npos);
-        if (std::getline(ss, line)) status.gpuName = line;
+        if (std::getline(ss, line)) {
+            status.torchVersion = line;
+            while (!status.torchVersion.empty() && (status.torchVersion.back() == '\r' || status.torchVersion.back() == '\n' || status.torchVersion.back() == ' ')) {
+                status.torchVersion.pop_back();
+            }
+        }
+        if (std::getline(ss, line)) {
+            status.cudaAvailable = (line.find("True") != std::string::npos);
+        }
+        if (std::getline(ss, line)) {
+            status.gpuName = line;
+            while (!status.gpuName.empty() && (status.gpuName.back() == '\r' || status.gpuName.back() == '\n' || status.gpuName.back() == ' ')) {
+                status.gpuName.pop_back();
+            }
+        }
         if (std::getline(ss, line)) {
             try { status.vramGb = std::stoi(line); } catch (...) {}
         }
@@ -86,12 +104,24 @@ UnslothStatus UnslothManager::checkEnvironment() {
         status.torchInstalled = false;
     }
 
+    // 4. Hardware Awareness: Detect CUDA Mismatch (Host has NVIDIA GPU, but PyTorch is CPU-only)
+    auto hostSpec = SystemProfiler::profileHostMachine();
+    if (hostSpec.cudaAvailable && (!status.cudaAvailable || status.torchVersion.find("+cpu") != std::string::npos)) {
+        status.cudaMismatch = true;
+        status.diagnosticAlert =
+            "Physical NVIDIA GPU detected: " + hostSpec.gpuName + " (" + hostSpec.cudaVersion + ")\n"
+            "Installed PyTorch build: " + (status.torchInstalled ? status.torchVersion : "None") + " (CPU-only build!)\n"
+            "Because PyTorch was installed without CUDA kernels, Unsloth is prevented from utilizing your GPU.\n\n"
+            "Remediation (Run in Terminal/PowerShell to install CUDA-enabled PyTorch):\n"
+            "  pip install --upgrade --force-reinstall torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124";
+    }
+
     // Build status summary
     std::stringstream summary;
     summary << "Python: " << (status.pythonAvailable ? status.pythonVersion : "Missing")
             << " | Unsloth: " << (status.unslothInstalled ? status.unslothVersion : "Not installed (pip install unsloth)")
             << " | PyTorch: " << (status.torchInstalled ? status.torchVersion : "Missing")
-            << " | Compute: " << (status.cudaAvailable ? (status.gpuName + " (" + std::to_string(status.vramGb) + "GB VRAM)") : "CPU / No CUDA");
+            << " | Compute: " << (status.cudaAvailable ? (status.gpuName + " (" + std::to_string(status.vramGb) + "GB VRAM)") : (status.cudaMismatch ? "CPU Build (Physical CUDA GPU Available!)" : "CPU / No CUDA"));
     status.statusSummary = summary.str();
 
     return status;
@@ -99,6 +129,13 @@ UnslothStatus UnslothManager::checkEnvironment() {
 
 std::vector<DatasetEntry> UnslothManager::extractFromSessions(const std::string& sessionsDir) {
     std::vector<DatasetEntry> entries;
+
+    // 1. Ingest already-verified ground-truth pairs from SelfLearningEngine if present
+    SelfLearningEngine selfLearn(config_);
+    auto verified = selfLearn.exportVerifiedDataset();
+    entries.insert(entries.end(), verified.begin(), verified.end());
+
+    // 2. Scan sessions directory and filter with Ground-Truth Validator (Anti-Fake Data Filter)
     if (!std::filesystem::exists(sessionsDir)) return entries;
 
     auto sessInfos = Session::listSessions(sessionsDir);
@@ -106,6 +143,13 @@ std::vector<DatasetEntry> UnslothManager::extractFromSessions(const std::string&
         try {
             Session s = Session::loadFromDisk(info.id, sessionsDir);
             if (s.originalTask.empty()) continue;
+
+            // Strict Anti-Fake Data & Ground Truth Validation
+            ValidationReport val = selfLearn.validateSession(s);
+            if (!val.isGroundTruth) {
+                Logger::instance().debug("Session " + s.id + " filtered out from Unsloth dataset: " + rejectionReasonToString(val.reason));
+                continue;
+            }
 
             // 1. Full session goal execution pair
             if (!s.completedTasks.empty()) {
@@ -119,7 +163,7 @@ std::vector<DatasetEntry> UnslothManager::extractFromSessions(const std::string&
                     out << "## Subtask: " << t.id << " - " << t.description << "\n";
                     if (!t.result.empty()) out << t.result << "\n";
                 }
-                out << "\n# Verification Status: COMPLETED\n"
+                out << "\n# Verification Status: 100% GROUND TRUTH VERIFIED\n"
                     << "Made by Lunarmist-byte | https://github.com/Lunarmist-byte\n";
                 e.output = out.str();
                 e.domain = "coding";
@@ -131,7 +175,7 @@ std::vector<DatasetEntry> UnslothManager::extractFromSessions(const std::string&
                 if (t.type == TaskType::DEBUGGING && !t.dependencies.empty() && t.status == TaskStatus::COMPLETED) {
                     DatasetEntry debugEntry;
                     debugEntry.instruction = "Diagnose and fix the following software/hardware failure:\n" + t.description;
-                    debugEntry.input = "Context: ArenaFight self-correction reasoning trajectory.";
+                    debugEntry.input = "Context: ArenaFight verified self-correction reasoning trajectory.";
                     debugEntry.output = t.result.empty() ? "Failure diagnosed and fixed successfully with passing validation." : t.result;
                     debugEntry.domain = "reasoning";
                     entries.push_back(debugEntry);

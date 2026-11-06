@@ -9,7 +9,35 @@
 namespace arenafight {
 
 ModelRouter::ModelRouter(const Config& config)
-    : config_(config) {}
+    : config_(config), aliases_(config.model_aliases) {}
+
+void ModelRouter::setAlias(const std::string& alias, const std::string& targetModel) {
+    if (!alias.empty() && !targetModel.empty()) {
+        aliases_[alias] = targetModel;
+        config_.setAlias(alias, targetModel);
+    }
+}
+
+bool ModelRouter::removeAlias(const std::string& alias) {
+    config_.removeAlias(alias);
+    return aliases_.erase(alias) > 0;
+}
+
+std::string ModelRouter::resolveAlias(const std::string& aliasOrName) const {
+    auto it = aliases_.find(aliasOrName);
+    if (it != aliases_.end() && !it->second.empty()) {
+        return it->second;
+    }
+    return config_.resolveAlias(aliasOrName);
+}
+
+std::map<std::string, std::string> ModelRouter::getAliases() const {
+    auto combined = config_.model_aliases;
+    for (const auto& [k, v] : aliases_) {
+        combined[k] = v;
+    }
+    return combined;
+}
 
 void ModelRouter::registerProvider(std::shared_ptr<ModelProvider> provider) {
     if (!provider) return;
@@ -54,22 +82,28 @@ ModelSelection ModelRouter::getOrRegisterDynamicModel(const std::string& modelNa
     ModelSelection sel;
     if (modelName.empty()) return sel;
 
+    // Resolve model alias if one exists
+    std::string effectiveModel = resolveAlias(modelName);
+
     if (catalog_.empty()) {
         rebuildCatalog();
     }
 
     // 1. Direct search in existing catalog
     for (const auto& entry : catalog_) {
-        if (entry.second.id == modelName || entry.second.name == modelName) {
+        if (entry.second.id == effectiveModel || entry.second.name == effectiveModel ||
+            entry.second.id == modelName || entry.second.name == modelName) {
             sel.provider = entry.first;
             sel.model = entry.second;
-            sel.reason = "Matched existing catalog model: " + modelName;
+            sel.reason = (effectiveModel != modelName)
+                ? ("Resolved via alias '" + modelName + "' -> " + effectiveModel)
+                : ("Matched existing catalog model: " + modelName);
             return sel;
         }
     }
 
     // 2. Case-insensitive substring search in catalog
-    std::string lowerTarget = modelName;
+    std::string lowerTarget = effectiveModel;
     for (char& c : lowerTarget) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
 
     for (const auto& entry : catalog_) {
@@ -78,7 +112,9 @@ ModelSelection ModelRouter::getOrRegisterDynamicModel(const std::string& modelNa
         if (lowerId.find(lowerTarget) != std::string::npos || lowerTarget.find(lowerId) != std::string::npos) {
             sel.provider = entry.first;
             sel.model = entry.second;
-            sel.reason = "Matched candidate model by name: " + entry.second.id;
+            sel.reason = (effectiveModel != modelName)
+                ? ("Resolved via alias '" + modelName + "' -> " + entry.second.id)
+                : ("Matched candidate model by name: " + entry.second.id);
             return sel;
         }
     }

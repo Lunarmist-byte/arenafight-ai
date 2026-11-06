@@ -55,6 +55,7 @@ private:
     nlohmann::json executeGenerateImage(const nlohmann::json& args);
     nlohmann::json executeGenerateVideo(const nlohmann::json& args);
     nlohmann::json executeMediaInspect(const nlohmann::json& args);
+    nlohmann::json executeMediaOrchestrate(const nlohmann::json& args);
 };
 
 } // namespace arenafight

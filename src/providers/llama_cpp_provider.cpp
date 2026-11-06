@@ -21,15 +21,16 @@ bool LlamaCppProvider::supportsTools(const std::string& modelId) const {
     if (toolSupportingModels_.count(modelId) > 0) return true;
     std::string lower = modelId;
     for (char& c : lower) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-    if (lower.find("gemma") != std::string::npos) return false;
-    if (lower.find("qwen") != std::string::npos ||
-        lower.find("llama") != std::string::npos ||
-        lower.find("mistral") != std::string::npos ||
-        lower.find("deepseek") != std::string::npos ||
-        lower.find("coder") != std::string::npos) {
-        return true;
+
+    // Gemma 1 (e.g. gemma:2b, gemma:7b) does not support native OpenAI tools format in llama.cpp;
+    // it uses automatic prompt injection. Modern Gemma 2 (gemma-2-*, gemma2-*) and all other model families
+    // (Qwen, Llama, Mistral, DeepSeek, Phi, StarCoder, custom finetunes) support tools.
+    if (lower == "gemma:2b" || lower == "gemma:7b" || lower == "gemma" ||
+        (lower.rfind("gemma:", 0) == 0 && lower.find("gemma-2") == std::string::npos && lower.find("gemma2") == std::string::npos)) {
+        return false;
     }
-    return false;
+
+    return true;
 }
 
 bool LlamaCppProvider::available() {
@@ -147,6 +148,18 @@ AgentResponse LlamaCppProvider::generate(const AgentRequest& request) {
     if (!httpResp.success && payload.contains("tools")) {
         Logger::instance().warn("[LLAMA-CPP] Model rejected tools parameter. Retrying with prompt injection...");
         payload.erase("tools");
+        if (!request.tools.empty()) {
+            std::stringstream toolPrompt;
+            toolPrompt << "\n\nAvailable Tools:\n";
+            for (const auto& t : request.tools) {
+                toolPrompt << "- " << t.name << ": " << t.description << "\n";
+            }
+            toolPrompt << "\nTo call a tool, return JSON: {\"name\": \"<tool_name>\", \"arguments\": { ... }}\n";
+            if (!messagesArray.empty()) {
+                messagesArray.back()["content"] = messagesArray.back()["content"].get<std::string>() + toolPrompt.str();
+            }
+            payload["messages"] = messagesArray;
+        }
         httpResp = HttpClient::instance().post(
             endpoint,
             payload.dump(),

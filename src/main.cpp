@@ -6,8 +6,7 @@
 #include "arenafight/repl/repl_engine.hpp"
 #include "arenafight/services/service_daemon.hpp"
 #include "arenafight/services/llama_server_daemon.hpp"
-#include "arenafight/services/service_daemon.hpp"
-#include "arenafight/services/llama_server_daemon.hpp"
+#include "arenafight/server/wifi_host_server.hpp"
 #include "arenafight/ui/terminal_ui.hpp"
 #include <filesystem>
 #include <functional>
@@ -34,6 +33,7 @@ void printUsage() {
          "(/goal)\n"
       << "  arena chat [persona]           Launch fun interactive conversation mode (witty, pirate, zen, etc.)\n"
       << "  arena talk [persona]           Alias for arena chat\n"
+      << "  arena media \"<concept>\"        Autonomous multimodal pipeline (Ollama -> Fooocus -> Wan AI 2.1)\n"
       << "  arena goal \"<task>\"             Autonomous goal pursuit with "
          "verification\n"
       << "  arena plan \"<task>\"             Generate structured plan "
@@ -53,7 +53,11 @@ void printUsage() {
       << "  arena opencode [cmd]           OpenCode CLI integration "
          "(status|models|run|sync)\n"
       << "  arena unsloth [cmd]            Unsloth AI on-the-fly fine-tuning "
-         "(status|dataset|scaffold|train)\n"
+         "(status|dataset|scaffold|train|learn)\n"
+      << "  arena learn [cmd]              Ground-Truth Self-Learning Engine "
+         "(status|audit|rejected|verify|auto|add|train)\n"
+      << "  arena alias [cmd]              Manage friendly names/aliases for AI models "
+         "(list|set|rm|clear)\n"
       << "  arena files [cmd]              Workspace file operations "
          "(list|cat|read|attach|attached)\n"
       << "  arena think <task>             Fast thinking tournament (Code "
@@ -89,6 +93,7 @@ void printUsage() {
       << "  arena help [command]           Display slash command or interactive mode guide (e.g. arena help chat)\n"
       << "  arena help-session, guide      Launch interactive guided help "
          "session\n"
+      << "  arena host, serve [--port N]   Host ArenaFight on Local Wi-Fi Network for Web & Phone access\n"
       << "  arena mcp                      Launch Model Context Protocol (MCP) server for OpenCode\n"
       << "  arena verify                   Execute Level 1 physical evidence verification gates\n"
       << "  arena test                     Run built-in automated "
@@ -221,7 +226,7 @@ int main(int argc, char *argv[]) {
       } catch (...) {
       }
     } else if ((arg == "--model" || arg == "-m") && i + 1 < argc) {
-      config.default_model = argv[++i];
+      config.default_model = config.resolveAlias(argv[++i]);
     } else if ((arg == "--base-url" || arg == "--endpoint" || arg == "--url") &&
                i + 1 < argc) {
       config.openai_base_url = argv[++i];
@@ -229,21 +234,16 @@ int main(int argc, char *argv[]) {
     } else if ((arg == "--api-key" || arg == "--key") && i + 1 < argc) {
       config.openai_api_key = argv[++i];
       config.openrouter_api_key = config.openai_api_key;
-    } else if (arg == "--help" || arg == "-h" || arg == "help") {
+    } else if (arg == "--help" || arg == "-h") {
+      printUsage();
+      return 0;
+    } else if (arg == "help") {
       if (i + 1 < argc) {
-        std::string sub = argv[i + 1];
-        if (sub == "session" || sub == "guide") {
-          ArenaAgent agent(config);
-          ReplEngine repl(agent);
-          repl.handleHelpSession("");
-          return 0;
-        } else if (sub == "chat" || sub == "talk" || sub == "banter" ||
-                   sub == "interactive") {
-          ArenaAgent agent(config);
-          ReplEngine repl(agent);
-          repl.handleHelp(sub);
-          return 0;
-        }
+        std::string sub = argv[++i];
+        ArenaAgent agent(config);
+        ReplEngine repl(agent);
+        repl.handleHelp(sub);
+        return 0;
       }
       printUsage();
       return 0;
@@ -353,6 +353,14 @@ int main(int argc, char *argv[]) {
   dispatchTable["talk"] = dispatchTable["chat"];
   dispatchTable["banter"] = dispatchTable["chat"];
 
+  dispatchTable["media"] = [&](const auto &args) {
+    ReplEngine repl(agent);
+    std::string sceneConcept = joinArgs(args, 1);
+    repl.handleMedia(sceneConcept);
+    return 0;
+  };
+  dispatchTable["cinematic"] = dispatchTable["media"];
+
   dispatchTable["connect"] = [&](const auto &args) {
     ReplEngine repl(agent);
     std::string target = (args.size() > 1) ? args[1] : "opencode";
@@ -434,6 +442,22 @@ int main(int argc, char *argv[]) {
     repl.handleUnsloth(subArgs);
     return 0;
   };
+
+  dispatchTable["learn"] = [&](const auto &args) {
+    ReplEngine repl(agent);
+    std::string subArgs = joinArgs(args, 1);
+    repl.handleLearn(subArgs);
+    return 0;
+  };
+  dispatchTable["self-learn"] = dispatchTable["learn"];
+
+  dispatchTable["alias"] = [&](const auto &args) {
+    ReplEngine repl(agent);
+    std::string subArgs = joinArgs(args, 1);
+    repl.handleAlias(subArgs);
+    return 0;
+  };
+  dispatchTable["aliases"] = dispatchTable["alias"];
 
   dispatchTable["abilities"] = [&](const auto &) {
     auto matrix = agent.getRouter().getAbilityMatrix();
@@ -611,6 +635,34 @@ int main(int argc, char *argv[]) {
     }
     return 0;
   };
+
+  dispatchTable["host"] = [&](const auto &args) {
+    int port = 8080;
+    std::string bindAddress = "0.0.0.0";
+    for (size_t i = 1; i < args.size(); ++i) {
+      if ((args[i] == "--port" || args[i] == "-p") && i + 1 < args.size()) {
+        try { port = std::stoi(args[++i]); } catch (...) {}
+      } else if (args[i] == "--bind" && i + 1 < args.size()) {
+        bindAddress = args[++i];
+      } else if (args[i].rfind("--port=", 0) == 0) {
+        try { port = std::stoi(args[i].substr(7)); } catch (...) {}
+      } else if (args[i].rfind("--bind=", 0) == 0) {
+        bindAddress = args[i].substr(7);
+      } else if (args[i][0] != '-') {
+        try { port = std::stoi(args[i]); } catch (...) {}
+      }
+    }
+
+    WiFiServerConfig srvCfg;
+    srvCfg.port = port;
+    srvCfg.bindAddress = bindAddress;
+
+    WiFiHostServer server(agent, srvCfg);
+    server.runBlocking();
+    return 0;
+  };
+  dispatchTable["serve"] = dispatchTable["host"];
+  dispatchTable["--host"] = dispatchTable["host"];
 
   dispatchTable["test"] = [&](const auto &) {
     std::cout << "Executing self-test suite (run 'ctest' or 'arena_test' for "

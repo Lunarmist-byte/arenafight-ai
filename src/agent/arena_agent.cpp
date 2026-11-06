@@ -5,6 +5,7 @@
 #include "arenafight/system/system_profiler.hpp"
 #include "arenafight/services/service_daemon.hpp"
 #include "arenafight/verifier/independent_reviewer.hpp"
+#include "arenafight/finetune/self_learning_engine.hpp"
 #include "arenafight/ui/terminal_ui.hpp"
 #include "arenafight/common/logger.hpp"
 #include <iostream>
@@ -416,6 +417,14 @@ bool ArenaAgent::run() {
             session_.completed = true;
             session_.currentState = "COMPLETED";
             session_.saveToDisk();
+
+            // Self-Learning Ground-Truth Ingestion Hook (Anti-Fake Data Filter)
+            try {
+                SelfLearningEngine selfLearn(config_);
+                if (selfLearn.isAutoLearningEnabled()) {
+                    selfLearn.ingestSession(session_, &verif);
+                }
+            } catch (...) {}
 
             std::vector<std::string> modifiedFiles;
             for (const auto& m : memory_.getItemsByCategory("file_change")) {

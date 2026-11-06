@@ -278,12 +278,33 @@ unsloth_train.py
 unsloth_output/
 unsloth_dataset.jsonl
 test_unsloth_dataset.jsonl
+test_unsloth_train.py
+test_Modelfile*
 *.dataset.jsonl
+*.jsonl
 *.gguf
+Modelfile*
+self_learning/
 checkpoint-*/
 adapter_config.json
 adapter_model.safetensors
 adapter_model.bin
+
+# Generated Media & Scratch Artifacts
+generated_media/
+*.mp4
+*.png
+*.jpg
+*.jpeg
+*.webp
+!docs/*.png
+!docs/*.jpg
+!docs/*.jpeg
+!docs/*.webp
+!docs/*.mp4
+update_*.py
+add_*.py
+modify_*.py
 
 # Test Sandboxes & Temporary Workspaces
 sandbox_test/

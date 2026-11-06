@@ -182,13 +182,22 @@ std::vector<LocalGgufModel> LlamaServerDaemon::discoverModels() {
         try {
             for (const auto& entry : std::filesystem::directory_iterator(dir)) {
                 if (entry.is_regular_file() && entry.path().extension() == ".gguf") {
+                    uintmax_t sz = 0;
+                    try { sz = std::filesystem::file_size(entry.path()); } catch (...) {}
+                    // Real GGUF model files are at least 1MB; ignore mock/corrupt stubs
+                    if (sz < 1024 * 1024) continue;
+
+                    // Verify GGUF magic header ("GGUF" in binary)
+                    std::ifstream ifs(entry.path(), std::ios::binary);
+                    char magic[4] = {0};
+                    ifs.read(magic, 4);
+                    if (std::string(magic, 4) != "GGUF") continue;
+
                     LocalGgufModel gm;
                     gm.id = entry.path().stem().string();
                     gm.name = gm.id;
                     gm.ggufPath = std::filesystem::absolute(entry.path()).string();
-                    try {
-                        gm.sizeBytes = std::filesystem::file_size(entry.path());
-                    } catch (...) {}
+                    gm.sizeBytes = sz;
                     gm.isOllamaImported = false;
                     gm.contextWindow = 8192;
                     models.push_back(gm);
@@ -206,6 +215,15 @@ std::string LlamaServerDaemon::resolveModelGgufPath(const std::string& modelId) 
     // 1. Direct path check
     if (std::filesystem::exists(modelId)) {
         return std::filesystem::absolute(modelId).string();
+    }
+    if (std::filesystem::exists(modelId + ".gguf")) {
+        return std::filesystem::absolute(modelId + ".gguf").string();
+    }
+    if (std::filesystem::exists("models/" + modelId)) {
+        return std::filesystem::absolute("models/" + modelId).string();
+    }
+    if (std::filesystem::exists("models/" + modelId + ".gguf")) {
+        return std::filesystem::absolute("models/" + modelId + ".gguf").string();
     }
 
     auto allModels = discoverModels();
@@ -225,16 +243,21 @@ std::string LlamaServerDaemon::resolveModelGgufPath(const std::string& modelId) 
     for (const auto& m : allModels) {
         std::string lowerId = m.id;
         for (char& c : lowerId) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-        if (lowerId.find(lowerTarget) != std::string::npos || lowerTarget.find(lowerId) != std::string::npos) {
+        if (lowerId == lowerTarget || lowerId.find(lowerTarget) != std::string::npos || lowerTarget.find(lowerId) != std::string::npos) {
             return m.ggufPath;
         }
     }
 
-    // Fallback: return first available model
-    return allModels[0].ggufPath;
+    return "";
 }
 
 std::string LlamaServerDaemon::findLlamaServerExecutable() {
+    const char* envPath = std::getenv("LLAMA_SERVER_PATH");
+    if (!envPath) envPath = std::getenv("LLAMA_SERVER_EXE");
+    if (envPath && std::filesystem::exists(envPath)) {
+        return std::filesystem::absolute(envPath).string();
+    }
+
 #if defined(_WIN32)
     // 1. Check standard PATH lookup
     ProcessResult pathLookup = ProcessExecutor::executeShell("where.exe llama-server", ".", 2000);

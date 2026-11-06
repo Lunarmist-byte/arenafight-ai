@@ -283,6 +283,21 @@ nlohmann::json MCPServer::getToolsSchema() const {
                 }},
                 {"required", nlohmann::json::array({"path"})}
             }}
+        },
+        {
+            {"name", "arena_media_orchestrate"},
+            {"description", "Autonomous multimodal pipeline: Ollama Cognitive Director -> Fooocus SDXL Keyframe -> Wan AI 2.1 Video Animation with VRAM scheduling."},
+            {"inputSchema", {
+                {"type", "object"},
+                {"properties", {
+                    {"concept", {{"type", "string"}, {"description", "High-level creative narrative concept or prompt to direct and synthesize"}}},
+                    {"output_video", {{"type", "string"}, {"description", "Destination path for generated video file (.mp4)"}}},
+                    {"output_keyframe", {{"type", "string"}, {"description", "Destination path for intermediate keyframe image (.png)"}}},
+                    {"director_model", {{"type", "string"}, {"description", "Cognitive Director LLM model in Ollama (default: cinematic-director)"}}},
+                    {"mode", {{"type", "string"}, {"description", "Pipeline mode: t2i2v, t2v, or i2v"}}}
+                }},
+                {"required", nlohmann::json::array({"concept"})}
+            }}
         }
     });
 }
@@ -327,6 +342,8 @@ nlohmann::json MCPServer::handleToolsCall(const nlohmann::json& id, const nlohma
         contentResult = executeGenerateVideo(args);
     } else if (toolName == "arena_media_inspect") {
         contentResult = executeMediaInspect(args);
+    } else if (toolName == "arena_media_orchestrate") {
+        contentResult = executeMediaOrchestrate(args);
     } else {
         return {
             {"jsonrpc", "2.0"},
@@ -635,6 +652,16 @@ nlohmann::json MCPServer::executeGenerateVideo(const nlohmann::json& args) {
 
 nlohmann::json MCPServer::executeMediaInspect(const nlohmann::json& args) {
     MediaInspectTool tool;
+    std::string ws = agent_.getConfig().workspace_dir;
+    auto res = tool.execute(args, ws);
+    return {
+        {"content", nlohmann::json::array({{{"type", "text"}, {"text", res.success ? res.output : ("Error: " + res.error)}}})},
+        {"isError", !res.success}
+    };
+}
+
+nlohmann::json MCPServer::executeMediaOrchestrate(const nlohmann::json& args) {
+    MediaOrchestratePipelineTool tool;
     std::string ws = agent_.getConfig().workspace_dir;
     auto res = tool.execute(args, ws);
     return {

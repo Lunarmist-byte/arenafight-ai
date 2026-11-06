@@ -79,11 +79,13 @@ set(CORE_SOURCES
     src/artifacts/artifact.cpp
     src/customizations/customization_manager.cpp
     src/finetune/unsloth_manager.cpp
+    src/finetune/self_learning_engine.cpp
     src/security/security_sandbox.cpp
     src/system/system_profiler.cpp
     src/services/service_daemon.cpp
     src/services/llama_server_daemon.cpp
     src/providers/llama_cpp_provider.cpp
+    src/server/wifi_host_server.cpp
     src/mcp/mcp_server.cpp
     src/repl/repl_engine.cpp
     src/agent/arena_agent.cpp

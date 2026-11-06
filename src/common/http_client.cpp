@@ -100,8 +100,9 @@ HttpResponse HttpClient::get(
     curl_easy_setopt(curl.get(), CURLOPT_NOSIGNAL, 1L);
 
     if (isLoopbackUrl(url)) {
-        curl_easy_setopt(curl.get(), CURLOPT_NOPROXY, "localhost,127.0.0.1,::1");
+        curl_easy_setopt(curl.get(), CURLOPT_NOPROXY, "*");
         curl_easy_setopt(curl.get(), CURLOPT_PROXY, "");
+        curl_easy_setopt(curl.get(), CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
     }
 
     // SSL options
@@ -163,8 +164,9 @@ HttpResponse HttpClient::post(
     curl_easy_setopt(curl.get(), CURLOPT_NOSIGNAL, 1L);
 
     if (isLoopbackUrl(url)) {
-        curl_easy_setopt(curl.get(), CURLOPT_NOPROXY, "localhost,127.0.0.1,::1");
+        curl_easy_setopt(curl.get(), CURLOPT_NOPROXY, "*");
         curl_easy_setopt(curl.get(), CURLOPT_PROXY, "");
+        curl_easy_setopt(curl.get(), CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
     }
 
     // SSL options
