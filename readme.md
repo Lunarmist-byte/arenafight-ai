@@ -1,10 +1,5 @@
 # ArenaFight Agent
 
-**Version:** 2.6.0 
-**Architecture:** Pure C++20 Native Standard  
-
-An autonomous, local-first multi-model AI agent orchestration runtime and execution system built in **C++20**.
-
 ArenaFight is primarily a **developer-first, high-performance CLI tool** (`arena` / `arena.exe`) designed for fast terminal workflows, autonomous coding, research, embedded systems engineering, and physical debugging (akin to advanced autonomous agent execution). It moves beyond standard chatbot question-and-answer patterns by operating an autonomous, self-evaluating execution loop: understanding tasks, generating structured task graphs with explicit dependencies, evaluating model abilities to plan optimal assignments, invoking tools, updating persistent memory, independently verifying physical evidence, debugging failures, and replanning until the objective is genuinely achieved.
 
 It operates with a dual-mode runtime architecture:
